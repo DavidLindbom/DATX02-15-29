@@ -1,16 +1,19 @@
+layout "=";
+layout toplevel;
+
 entrypoints Module;
 
 -- Module
-MModule. Module ::= "module" IdCon "(" [Export] ")" "where" [Def];
+MModule. Module ::= "module" IdCon "(" [Export] ")" "where" ";" [Def];
 MExport. Export ::= IdVar;
 
 separator nonempty Export ",";
 
 -- Signatures and functions 
-terminator Def "";
+separator Def ";";
 
 DSig. Def ::= IdVar "::" [Type];
-DFun. Def ::= IdVar "=" Exp;
+DFun. Def ::= IdVar "=" "{" Exp "}";
 
 -- Types
 TName. Type ::= IdCon;
@@ -18,7 +21,6 @@ TVar.  Type ::= IdVar;
 separator nonempty Type "->";
 
 -- Expressions
-terminator Exp "";
 
 EVar.     Exp2 ::= IdVar;
 ECon.     Exp2 ::= IdCon;

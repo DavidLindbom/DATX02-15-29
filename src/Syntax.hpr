@@ -1,0 +1,12 @@
+module Name (a) where
+
+a :: a -> Int
+a = 1 + 1
+
+b :: String
+b = "Hello, world!"
+
+c = print b
+
+d = \True _ e -> e f
+
