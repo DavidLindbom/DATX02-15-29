@@ -1,0 +1,51 @@
+entrypoints Module;
+
+-- Module
+MModule. Module ::= "module" IdCon "(" [Export] ")" "where" [Def];
+MExport. Export ::= IdVar;
+
+separator nonempty Export ",";
+
+-- Signatures and functions 
+terminator Def "";
+
+DSig. Def ::= IdVar "::" [Type];
+DFun. Def ::= IdVar "=" Exp;
+
+-- Types
+TName. Type ::= IdCon;
+TVar.  Type ::= IdVar;
+separator nonempty Type "->";
+
+-- Expressions
+terminator Exp "";
+
+EVar.     Exp2 ::= IdVar;
+ECon.     Exp2 ::= IdCon;
+EOpr.     Exp2 ::= "(" IdOpr ")";
+EString.  Exp2 ::= String;
+EChar.    Exp2 ::= Char;
+EInteger. Exp2 ::= Integer;
+EDouble.  Exp2 ::= Double;
+EInfix.   Exp1 ::= Exp1 IdOpr Exp2;
+EApp.     Exp1 ::= Exp1 Exp2;
+ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
+
+coercions Exp 2;
+
+-- Patterns
+PCon.  Pat ::= IdCon;
+PVar.  Pat ::= IdVar;
+PWild. Pat ::= "_";
+
+terminator nonempty Pat "";
+
+-- Tokens
+token IdVar (lower (digit | letter | '_' )* ); 
+token IdCon (upper (digit | letter)* );
+token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ );
+
+-- Comments
+comment "--";
+comment "{-" "-}";
+
