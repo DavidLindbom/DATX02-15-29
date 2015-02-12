@@ -3,14 +3,14 @@ module Main where
 
 
 import System.IO ( stdin, hGetContents )
-import System.Environment ( getArgs )--, getProgName )
+import System.Environment ( getArgs, getProgName )
 import System.Exit ( exitFailure, exitSuccess )
 
 import Parser.LexHopper
 import Parser.ParHopper
---import Parser.SkelHopper
+import Parser.SkelHopper
 import Parser.PrintHopper
---import Parser.AbsHopper
+import Parser.AbsHopper
 import Parser.LayoutHopper
 
 
@@ -19,7 +19,6 @@ import Parser.ErrM
 
 type ParseFun a = [Token] -> Err a
 
-myLLexer :: String -> [Token]
 myLLexer = resolveLayout True . myLexer
 
 type Verbosity = Int
@@ -32,10 +31,10 @@ runFile v p f = putStrLn f >> readFile f >>= run v p
 
 run :: (Print a, Show a) => Verbosity -> ParseFun a -> String -> IO ()
 run v p s = let ts = myLLexer s in case p ts of
-           Bad str  -> do putStrLn "\nParse              Failed...\n"
+           Bad s    -> do putStrLn "\nParse              Failed...\n"
                           putStrV v "Tokens:"
                           putStrV v $ show ts
-                          putStrLn str
+                          putStrLn s
                           exitFailure
            Ok  tree -> do putStrLn "\nParse Successful!"
                           showTree v tree
