@@ -1,12 +1,18 @@
 module Name (a) where
 
+-- A function with an infix operator
 a :: a -> Int
 a = 1 + 1
 
+-- A function with a string
 b :: String
 b = "Hello, world!"
 
-c = print b
+{-
+A function without type but with function application
+-}
+c = print b d
 
+-- Lambda
 d = \True _ e -> e f
 
