@@ -23,6 +23,9 @@ executable hopper
 
 test-suite test-hopper 
     type:              exitcode-stdio-1.0
+    build-tools:       alex, happy
+    other-modules:     Parser.LexHopper,
+                       Parser.ParHopper
     main-is:           Test.hs
     hs-source-dirs:    tests, src
     build-depends:     base >=4.7 && <4.8, 
