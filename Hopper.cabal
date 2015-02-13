@@ -15,7 +15,7 @@ executable hopper
   build-tools:         alex, happy
   other-modules:       Parser.LexHopper,
                        Parser.ParHopper
-  build-depends:       base >=4.5 && <4.8,
+  build-depends:       CoreErlang, base >=4.5 && <4.8,
                        array >=0.4
   GHC-Options:         -O2 -Wall
   hs-source-dirs:      src
