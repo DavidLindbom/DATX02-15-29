@@ -15,8 +15,8 @@ executable hopper
   build-tools:         alex, happy
   other-modules:       Parser.LexHopper,
                        Parser.ParHopper
-  build-depends:       base >=4.7 && <4.8,
-                       array >=0.5
+  build-depends:       base >=4.5 && <4.8,
+                       array >=0.4
   GHC-Options:         -O2 -Wall
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -28,8 +28,8 @@ test-suite test-hopper
                        Parser.ParHopper
     main-is:           Test.hs
     hs-source-dirs:    tests, src
-    build-depends:     base >=4.7 && <4.8, 
-                       array >=0.5,
+    build-depends:     base >=4.5 && <4.8, 
+                       array >=0.4,
                        HUnit,
                        test-framework,
                        test-framework-hunit
