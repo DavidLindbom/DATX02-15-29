@@ -38,6 +38,7 @@ transDef :: Def -> Result
 transDef x = case x of
   DSig idvar types  -> failure x
   DFun idvar exp  -> failure x
+  DCollected idvar def defs  -> failure x
 
 
 transType :: Type -> Result

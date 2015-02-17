@@ -19,15 +19,16 @@ import Parser.ErrM
   ')' { PT _ (TS _ 2) }
   ',' { PT _ (TS _ 3) }
   '->' { PT _ (TS _ 4) }
-  '::' { PT _ (TS _ 5) }
-  ';' { PT _ (TS _ 6) }
-  '=' { PT _ (TS _ 7) }
-  '\\' { PT _ (TS _ 8) }
-  '_' { PT _ (TS _ 9) }
-  'module' { PT _ (TS _ 10) }
-  'where' { PT _ (TS _ 11) }
-  '{' { PT _ (TS _ 12) }
-  '}' { PT _ (TS _ 13) }
+  ': (' { PT _ (TS _ 5) }
+  '::' { PT _ (TS _ 6) }
+  ';' { PT _ (TS _ 7) }
+  '=' { PT _ (TS _ 8) }
+  '\\' { PT _ (TS _ 9) }
+  '_' { PT _ (TS _ 10) }
+  'module' { PT _ (TS _ 11) }
+  'where' { PT _ (TS _ 12) }
+  '{' { PT _ (TS _ 13) }
+  '}' { PT _ (TS _ 14) }
 
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }

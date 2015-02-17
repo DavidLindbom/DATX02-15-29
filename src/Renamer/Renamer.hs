@@ -1,4 +1,4 @@
-module Renamer.Renamer where
+module Renamer.Renamer (collectDefs) where
 
 import qualified Data.Map as M
 import Control.Monad (foldM)
@@ -14,8 +14,8 @@ collectDefs (MModule id exps defs) = do
   return $ MModule id exps (M.foldrWithKey go [] funs)
   where
     go :: Def -> [Def] -> [Def] -> [Def]
-    go sig funs acc =
-       (DCollected sig funs) : acc
+    go sig@(DSig id _) funs acc =
+       (DCollected id sig funs) : acc
 
 findSigs :: [Def] -> Err (M.Map IdVar Def)
 findSigs defs =

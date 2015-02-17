@@ -21,6 +21,7 @@ data Export =
 data Def =
    DSig IdVar [Type]
  | DFun IdVar Exp
+ | DCollected IdVar Def [Def]
   deriving (Eq,Ord,Show,Read)
 
 data Type =

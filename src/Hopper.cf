@@ -14,7 +14,7 @@ separator Def ";";
 
 DSig. Def ::= IdVar "::" [Type];
 DFun. Def ::= IdVar "=" "{" Exp "}";
-internal DCollected. Def ::= IdVar Def [Def];
+internal DCollected. Def ::= IdVar ": (" Def ")" [Def];
 
 -- Types
 TName. Type ::= IdCon;
