@@ -16,13 +16,20 @@ abstract module as seen in AbsGrammar.hs
 This module is part of the HPR.language project
 -}
 
-module CodeGenerator where
+module CodeGenerator (compileModuleString, compileModule) where
 
 import Language.CoreErlang.Syntax as CES
+import Language.CoreErlang.Pretty as CEP
 import AbsHopper as HPR
 import Data.List
 
--- |The 'compileModule' function compiles a AbsHPR.Module
+-- |The 'compileModuleString' function compales a Hopper module
+--  to a pretty printed CoreErlang string
+compileModuleString :: HPR.Module -> String
+compileModuleString mod = CEP.prettyPrint cesModule
+  where cesModule = compileModule mod
+
+-- |The 'compileModule' function compiles a Hopper Module
 --  to a CoreErlang.Syntax.Module
 compileModule :: HPR.Module -> CES.Module
 compileModule mod = CES.Module (Atom id) es attribs ds
@@ -87,16 +94,16 @@ compileExp (ELambda pats e)          = Lambda (map compileLambdaPat pats) (CES.E
 -- |The 'compileLambdaPat' function converts a
 --  lambda pattern to a CoreErlang.Var
 compileLambdaPat :: HPR.Pat -> CES.Var
-compileLambdaPat (PCon (IdCon id))        = id
+compileLambdaPat (PCon (IdCon id))     = id
 compileLambdaPat (HPR.PVar (IdVar id)) = id
-compileLambdaPat PWild                    = "_"
+compileLambdaPat PWild                 = "_"
 
 -- |The 'compilePat' function compiles a Pat
 --  to a CoreErlang.Pat
 compilePat :: HPR.Pat -> CES.Pat
-compilePat (PCon (IdCon id))        = PLit (LAtom (Atom id)) 
+compilePat (PCon (IdCon id))     = PLit (LAtom (Atom id)) 
 compilePat (HPR.PVar (IdVar id)) = CES.PVar id
-compilePat PWild                    = CES.PVar "_"
+compilePat PWild                 = CES.PVar "_"
 
 -- |The 'getArity' function returns the arity of
 --  the function with the given id
@@ -108,7 +115,7 @@ getArity id mod = toInteger $ length types - 1
 
 -- |The 'getSig' function returns the DSig with
 --  the corresponding id
---  Takes a String function id and the complete AbsHPR.Module as argument
+--  Takes a String function id and the completh AbsHPR.Module as argument
 --  This function assumes that the given Module contains
 --  a function signature with the given Function Id
 getSig :: String -> HPR.Module -> Def
@@ -116,7 +123,7 @@ getSig id (MModule mId es (def:defs))
   | id == funId = sig
   | otherwise   = getSig id (MModule mId es defs)
   where (DSig (IdVar funId) types) = sig
-        (DCollected _ sig _) = def
+        (DCollected _ sig _)       = def
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
@@ -124,5 +131,13 @@ getSig id (MModule mId es (def:defs))
 --  Takes a String module id as argument
 generateModuleInfo :: String -> [FunDef]
 generateModuleInfo id = [mi0,mi1]
-  where mi0 = FunDef (Constr (Function (Atom "module_info",0))) (Constr (Lambda [] (Exp (Constr (ModCall (Exp (Constr (Lit (LAtom (Atom "erlang")))),Exp (Constr (Lit (LAtom (Atom "get_module_info"))))) [Exp (Constr (Lit (LAtom (Atom id))))])))))
-        mi1 = FunDef (Constr (Function (Atom "module_info",1))) (Constr (Lambda ["_cor0"] (Exp (Constr (ModCall (Exp (Constr (Lit (LAtom (Atom "erlang")))),Exp (Constr (Lit (LAtom (Atom "get_module_info"))))) [Exp (Constr (Lit (LAtom (Atom id)))),Exp (Constr (Var "_cor0"))])))))
+  where mi0 = FunDef (Constr (Function (Atom "module_info",0)))
+                     (Constr (Lambda [] (Exp (Constr (ModCall
+                        (Exp (Constr (Lit (LAtom (Atom "erlang")))),
+                         Exp (Constr (Lit (LAtom (Atom "get_module_info")))))
+                        [Exp (Constr (Lit (LAtom (Atom id))))])))))
+        mi1 = FunDef (Constr (Function (Atom "module_info",1)))
+                     (Constr (Lambda ["_cor0"] (Exp (Constr (ModCall
+                        (Exp (Constr (Lit (LAtom (Atom "erlang")))),
+                         Exp (Constr (Lit (LAtom (Atom "get_module_info")))))
+                        [Exp (Constr (Lit (LAtom (Atom id)))),Exp (Constr (Var "_cor0"))])))))
