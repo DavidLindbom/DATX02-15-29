@@ -16,7 +16,7 @@ abstract module as seen in AbsGrammar.hs
 This module is part of the HPR.language project
 -}
 
-module CodeGenerator (compileModuleString, compileModule) where
+module CodeGenerator.CodeGenerator (compileModuleString, compileModule) where
 
 import Language.CoreErlang.Syntax as CES
 import Language.CoreErlang.Pretty as CEP
