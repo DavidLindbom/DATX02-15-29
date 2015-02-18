@@ -9,6 +9,7 @@ import Parser.ParHopper (myLexer, pModule)
 import Parser.ErrM
 
 import RenameTests
+import CodeGenTests
 
 main :: IO () 
 main = defaultMain tests
@@ -19,6 +20,7 @@ tests = [ testGroup "Syntax tests"
             [ testCase "Parse code" (readAndParseCodeFile "tests/Syntax.hpr")
             ]
         , testGroup "Renaming tests" renameTests
+        , testGroup "Code generation tests" codeGenTests
         ]
 
 readAndParseCodeFile :: FilePath -> Assertion
