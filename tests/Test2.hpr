@@ -1,4 +1,4 @@
-module test2 (a, b) where
+module Test2 (a, b) where
 
 a :: Int
 a = 10

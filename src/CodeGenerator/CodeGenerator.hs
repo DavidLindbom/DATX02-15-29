@@ -20,7 +20,7 @@ module CodeGenerator.CodeGenerator (compileModuleString, compileModule) where
 
 import Language.CoreErlang.Syntax as CES
 import Language.CoreErlang.Pretty as CEP
-import AbsHopper as HPR
+import Parser.AbsHopper as HPR
 import Data.List
 
 -- |The 'compileModuleString' function compales a Hopper module

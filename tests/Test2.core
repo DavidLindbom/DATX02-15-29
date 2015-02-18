@@ -1,0 +1,11 @@
+module 'Test2' ['a'/0, 'b'/0, 'module_info'/0, 'module_info'/1]
+    attributes []
+'a'/0 =
+    fun() -> 10
+'b'/0 =
+    fun() -> "Hej"
+'module_info'/0 =
+    fun() -> call 'erlang':'get_module_info' ('Test2')
+'module_info'/1 =
+    fun(_cor0) -> call 'erlang':'get_module_info' ('Test2', _cor0)
+end

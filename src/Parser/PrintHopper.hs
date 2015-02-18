@@ -108,7 +108,7 @@ instance Print Export where
 instance Print Def where
   prt i e = case e of
    DSig idvar types -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "::") , prt 0 types])
-   DFun idvar exp -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "=") , doc (showString "{") , prt 0 exp , doc (showString "}")])
+   DFun idvar ex -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "=") , doc (showString "{") , prt 0 ex , doc (showString "}")])
    DCollected idvar def defs -> prPrec i 0 (concatD [prt 0 idvar , doc (showString ": (") , prt 0 def , doc (showString ")") , prt 0 defs])
 
   prtList es = case es of
@@ -134,9 +134,9 @@ instance Print Exp where
    EChar c -> prPrec i 2 (concatD [prt 0 c])
    EInteger n -> prPrec i 2 (concatD [prt 0 n])
    EDouble d -> prPrec i 2 (concatD [prt 0 d])
-   EInfix exp0 idopr exp -> prPrec i 1 (concatD [prt 1 exp0 , prt 0 idopr , prt 2 exp])
-   EApp exp0 exp -> prPrec i 1 (concatD [prt 1 exp0 , prt 2 exp])
-   ELambda pats exp -> prPrec i 0 (concatD [doc (showString "\\") , prt 0 pats , doc (showString "->") , prt 0 exp])
+   EInfix exp0 idopr ex -> prPrec i 1 (concatD [prt 1 exp0 , prt 0 idopr , prt 2 ex])
+   EApp exp0 ex -> prPrec i 1 (concatD [prt 1 exp0 , prt 2 ex])
+   ELambda pats ex -> prPrec i 0 (concatD [doc (showString "\\") , prt 0 pats , doc (showString "->") , prt 0 ex])
 
 
 instance Print Pat where

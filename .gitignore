@@ -15,3 +15,5 @@ rel/example_project
 *.swo
 *~
 *.hi
+src/Parser/LexHopper.hs
+src/Parser/ParHopper.hs
