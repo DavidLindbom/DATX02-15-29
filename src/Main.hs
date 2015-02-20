@@ -6,7 +6,7 @@ import Parser.ParHopper
 import Parser.LayoutHopper
 import Parser.ErrM
 
-import Renamer.Renamer
+import Renamer.Renamer (transformModule)
 import CodeGenerator.CodeGenerator
 
 main :: IO ()
@@ -25,7 +25,7 @@ main = do
 compile :: String -> Err String
 compile str = do
   parsetree <- parse str
-  ast <- collectDefs parsetree
+  ast <- transformModule parsetree
   -- Other passes...
   return $ compileModuleString ast
   where 
