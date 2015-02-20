@@ -2,9 +2,12 @@ module AST.AST where
 
 import Parser.AbsHopper
 
-data ModuleAST = ModuleAST String [ExportAST] [DefAST]
+data ModuleAST a = ModuleAST String [ExportAST] [DefAST a]
+
 data ExportAST = ExportAST String
-data DefAST = DefAST String (Maybe TypeAST) AST
+
+data DefAST a = DefAST String a AST -- (Maybe TypeAST) AST
+
 data AST = Named String
          | LitStr String
          | LitInteger Integer
@@ -14,8 +17,13 @@ data AST = Named String
          | AppAST AST AST
 data PatAST = VarPat String
             | WildPat
+
 data TypeAST = VarType String
              | ConType String [TypeAST]
+
+transform :: Module -> ModuleAST (Maybe TypeAST)
+transform = undefined
+
 --a -> b ==> ConType "->" [VarType "a",VarType "b"]
 
 expToAST :: Exp -> AST
