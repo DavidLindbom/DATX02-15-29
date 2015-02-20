@@ -1,15 +1,16 @@
 -- Inspired by "Syntax summary" in "An introduction to Core Erlang"
-module AST where
+--
+-- Should be somewhere between Haskell syntax and Core Erlang syntax
+-- but simple to typecheck
+-- https://www.haskell.org/onlinereport/haskell2010/haskellch10.html
+-- www.erlang.se/workshop/carlsson.ps 
+module AST.AST where
 
-data Module = Mod [Identifier] [Function]
+data Module = Mod String [Identifier] [Function]
   deriving (Show)
 
--- Function name
-data Identifier = Id String
-  deriving (Show) 
-  
-data Constructor = Con String
-  deriving (Show)
+newtype Identifier  = Id String  deriving (Show) -- Function name, variable...
+newtype Constructor = Con String deriving (Show)
 
 data Literal = LS String
              | LC Char
@@ -19,6 +20,7 @@ data Literal = LS String
   deriving (Show)
 
 data Function = Fun Identifier Signature [([Pattern],Expression)]
+              | Unc Identifier Signature [([Pattern],Expression)] -- Uncurried
   deriving (Show)
 
 data Signature = Sig [Type]
