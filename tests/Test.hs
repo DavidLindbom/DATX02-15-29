@@ -8,7 +8,7 @@ import Parser.LayoutHopper (resolveLayout)
 import Parser.ParHopper (myLexer, pModule) 
 import Parser.ErrM
 
-import RenameTests
+--import RenameTests
 import CodeGenTests
 
 main :: IO () 
@@ -19,7 +19,7 @@ tests :: [Test]
 tests = [ testGroup "Syntax tests" 
             [ testCase "Parse code" (readAndParseCodeFile "tests/Syntax.hpr")
             ]
-        , testGroup "Renaming tests" renameTests
+    --    , testGroup "Renaming tests" renameTests
         , testGroup "Code generation tests" codeGenTests
         ]
 

@@ -19,80 +19,85 @@ This module is part of the HPR.language project
 module CodeGenerator.CodeGenerator where
 
 import Language.CoreErlang.Syntax as CES
+import Language.CoreErlang.Pretty as CEP
 import AST.AST
 import Data.List
 
--- |The 'compileModule' function compiles a AbsHPR.Module
+-- |The 'compileModule' function compiles a ModuleAST
 --  to a CoreErlang.Syntax.Module
-compileModule :: AST.Module a -> CES.Module
+compileModule :: ModuleAST (Maybe TypeAST) -> CES.Module
 compileModule mod = CES.Module (Atom id) es attribs ds
   where es      = compileExports exports mod
-        ds      = (map (comileFun mod) defs) ++ generateModuleInfo id
+        ds      = (map (compileFun mod) defs) ++ generateModuleInfo id
         attribs = [] -- Not using attributes now
         (ModuleAST id exports defs) = mod
 
-compileExports :: [ExportAST] -> AST.Module -> [CES.Function]
+compileModuleString :: ModuleAST (Maybe TypeAST) -> String
+compileModuleString mod = prettyPrint $ compileModule mod
+
+-- |The 'compileExports' function compiles a list of ExportAST
+--  to a list of CoreErlang.Syntax.Function
+compileExports :: [ExportAST] -> ModuleAST (Maybe TypeAST) -> [CES.Function]
 compileExports es mod = (map (compileExport mod) es) ++ [mi0,mi1]
   where mi0  = CES.Function (name,0)
         mi1  = CES.Function (name,1)
         name = CES.Atom "module_info"
 
--- |The 'compileExport' function compiles an Export
+-- |The 'compileExport' function compiles an ExportAST
 --  to a CoreErlang.Syntax.Function
-compileExport :: AST.Module -> ExportAST -> CES.Function
+compileExport :: ModuleAST (Maybe TypeAST) -> ExportAST -> CES.Function
 compileExport mod (ExportAST id) = CES.Function (CES.Atom id, getArity id mod)
 
--- |The 'compileFun' function compiles a Def DFun
---  to a CoreErlang.Exp
-compileFun :: AST.Module -> DefAst a -> CES.FunDef
-compileFun mod (DefAST id _ AST) = FunDef (Constr (getSig id mod)) (Constr (compileAST ast))
+-- |The 'compileFun' function compiles a DefAST
+--  to a CoreErlang.FunDef
+compileFun :: ModuleAST (Maybe TypeAST) -> DefAST (Maybe TypeAST) -> CES.FunDef
+compileFun mod (DefAST id t ast) = 
+  FunDef (Constr (Function (CES.Atom id, typeToArity t))) (Constr (compileAST (LamAST [] ast)))
 
--- |The 'compileType' function compiles a Type
+-- |The 'compileType' function compiles a TypeAST
 --  to CoreErlang data
 --  Not implemented
 compileType :: TypeAST -> String
 compileType (VarType id)    = undefined
 compileType (ConType id ts) = undefined
 
--- |The 'compileExp' function compiles an Exp
+-- |The 'compileExp' function compiles an AST
 --  to a CoreErlang.Exp
---  EInfix should not be dealt with, the updated data structure
---  won't contain infix, will remove when implemented
 --  EApp not implemented, ELambda might need verification
 compileAST :: AST -> CES.Exp
 compileAST (Named id)      = Var id
 compileAST (LitStr s)      = Lit (LString s)
 compileAST (LitInteger i)  = Lit (LInt i)
 compileAST (LitDouble d)   = Lit (LFloat d) -- No double constructor in CoreErlang
-compileAST (LitChar d)     = Lit (LChar c) -- No double constructor in CoreErlang
+compileAST (LitChar c)     = Lit (LChar c)
 compileAST (LamAST pats a) = Lambda (map compileLambdaPat pats) (CES.Exp (Constr (compileAST a)))
 compileAST (AppAST a1 a2)  = undefined 
 
 -- |The 'compileLambdaPat' function converts a
---  lambda pattern to a CoreErlang.Var
-compileLambdaPat :: PatAst -> CES.Var
+--  PatAST to a CoreErlang.Var
+compileLambdaPat :: PatAST -> CES.Var
 compileLambdaPat (VarPat id) = id
-compileLambdaPat PWild       = "_"
+compileLambdaPat WildPat     = "_"
 
--- |The 'getArity' function returns the arity of
---  the function with the given id
---  Takes a String function id and the complete AbsHPR.Module as argument
---  Used when creating the export list
-getArity :: String -> ModuleAST -> Integer
-getArity id mod = toInteger $ length types - 1
-  where (DSig _ types) = getSig id mod
+-- |The 'getArity' function gets the arity of the function
+--  with the given id in the given ModuleAST
+getArity :: String -> ModuleAST (Maybe TypeAST) -> Integer
+getArity id mod = typeToArity $ getTypeSig id mod
 
--- |The 'getSig' function returns the DSig with
---  the corresponding id
---  Takes a String function id and the completh AbsHPR.Module as argument
---  This function assumes that the given Module contains
---  a function signature with the given Function Id
-getSig :: String -> HPR.Module -> Def
-getSig id (MModule mId es (def:defs))
-  | id == funId = sig
-  | otherwise   = getSig id (MModule mId es defs)
-  where (DSig (IdVar funId) types) = sig
-        (DCollected _ sig _)       = def
+-- |The 'typeToArity' returns the corresponding arity
+--  of the given Maybe TypeAST. Nothing will just return 0
+typeToArity :: Maybe TypeAST -> Integer
+typeToArity t = case t of
+                  Just (ConType _ ts) -> toInteger $ length ts
+                  Nothing             -> 0
+
+-- |The 'getTypeSig' function gets the Maybe TypeAST signature
+--  of the function with the given id in the given ModuleAST
+getTypeSig :: String -> ModuleAST (Maybe TypeAST) -> Maybe TypeAST
+getTypeSig id (ModuleAST mId es (def:defs))
+  | id == funId = typeSig
+  | otherwise   = getTypeSig id (ModuleAST mId es defs)
+  where (DefAST funId typeSig _) = def
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
