@@ -16,6 +16,7 @@ module CodeGenerator.BeamWriter (writeBeam) where
 import System.Cmd
 import System.Directory
 import System.IO
+import System.Process
 
 -- |The 'writeBeam' function compiles a .beam file from
 --  the given abstract Language.CoreErlang.Syntax.Module
@@ -23,6 +24,6 @@ import System.IO
 writeBeam :: String -> String -> IO ()
 writeBeam moduleName code = 
   do writeFile coreFile code
-     rawSystem "erlc" [coreFile]
+     out <- readProcess "erlc" [coreFile] ""
      removeFile coreFile
   where coreFile = moduleName ++ ".core"
