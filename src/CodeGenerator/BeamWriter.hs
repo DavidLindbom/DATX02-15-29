@@ -19,7 +19,7 @@ import System.IO
 import System.Process
 
 -- |The 'writeBeam' function compiles a .beam file from
---  the given abstract Language.CoreErlang.Syntax.Module
+--  the given core erlang code string
 --  using the erlc program
 writeBeam :: String -> String -> IO ()
 writeBeam moduleName code = 

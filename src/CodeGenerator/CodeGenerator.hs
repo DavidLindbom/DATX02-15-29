@@ -19,19 +19,19 @@ This module is part of the HPR.language project
 module CodeGenerator.CodeGenerator where
 
 import Language.CoreErlang.Syntax as CES
-import Parser.AbsHopper as HPR
+import AST.AST
 import Data.List
 
 -- |The 'compileModule' function compiles a AbsHPR.Module
 --  to a CoreErlang.Syntax.Module
-compileModule :: HPR.Module -> CES.Module
+compileModule :: AST.Module a -> CES.Module
 compileModule mod = CES.Module (Atom id) es attribs ds
   where es      = compileExports exports mod
-        ds      = (map compileCollected defs) ++ generateModuleInfo id
+        ds      = (map (comileFun mod) defs) ++ generateModuleInfo id
         attribs = [] -- Not using attributes now
-        (MModule (IdCon id) exports defs) = mod
+        (ModuleAST id exports defs) = mod
 
-compileExports :: [Export] -> HPR.Module -> [CES.Function]
+compileExports :: [ExportAST] -> AST.Module -> [CES.Function]
 compileExports es mod = (map (compileExport mod) es) ++ [mi0,mi1]
   where mi0  = CES.Function (name,0)
         mi1  = CES.Function (name,1)
@@ -39,70 +39,46 @@ compileExports es mod = (map (compileExport mod) es) ++ [mi0,mi1]
 
 -- |The 'compileExport' function compiles an Export
 --  to a CoreErlang.Syntax.Function
-compileExport :: HPR.Module -> Export -> CES.Function
-compileExport mod (MExport (IdVar id)) = CES.Function (CES.Atom id, getArity id mod)
+compileExport :: AST.Module -> ExportAST -> CES.Function
+compileExport mod (ExportAST id) = CES.Function (CES.Atom id, getArity id mod)
 
--- |The 'compileDef' function compiles a Def
---  to a CoreErlang.FunDef
---  Not dealing with arguments yet, hence the empty list
-compileCollected :: Def -> FunDef
-compileCollected (DCollected (IdVar id) sig funs) = FunDef s f
-  where s = Constr (compileSig sig)
-        f = Constr (Lambda [] (CES.Exp (Constr (compileFun funs))))
-
--- |The 'compileSig' function compiles a Def DSig
---  to a CoreErlang.Function
-compileSig :: Def -> Function
-compileSig (DSig (IdVar id) types) = Function (Atom id, toInteger $ length types - 1)
-
--- |The 'compileFun' function compiles a list of Def DFun
+-- |The 'compileFun' function compiles a Def DFun
 --  to a CoreErlang.Exp
-compileFun :: [Def] -> CES.Exp
-compileFun [DFun (IdVar id) exp] = compileExp exp
+compileFun :: AST.Module -> DefAst a -> CES.FunDef
+compileFun mod (DefAST id _ AST) = FunDef (Constr (getSig id mod)) (Constr (compileAST ast))
 
 -- |The 'compileType' function compiles a Type
 --  to CoreErlang data
 --  Not implemented
-compileType :: Type -> String
-compileType (TName (IdCon id)) = undefined
-compileType (TVar  (IdVar id)) = undefined
+compileType :: TypeAST -> String
+compileType (VarType id)    = undefined
+compileType (ConType id ts) = undefined
 
 -- |The 'compileExp' function compiles an Exp
 --  to a CoreErlang.Exp
 --  EInfix should not be dealt with, the updated data structure
 --  won't contain infix, will remove when implemented
 --  EApp not implemented, ELambda might need verification
-compileExp :: HPR.Exp -> CES.Exp
-compileExp (EVar (IdVar id))         = Var id
-compileExp (ECon (IdCon id))         = Lit (LAtom (Atom id))
-compileExp (EOpr (IdOpr id))         = Op (Atom id) [] -- Not sure about this
-compileExp (EString s)               = Lit (LString s)
-compileExp (EChar c)                 = Lit (LChar c)
-compileExp (EInteger i)              = Lit (LInt i)
-compileExp (EDouble d)               = Lit (LFloat d) -- No double constructor in CoreErlang
-compileExp (EInfix e1 (IdOpr id) e2) = undefined
-compileExp (EApp e1 e2)              = undefined 
-compileExp (ELambda pats e)          = Lambda (map compileLambdaPat pats) (CES.Exp (Constr (compileExp e)))
+compileAST :: AST -> CES.Exp
+compileAST (Named id)      = Var id
+compileAST (LitStr s)      = Lit (LString s)
+compileAST (LitInteger i)  = Lit (LInt i)
+compileAST (LitDouble d)   = Lit (LFloat d) -- No double constructor in CoreErlang
+compileAST (LitChar d)     = Lit (LChar c) -- No double constructor in CoreErlang
+compileAST (LamAST pats a) = Lambda (map compileLambdaPat pats) (CES.Exp (Constr (compileAST a)))
+compileAST (AppAST a1 a2)  = undefined 
 
 -- |The 'compileLambdaPat' function converts a
 --  lambda pattern to a CoreErlang.Var
-compileLambdaPat :: HPR.Pat -> CES.Var
-compileLambdaPat (PCon (IdCon id))     = id
-compileLambdaPat (HPR.PVar (IdVar id)) = id
-compileLambdaPat PWild                 = "_"
-
--- |The 'compilePat' function compiles a Pat
---  to a CoreErlang.Pat
-compilePat :: HPR.Pat -> CES.Pat
-compilePat (PCon (IdCon id))     = PLit (LAtom (Atom id)) 
-compilePat (HPR.PVar (IdVar id)) = CES.PVar id
-compilePat PWild                 = CES.PVar "_"
+compileLambdaPat :: PatAst -> CES.Var
+compileLambdaPat (VarPat id) = id
+compileLambdaPat PWild       = "_"
 
 -- |The 'getArity' function returns the arity of
 --  the function with the given id
 --  Takes a String function id and the complete AbsHPR.Module as argument
 --  Used when creating the export list
-getArity :: String -> HPR.Module -> Integer
+getArity :: String -> ModuleAST -> Integer
 getArity id mod = toInteger $ length types - 1
   where (DSig _ types) = getSig id mod
 
