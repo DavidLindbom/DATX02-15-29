@@ -27,6 +27,8 @@ data Def =
 data Type =
    TName IdCon
  | TVar IdVar
+ | TString String
+ | TInt Integer
   deriving (Eq,Ord,Show,Read)
 
 data Exp =

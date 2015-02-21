@@ -16,20 +16,13 @@ abstract module as seen in AbsGrammar.hs
 This module is part of the HPR.language project
 -}
 
-module CodeGenerator.CodeGenerator (compileModuleString, compileModule) where
+module CodeGenerator.CodeGenerator where
 
 import Language.CoreErlang.Syntax as CES
-import Language.CoreErlang.Pretty as CEP
 import Parser.AbsHopper as HPR
 import Data.List
 
--- |The 'compileModuleString' function compales a Hopper module
---  to a pretty printed CoreErlang string
-compileModuleString :: HPR.Module -> String
-compileModuleString mod = CEP.prettyPrint cesModule
-  where cesModule = compileModule mod
-
--- |The 'compileModule' function compiles a Hopper Module
+-- |The 'compileModule' function compiles a AbsHPR.Module
 --  to a CoreErlang.Syntax.Module
 compileModule :: HPR.Module -> CES.Module
 compileModule mod = CES.Module (Atom id) es attribs ds
