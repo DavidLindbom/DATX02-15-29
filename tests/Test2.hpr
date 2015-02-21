@@ -4,4 +4,4 @@ a :: Int
 a = 10
 
 b :: String
-b = "Hej"
+b = "test"
