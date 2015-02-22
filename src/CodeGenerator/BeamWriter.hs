@@ -20,9 +20,13 @@ import System.IO
 -- |The 'writeBeam' function compiles a .beam file from
 --  the given abstract Language.CoreErlang.Syntax.Module
 --  using the erlc program
-writeBeam :: String -> String -> IO ()
-writeBeam moduleName code = 
+writeBeam :: String -> String -> Bool -> IO ()
+writeBeam path code keepCore = 
   do writeFile coreFile code
      rawSystem "erlc" [coreFile]
-     removeFile coreFile
-  where coreFile = moduleName ++ ".core"
+     if keepCore then return () else removeFile coreFile
+  where coreFile = path ++ ".core"
+
+
+-- TODO:
+-- Writing .beam to wrong dir

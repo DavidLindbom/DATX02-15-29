@@ -21,12 +21,13 @@ module CodeGenerator.CodeGenerator (compileModuleString, compileModule) where
 import Language.CoreErlang.Syntax as CES
 import Language.CoreErlang.Pretty as CEP
 import Parser.AbsHopper as HPR
+import Parser.ErrM
 import Data.List
 
 -- |The 'compileModuleString' function compales a Hopper module
 --  to a pretty printed CoreErlang string
-compileModuleString :: HPR.Module -> String
-compileModuleString mod = CEP.prettyPrint cesModule
+compileModuleString :: HPR.Module -> Err String
+compileModuleString mod = Ok $ CEP.prettyPrint cesModule
   where cesModule = compileModule mod
 
 -- |The 'compileModule' function compiles a Hopper Module
