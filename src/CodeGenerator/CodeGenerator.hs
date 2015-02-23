@@ -63,19 +63,31 @@ compileType (ConType id ts) = undefined
 
 -- |The 'compileExp' function compiles an AST
 --  to a CoreErlang.Exp
---  EApp not implemented, ELambda might need verification
-compileAST :: AST -> CES.Exp
-compileAST (Named id)      = Var id
+--  Named and AppAst are implemented with parameterless functions in mind
+--  AppAST will rely on that the first AST in the first occurence of
+--  an AppAST will be a function identifier
+compileAST :: AST -> Exp
+compileAST (Named id)      = App (Exp (Constr (Fun (Function (Atom id, 0))))) []
 compileAST (LitStr s)      = Lit (LString s)
 compileAST (LitInteger i)  = Lit (LInt i)
 compileAST (LitDouble d)   = Lit (LFloat d) -- No double constructor in CoreErlang
 compileAST (LitChar c)     = Lit (LChar c)
 compileAST (LamAST pats a) = Lambda (map compileLambdaPat pats) (CES.Exp (Constr (compileAST a)))
-compileAST (AppAST a1 a2)  = undefined 
+compileAST (AppAST a1 a2)  = App (Exp (Constr (Fun (Function (Atom id, arity))))) args
+  where arity      = toInteger $ length args
+        args       = compileAppArgs a2
+        (Named id) = a1
+
+compileAppArgs :: AST -> [Exps]
+compileAppArss a@(AppAST (Named id') a2) = App (Exp (Constr (compileAST a)))
+compileAppArgs (AppAST a1 a2)            = ann a1 ++ ann a2
+  where ann x = case x of
+                  (AppAST _ _)            -> compileAppArgs x
+                  _                       -> [Exp (Constr (compileAST x))]
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
-compileLambdaPat :: PatAST -> CES.Var
+compileLambdaPat :: PatAST -> Var
 compileLambdaPat (VarPat id) = id
 compileLambdaPat WildPat     = "_"
 
