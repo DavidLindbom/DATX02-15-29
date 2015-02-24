@@ -16,9 +16,10 @@ module CodeGenerator.BeamWriter (writeBeam) where
 import System.Cmd
 import System.Directory
 import System.IO
+import System.Process
 
 -- |The 'writeBeam' function compiles a .beam file from
---  the given abstract Language.CoreErlang.Syntax.Module
+--  the given core erlang code string
 --  using the erlc program
 writeBeam :: String -> String -> Bool -> IO ()
 writeBeam path code keepCore = 

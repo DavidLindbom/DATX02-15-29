@@ -11,7 +11,7 @@ import Parser.ParHopper
 import Parser.LayoutHopper
 import Parser.ErrM
 
-import Renamer.Renamer
+import Renamer.Renamer (transformModule)
 import CodeGenerator.CodeGenerator
 import CodeGenerator.BeamWriter
 
@@ -81,7 +81,6 @@ main' args = do
             writeBeam f' c (Core `elem` opts)
 
   write "Done!"
-
   where 
     argparse argv = case (getOpt Permute options argv) of
                       (o,n,[] ) -> return (o,n)
