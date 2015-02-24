@@ -58,7 +58,7 @@ main' args = do
         write $ "Wrote parse file to " ++ f' ++ ".parse.hpr"
 
       -- Convert to AST
-      let astE = treeE >>= collectDefs
+      let astE = treeE >>= transformModule
 
       -- Typechecker
       -- todo
