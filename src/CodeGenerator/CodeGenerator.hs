@@ -54,7 +54,16 @@ compileExport m (ExportAST eId) = CES.Function (CES.Atom eId, getArity eId m)
 --  to a CoreErlang.FunDef
 compileFun :: DefAST (Maybe TypeAST) -> CES.FunDef
 compileFun (DefAST fId t ast) = 
-  FunDef (Constr (Function (CES.Atom fId, typeToArity t))) (Constr (compileAST (LamAST [] ast)))
+  FunDef (Constr (Function (CES.Atom fId, typeToArity t))) (Constr (compileAST ast' []))
+  where ast' = if isLambda ast
+                  then ast
+                  else (LamAST [] ast)
+
+isLambda :: AST -> Bool
+isLambda (LamAST _ _) = True
+isLambda _            = False
+
+-- The empty lists here will be changed when we deal with parameters
 
 -- |The 'compileType' function compiles a TypeAST
 --  to CoreErlang data
@@ -68,31 +77,43 @@ compileType (ConType _cId _ts) = undefined
 --  Named and AppAst are implemented with parameterless functions in mind
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
-compileAST :: AST -> Exp
-compileAST (Named nId)     = App (Exp (Constr (Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
-compileAST (LitStr s)      = Lit (LString s)
-compileAST (LitInteger i)  = Lit (LInt i)
-compileAST (LitDouble d)   = Lit (LFloat d) -- No double constructor in CoreErlang
-compileAST (LitChar c)     = Lit (LChar c)
-compileAST (LamAST pats a) = Lambda (map compileLambdaPat pats) (CES.Exp (Constr (compileAST a)))
-compileAST (AppAST a1 a2)  = App (Exp (Constr (Fun (Function (Atom nId, arity))))) args
+compileAST :: AST -> [PatAST] -> Exp
+compileAST (Named nId)     s = 
+  if isIdBound nId s
+    then Var $ compileLambdaPat (VarPat nId)
+    else App (Exp (Constr (Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
+compileAST (LitStr s)      _ = Lit (LString s)
+compileAST (LitInteger i)  _ = Lit (LInt i)
+compileAST (LitDouble d)   _ = Lit (LFloat d) -- No double constructor in CoreErlang
+compileAST (LitChar c)     _ = Lit (LChar c)
+compileAST (LamAST pats a) s = Lambda (map compileLambdaPat pats) (Exp (Constr (compileAST a (pats++s))))
+compileAST (AppAST a1 a2)  _ = App (Exp (Constr (Fun (Function (Atom nId, arity))))) args
   where arity       = toInteger $ length args
         args        = compileAppArgs a2
         (Named nId) = a1
 
+-- |The 'compileAppArgs' function compiles a chain
+--  of AST's in the form of AppAST to a list of expressions
 compileAppArgs :: AST -> [Exps]
-compileAppArgs a@(AppAST (Named _) _) = [Exp (Constr (compileAST a))]
+compileAppArgs a@(AppAST (Named _) _) = [Exp (Constr (compileAST a []))]
 compileAppArgs (AppAST a1 a2)         = ann a1 ++ ann a2
   where ann x = case x of
                   (AppAST _ _)            -> compileAppArgs x
-                  _                       -> [Exp (Constr (compileAST x))]
-compileAppArgs ast = [Exp (Constr (compileAST ast))]
+                  _                       -> [Exp (Constr (compileAST x []))]
+compileAppArgs ast = [Exp (Constr (compileAST ast []))]
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
 compileLambdaPat :: PatAST -> Var
 compileLambdaPat (VarPat vId) = '_':vId -- _ garantuees valid core erlang variable name
 compileLambdaPat WildPat     = "_"
+
+isIdBound :: String -> [PatAST] -> Bool
+isIdBound _ [] = False
+isIdBound i ((VarPat i'):pats)
+  | i == i' = True
+  | otherwise  = isIdBound i pats
+isIdBound i (_:pats) = isIdBound i pats
 
 -- |The 'getArity' function gets the arity of the function
 --  with the given id in the given ModuleAST
