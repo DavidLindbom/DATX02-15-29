@@ -4,14 +4,14 @@ Description : Generates CoreErlang
 Copyright   : -
 License     : -
 Status      : Partly implemented. As of now this module works with the
-              datatypes described in AbsGrammar.hs. This module should
+              datatypes described in AST.hs. This module should
               be translated to work with a processed version of these
               datatypes with (but not limited to) unitized annotated
               function definitions. This module expects every function to
               have a signature.
 
 Module that generates CoreErlang code from an 
-abstract module as seen in AbsGrammar.hs
+abstract module as seen in AST.hs
 
 This module is part of the HPR.language project
 -}
@@ -57,13 +57,13 @@ compileFun (DefAST fId t ast) =
   FunDef (Constr (Function (CES.Atom fId, typeToArity t))) (Constr (compileAST ast' []))
   where ast' = if isLambda ast
                   then ast
-                  else (LamAST [] ast)
+                  else LamAST [] ast
+-- The empty lists here will be changed when we deal with parameters
 
+-- |The 'isLambda' function checks if an AST is a lambda
 isLambda :: AST -> Bool
 isLambda (LamAST _ _) = True
 isLambda _            = False
-
--- The empty lists here will be changed when we deal with parameters
 
 -- |The 'compileType' function compiles a TypeAST
 --  to CoreErlang data
@@ -108,9 +108,11 @@ compileLambdaPat :: PatAST -> Var
 compileLambdaPat (VarPat vId) = '_':vId -- _ garantuees valid core erlang variable name
 compileLambdaPat WildPat     = "_"
 
+-- |The 'isIdBound' checks if the given id is
+--  bound in the given scope
 isIdBound :: String -> [PatAST] -> Bool
 isIdBound _ [] = False
-isIdBound i ((VarPat i'):pats)
+isIdBound i (VarPat i':pats)
   | i == i' = True
   | otherwise  = isIdBound i pats
 isIdBound i (_:pats) = isIdBound i pats
