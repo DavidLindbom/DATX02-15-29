@@ -28,7 +28,7 @@ import AST.AST
 compileModule :: ModuleAST (Maybe TypeAST) -> CES.Module
 compileModule cMod@(ModuleAST mId exports defs) = CES.Module (Atom mId) es attribs ds
   where es      = compileExports exports cMod
-        ds      = (map compileFun defs) ++ generateModuleInfo mId
+        ds      = map compileFun defs ++ generateModuleInfo mId
         attribs = [] -- Not using attributes now
 
 -- |The 'compileModuleString' function compiles a ModuleAST
@@ -40,7 +40,7 @@ compileModuleString m = Ok $ CEP.prettyPrint cesModule
 -- |The 'compileExports' function compiles a list of ExportAST
 --  to a list of CoreErlang.Syntax.Function
 compileExports :: [ExportAST] -> ModuleAST (Maybe TypeAST) -> [CES.Function]
-compileExports es m = (map (compileExport m) es) ++ [mi0,mi1]
+compileExports es m = map (compileExport m) es ++ [mi0,mi1]
   where mi0  = CES.Function (name,0)
         mi1  = CES.Function (name,1)
         name = CES.Atom "module_info"
@@ -91,7 +91,7 @@ compileAppArgs ast = [Exp (Constr (compileAST ast))]
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
 compileLambdaPat :: PatAST -> Var
-compileLambdaPat (VarPat vId) = "_"++vId -- _ garantuees valid core erlang variable name
+compileLambdaPat (VarPat vId) = '_':vId -- _ garantuees valid core erlang variable name
 compileLambdaPat WildPat     = "_"
 
 -- |The 'getArity' function gets the arity of the function
