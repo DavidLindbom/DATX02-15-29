@@ -27,9 +27,7 @@ import AST.AST
 --  to a CoreErlang.Syntax.Module
 compileModule :: ModuleAST (Maybe TypeAST) -> CES.Module
 compileModule cMod@(ModuleAST mId exports defs) = CES.Module (Atom mId) es attribs ds
-  where attribs = case es of 
-                    [] -> [(Atom "compile", CLit (LAtom (Atom "export_all")))]
-                    _  -> []
+  where attribs = []
         es      = compileExports exports cMod
         ds      = map compileFun defs ++ generateModuleInfo mId
 
