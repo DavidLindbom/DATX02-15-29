@@ -13,20 +13,20 @@ Status      : Partly implemented. As of now this module works with the
 Module that generates CoreErlang code from an 
 abstract module as seen in AST.hs
 
-This module is part of the HPR.language project
+This module is part of the Hopper language project
 -}
 
 module CodeGenerator.CodeGenerator where
 
-import Language.CoreErlang.Syntax as CES
-import Language.CoreErlang.Pretty as CEP
+import Language.CoreErlang.Syntax
+import Language.CoreErlang.Pretty
 import Parser.ErrM
 import AST.AST
 
 -- |The 'compileModule' function compiles a ModuleAST
 --  to a CoreErlang.Syntax.Module
-compileModule :: ModuleAST (Maybe TypeAST) -> CES.Module
-compileModule cMod@(ModuleAST mId exports defs) = CES.Module (Atom mId) es attribs ds
+compileModule :: ModuleAST (Maybe TypeAST) -> Module
+compileModule cMod@(ModuleAST mId exports defs) = Module (Atom mId) es attribs ds
   where attribs = []
         es      = compileExports exports cMod
         ds      = map compileFun defs ++ generateModuleInfo mId
@@ -34,36 +34,31 @@ compileModule cMod@(ModuleAST mId exports defs) = CES.Module (Atom mId) es attri
 -- |The 'compileModuleString' function compiles a ModuleAST
 --  to a Core Erlang code string
 compileModuleString :: ModuleAST (Maybe TypeAST) -> Err String
-compileModuleString m = Ok $ CEP.prettyPrint cesModule
+compileModuleString m = Ok $ prettyPrint cesModule
   where cesModule = compileModule m
 
 -- |The 'compileExports' function compiles a list of ExportAST
 --  to a list of CoreErlang.Syntax.Function
-compileExports :: [ExportAST] -> ModuleAST (Maybe TypeAST) -> [CES.Function]
+compileExports :: [ExportAST] -> ModuleAST (Maybe TypeAST) -> [Function]
 compileExports es m = map (compileExport m) es ++ [mi0,mi1]
-  where mi0  = CES.Function (name,0)
-        mi1  = CES.Function (name,1)
-        name = CES.Atom "module_info"
+  where mi0  = Function (name,0)
+        mi1  = Function (name,1)
+        name = Atom "module_info"
 
 -- |The 'compileExport' function compiles an ExportAST
 --  to a CoreErlang.Syntax.Function
-compileExport :: ModuleAST (Maybe TypeAST) -> ExportAST -> CES.Function
-compileExport m (ExportAST eId) = CES.Function (CES.Atom eId, getArity eId m)
+compileExport :: ModuleAST (Maybe TypeAST) -> ExportAST -> Function
+compileExport m (ExportAST eId) = Function (Atom eId, getArity eId m)
 
 -- |The 'compileFun' function compiles a DefAST
 --  to a CoreErlang.FunDef
-compileFun :: DefAST (Maybe TypeAST) -> CES.FunDef
+compileFun :: DefAST (Maybe TypeAST) -> FunDef
 compileFun (DefAST fId t ast) = 
-  FunDef (Constr (Function (CES.Atom fId, typeToArity t))) (Constr (compileAST ast' []))
-  where ast' = if isLambda ast
-                  then ast
-                  else LamAST [] ast
+  FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileAST ast' []))
+  where ast' = case ast of
+                 (LamAST _ _) -> ast
+                 _            -> LamAST [] ast
 -- The empty lists here will be changed when we deal with parameters
-
--- |The 'isLambda' function checks if an AST is a lambda
-isLambda :: AST -> Bool
-isLambda (LamAST _ _) = True
-isLambda _            = False
 
 -- |The 'compileType' function compiles a TypeAST
 --  to CoreErlang data
