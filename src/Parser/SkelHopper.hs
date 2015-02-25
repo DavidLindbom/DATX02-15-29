@@ -45,6 +45,7 @@ transType :: Type -> Result
 transType x = case x of
   TName idcon  -> failure x
   TVar idvar  -> failure x
+  TFun type' types  -> failure x
 
 
 transExp :: Exp -> Result

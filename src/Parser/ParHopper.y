@@ -76,6 +76,7 @@ Def : IdVar '::' ListType { DSig $1 $3 }
 Type :: { Type }
 Type : IdCon { TName $1 } 
   | IdVar { TVar $1 }
+  | '(' Type '->' ListType ')' { TFun $2 $4 }
 
 
 ListType :: { [Type] }

@@ -75,6 +75,7 @@ All other symbols are terminals.
   |  |  **|**  | //IdVar// ``=`` ``{`` //Exp// ``}`` 
   | //Type// | -> | //IdCon// 
   |  |  **|**  | //IdVar// 
+  |  |  **|**  | ``(`` //Type// ``->`` //[Type]// ``)`` 
   | //[Type]// | -> | //Type// 
   |  |  **|**  | //Type// ``->`` //[Type]// 
   | //Exp2// | -> | //IdVar// 
