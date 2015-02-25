@@ -1,0 +1,88 @@
+module CodeGenTests (codeGenTests) where
+
+import Test.HUnit hiding (Test)
+
+import Test.Framework
+import Test.Framework.Providers.HUnit
+
+import AST.AST
+import Parser.PrintHopper
+import Parser.ErrM
+import CodeGenerator.CodeGenerator
+import CodeGenerator.BeamWriter
+import Language.CoreErlang.Syntax as CES
+import Language.CoreErlang.Pretty as CEP
+import System.Directory
+import System.Process
+import System.IO
+
+-- |Test that verifies the quality of the code generator
+codeGenTests :: [Test]
+codeGenTests =
+  [ testCase "Testing compiling and running beam" testCompiled ] ++
+  [ testCase "Testing getTypeSig" (testGetTypeSig id (tSig id)) | id <- ["i", "s"] ] ++
+  [ testCase "Testing getArity" (testGetArity id ar) | (id,ar) <- [("i",0),("s",0)] ]
+
+-- |Test that a module compiles and functions as expected
+testCompiled :: Assertion
+testCompiled =
+  case cm of
+    (Ok cesMod) ->
+      do writeBeam modName cesMod False
+         resultI <- readProcess "erl" (pArgs "i") ""
+         resultS <- readProcess "erl" (pArgs "s") ""
+         removeFile $ modName ++ ".beam"
+         if resultI == "10" && resultS == "\"test\"" --Erlangs ~p printing prints strings with surrounding ""
+            then return ()
+            else assertFailure $ failmsg resultI resultS
+    (Bad s) -> do assertFailure s
+  where modName = "CodeGenTest"
+        cm = compileModuleString tModule
+        failmsg i s = "Expected output: 10 and test, got: " ++ i ++ " and " ++ s
+        pArgs f = [ "-noshell"
+                  , "-eval" 
+                  , "io:format(\"~p\", [\'" ++ modName ++ "\':" ++ f ++ "()]),init:stop()"
+                  ]
+
+-- |Test that checks that the getSig function
+--  return the correct Def DSig for the function with
+--  the given id
+testGetTypeSig :: String -> Maybe TypeAST -> Assertion
+testGetTypeSig id expectedSig =
+  if receivedSig == expectedSig
+     then return ()
+     else assertFailure $ failmsg expectedSig receivedSig
+  where receivedSig   = getTypeSig id tModule
+        failmsg s1 s2 ="Expected sig:\n" ++ show s1 ++ "\nGot:\n" ++ show s2
+
+-- |Test that checks that the getArity function
+--  return the correct arity for the function with
+--  the given id
+testGetArity :: String -> Integer -> Assertion
+testGetArity id expectedArity =
+  if receivedArity == expectedArity
+     then return ()
+     else assertFailure $ failmsg expectedArity receivedArity
+  where receivedArity = getArity id tModule
+        failmsg x y   = "Expected arity: " ++ show x ++ " got: " ++ show y
+
+-- |Returns a function signature to use in testing
+--  with the given id
+tSig :: String -> Maybe TypeAST
+tSig "i" = Just (ConType "Int" [])
+tSig "s" = Just (ConType "String" [])
+
+-- |Returns a module to use when testing
+--  actual compilation
+tModule :: ModuleAST (Maybe TypeAST)
+tModule = ModuleAST "CodeGenTest"
+            [ ExportAST "i"
+            , ExportAST "s"
+            ]
+            [ DefAST "i"
+                (Just (ConType "Int" []))
+                (LitInteger 10)
+            , DefAST "s"
+                (Just (ConType "String" []))
+                (LitStr "test")
+            ]

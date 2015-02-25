@@ -15,8 +15,7 @@ module CodeGenerator.BeamWriter (writeBeam) where
 
 import System.Cmd
 import System.Directory
-import System.IO
-import System.Process
+import Control.Monad
 
 -- |The 'writeBeam' function compiles a .beam file from
 --  the given core erlang code string
@@ -24,8 +23,8 @@ import System.Process
 writeBeam :: String -> String -> Bool -> IO ()
 writeBeam path code keepCore = 
   do writeFile coreFile code
-     rawSystem "erlc" [coreFile]
-     if keepCore then return () else removeFile coreFile
+     _ <- rawSystem "erlc" [coreFile]
+     unless keepCore $ removeFile coreFile
   where coreFile = path ++ ".core"
 
 
