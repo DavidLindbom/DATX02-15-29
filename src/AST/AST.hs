@@ -20,14 +20,14 @@ data Literal = LS String
   deriving (Show)
 
 data Function a = Fun Identifier a [Expression a] -- Function arguments is desugared to lambdas
-                | Unc Identifier a [Expression a] -- Uncurried functions, just for code generation
   deriving (Show)
 
 type Signature = [Type]
 
-data Type = TName String -- [Type]
-          | TVar  String -- [Type]
-  deriving (Show) -- Should be recursive later for parametrized algebraic data types?
+data Type = TName String [Type]
+          | TVar  String
+          | TFun  [Type] -- For functions as arguments
+  deriving (Show)
 
 data Pattern = PVar Identifier
              | PCon Constructor
