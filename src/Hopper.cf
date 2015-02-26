@@ -19,6 +19,7 @@ internal DCollected. Def ::= IdVar ": (" Def ")" [Def];
 -- Types
 TName. Type ::= IdCon;
 TVar.  Type ::= IdVar;
+TFun.  Type ::= "(" Type "->" [Type] ")";
 separator nonempty Type "->";
 
 -- Expressions
