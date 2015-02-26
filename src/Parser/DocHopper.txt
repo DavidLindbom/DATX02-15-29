@@ -53,7 +53,7 @@ The reserved words used in Hopper are the following:
 The symbols used in Hopper are the following:
   | ( | ) | ; | ,
   | :: | = | { | }
-  | : ( | -> | \ | _
+  | -> | \ | _ | 
 
 ===Comments===
 Single-line comments begin with --.Multiple-line comments are  enclosed with {- and -}.

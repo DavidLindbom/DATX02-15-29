@@ -6,7 +6,6 @@ module Parser.PrintHopper where
 import Parser.AbsHopper
 import Data.Char
 
-import Prelude hiding (exp)
 
 -- the top-level printing method
 printTree :: Print a => a -> String
@@ -110,7 +109,6 @@ instance Print Def where
   prt i e = case e of
    DSig idvar types -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "::") , prt 0 types])
    DFun idvar exp -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "=") , doc (showString "{") , prt 0 exp , doc (showString "}")])
-   DCollected idvar def defs -> prPrec i 0 (concatD [prt 0 idvar , doc (showString ": (") , prt 0 def , doc (showString ")") , prt 0 defs])
 
   prtList es = case es of
    [] -> (concatD [])
