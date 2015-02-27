@@ -1,92 +1,150 @@
-module Renamer.Renamer (transformModule) where
+module Renamer.Renamer (transform) where
 
 import qualified Data.Map as M
-import Control.Monad (foldM)
+import Control.Monad 
 
-import Parser.AbsHopper
-import AST.AST
-import Parser.ErrM
+import Parser.AbsHopper as HPR
+import AST.AST as AST
+import Parser.ErrM --Utils.ErrM
+import Utils.PrettyPrint
 
-transformModule :: Module -> Err (ModuleAST (Maybe TypeAST))
-transformModule (MModule (IdCon mname) exports defs) = do
+transform :: HPR.Module -> Err (AST.Module (Maybe Signature))
+transform (MModule (IdCon name) expo defs) = do
   defs' <- transformDefs defs
-  return $ ModuleAST mname (map exportToAST exports) defs'
+  mapM_ checkLonelySignatures defs'
+  expo' <- case expo of
+            [] -> return $ map (\(Fun n _ _) -> n) defs'
+            _  -> transformExports expo
+  checkExports expo' defs'
+  return $ Mod name expo' defs'
 
-exportToAST :: Export -> ExportAST
-exportToAST (MExport (IdVar s)) = ExportAST s
 
-transformDefs :: [Def] -> Err [DefAST (Maybe TypeAST)]
+
+--
+-- All transform* functions is a transform from the parse tree to AST
+--
+
+transformExports :: [Export] -> Err [Identifier]
+transformExports exps = Ok $ map (\(MExport (IdVar s)) -> s) exps
+ 
+transformDefs :: [Def] -> Err [Function (Maybe Signature)]
 transformDefs defs = do
-  sigm <- findSigs defs
-  funs <- findFuns defs sigm
-  return $ M.foldrWithKey go [] funs
+  funs <- foldM go M.empty defs 
+  return $ M.elems funs
   where
-    go :: Def -> [Def] -> [DefAST (Maybe TypeAST)] -> [DefAST (Maybe TypeAST)]
-    go sig funs acc =
-       (defsToAST sig funs) : acc
+    go :: M.Map Identifier (Function (Maybe Signature)) -> Def
+       -> Err (M.Map Identifier (Function (Maybe Signature)))
+    go m (DSig (IdVar i) t) = 
+      case M.lookup i m of
+        Nothing                -> return $ M.insert i (Fun i (Just $ transformTypes t) []) m
+        Just (Fun _ Nothing e) -> return $ M.insert i (Fun i (Just $ transformTypes t) e) m
+        _                      -> fail $ "Multiple signatures for '" ++ i ++ "'"
+    
+    go m (DFun (IdVar i) e) = do
+      e' <- transformExp e
+      case M.lookup i m of
+        Nothing           -> return $ M.insert i (Fun i Nothing [e']) m
+        Just (Fun _ t es) -> return $ M.insert i (Fun i t (es ++ [e'])) m
 
-findSigs :: [Def] -> Err (M.Map IdVar Def)
-findSigs defs =
-  foldM go M.empty defs
+
+transformTypes :: [HPR.Type] -> Signature
+transformTypes = map go
   where
-    go :: M.Map IdVar Def -> Def -> Err (M.Map IdVar Def)
-    go m (DFun _ _)      = return m
-    go m def@(DSig id _) =
-      case M.lookup id m of
-           Nothing -> return $ M.insert id def m
-           Just _  -> fail $ "Multiple signatures for " ++ show id
+    go :: HPR.Type -> AST.Type
+    go (HPR.TName (IdCon a)) = AST.TName a []
+    go (HPR.TVar  (IdVar a)) = AST.TVar a
+    go (HPR.TFun t ts)       = AST.TFun (go t:map go ts)
 
-findFuns :: [Def] -> M.Map IdVar Def -> Err (M.Map Def [Def])
-findFuns defs sigm =
-  foldM go M.empty (reverse defs)
-  where
-    go m (DSig _ _)      = return m
-    go m def@(DFun id _) =
-      case M.lookup id sigm of
-           Nothing  -> fail $ "Function " ++ show id ++
-                              " defined without " ++ "matching signature"
-           Just sig -> return $ M.insertWith insfun sig [def] m
-    insfun :: [a] -> [a] -> [a]
-    insfun [new] old = new : old
 
---           sig    bindings
-defsToAST :: Def -> [Def] -> DefAST (Maybe TypeAST)
-defsToAST (DSig (IdVar id) ts) (DFun _ ex : ds) =
-  -- TODO when grammar has progressed: transform multiple bindings with
-  -- pattern matching into case here. currently we do not have pattern
-  -- matching in function bindings (since we do not have arguments), so the
-  -- current behaviour is to take the first binding and disregard all
-  -- following ones. E.g.:
-  -- f :: Int
-  -- f = 2
-  -- f = 4
-  -- Here, "f = 4" is thrown away.
-  DefAST id (Just $ typesToAST ts) (expToAST ex)
+-- Questions: 
+-- * Should we add some type inference here? At least on literals?
+-- * Should EOpr be special in some way?
+transformExp :: Exp -> Err (Expression (Maybe Signature))
+transformExp e = case e of
+  HPR.EVar (IdVar i) -> Ok $ AST.EVar Nothing i
+  HPR.ECon (IdCon i) -> Ok $ AST.ECon Nothing i
+  EOpr (IdOpr i)     -> Ok $ AST.EVar Nothing i
 
-typesToAST :: [Type] -> TypeAST
-typesToAST [t] = typeToAST t
-typesToAST ts  = ConType "->" (map typeToAST ts)
+  EString s          -> Ok $ ELit (Just [AST.TName "String"  []]) $ LS s
+  EChar c            -> Ok $ ELit (Just [AST.TName "Char"    []]) $ LC c
+  EInteger i         -> Ok $ ELit (Just [AST.TName "Integer" []]) $ LI i
+  EDouble d          -> Ok $ ELit (Just [AST.TName "Double"  []]) $ LD d
 
--- helper
-typeToAST :: Type -> TypeAST
-typeToAST (TName (IdCon t)) = ConType t []
-typeToAST (TVar (IdVar v))  = VarType v
+  EInfix a op b      -> (transformExp $ EOpr op) `app` (transformExp a) `app` (transformExp b)
+  HPR.EApp a b       -> (transformExp a) `app` (transformExp b)
+  HPR.ELambda ps a   -> do a'  <- transformExp a 
+                           ps' <- mapM transformPat ps 
+                           return $ AST.ELambda Nothing ps' a' 
+  where app (Bad m) _      = Bad m
+        app _      (Bad m) = Bad m 
+        app (Ok a) (Ok b)  = Ok $ AST.EApp Nothing a b
 
-expToAST :: Exp -> AST
-expToAST e = case e of (EVar (IdVar s)) -> Named s
-                       (ECon (IdCon s)) -> Named s
-                       (EOpr (IdOpr s)) -> Named s
-                       (EString s) -> LitStr s
-                       (EChar c) -> LitChar c
-                       (EInteger i) -> LitInteger i
-                       (EDouble d) -> LitDouble d
-                       (EInfix e1 (IdOpr op) e2) -> (Named op) `AppAST` 
-                                                    expToAST e1 `AppAST`
-                                                    expToAST e2
-                       (EApp f x) -> AppAST (expToAST f) $ expToAST x
-                       (ELambda ps x) -> LamAST (map patToAST ps) $ expToAST x
+transformPat :: Pat -> Err Pattern
+transformPat p = case p of
+  HPR.PCon (IdCon i) -> Ok $ AST.PCon i
+  HPR.PVar (IdVar i) -> Ok $ AST.PVar i
+  HPR.PWild          -> Ok AST.PWild
+  -- TODO add literal pattern
 
-patToAST :: Pat -> PatAST
-patToAST (PCon (IdCon s)) = VarPat s -- this is probably not what we want to do!
-patToAST (PVar (IdVar s)) = VarPat s
-patToAST PWild = WildPat
+
+--
+-- Helper functions
+--
+
+checkLonelySignatures :: Function (Maybe Signature) -> Err ()
+checkLonelySignatures (Fun i (Just s) []) = Bad $ "Lonley signature '" ++ i ++ " :: " ++ showSignature s ++ "'" 
+checkLonelySignatures _ = Ok ()
+
+-- | Check that there is a definition for all exported functions
+checkExports :: [Identifier] -> [Function a] -> Err ()
+checkExports ids fs = sequence_ $ map exists ids
+  where exists i = if any (\(Fun f _ _) -> f == i) fs
+                  then Ok ()
+                  else Bad $ "Undefined export '" ++ i ++ "'"
+
+
+
+{-
+
+untransformed :: HPR.Module
+untransformed = MModule (IdCon "MyModule") e f
+ where e = [MExport (IdVar "a"),MExport (IdVar "b")] 
+       f = [DSig (IdVar "a") [HPR.TName (IdCon "Int")
+                             ,HPR.TVar (IdVar "b")
+                             ,HPR.TName (IdCon "Bool")
+                             ,HPR.TName (IdCon "Int")]
+           ,DFun (IdVar "a") (HPR.ELambda [HPR.PWild
+                                          ,HPR.PWild
+                                          ,HPR.PCon (IdCon "True")] (EInteger 0))
+           ,DFun (IdVar "a") (HPR.ELambda [HPR.PVar (IdVar "n")
+                                          ,HPR.PWild
+                                          ,HPR.PWild] (HPR.EVar (IdVar "n")))
+           ,DFun (IdVar "b") (HPR.EApp 
+                               (HPR.EApp 
+                                 (HPR.EApp (HPR.EVar (IdVar "a")) 
+                                           (EInteger 4)) 
+                                 (EChar 'c')) 
+                               (HPR.ECon (IdCon "False")))]
+
+            
+transformed = Mod "MyModule" e f 
+  where e = ["a","b"] 
+        f = [Fun "a" (Just [AST.TName "Int" []
+                           ,AST.TVar "b"
+                           ,AST.TName "Bool" []
+                           ,AST.TName "Int" []]) 
+              [AST.ELambda Nothing [AST.PWild
+                                   ,AST.PWild
+                                   ,AST.PCon "True"] (ELit (Just [AST.TName "Integer" []]) (LI 0))
+              ,AST.ELambda Nothing [AST.PVar "n"
+                                   ,AST.PWild
+                                   ,AST.PWild] (AST.EVar Nothing "n")]
+            ,Fun "b" Nothing [AST.EApp Nothing 
+                              (AST.EApp Nothing 
+                                (AST.EApp Nothing 
+                                  (AST.EVar Nothing "a") 
+                                  (ELit (Just [AST.TName "Integer" []]) (LI 4))) 
+                                (ELit (Just [AST.TName "Char" []]) (LC 'c'))) 
+                              (AST.ECon Nothing "False")]]
+
+--}

@@ -10,6 +10,13 @@ import Parser.PrintHopper
 import Parser.ErrM
 import Renamer.Renamer
 
+--
+-- TODO: New tests
+-- * Multiple signatures
+-- * Missing signature
+-- * Keeping order 
+--
+
 renameTests :: [Test]
 renameTests =
   [testCase s (doRenameTest ms) | (s,ms) <- [("Basic rename", (in1, out1))]]

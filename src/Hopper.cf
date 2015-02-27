@@ -13,11 +13,10 @@ separator nonempty Export ",";
 separator Def ";";
 
 DSig. Def ::= IdVar "::" [Type];
-DFun. Def ::= IdVar "=" "{" Exp "}";
-internal DCollected. Def ::= IdVar ": (" Def ")" [Def];
+DFun. Def ::= IdVar "=" "{" Exp "}"; -- TODO: Add function parameters
 
 -- Types
-TName. Type ::= IdCon;
+TName. Type ::= IdCon; -- Todo: Add parameters here
 TVar.  Type ::= IdVar;
 TFun.  Type ::= "(" Type "->" [Type] ")";
 separator nonempty Type "->";
@@ -40,7 +39,7 @@ coercions Exp 2;
 -- Patterns
 PCon.  Pat ::= IdCon;
 PVar.  Pat ::= IdVar;
-PWild. Pat ::= "_";
+PWild. Pat ::= "_"; -- TODO: Add literal patterns
 
 terminator nonempty Pat "";
 
