@@ -39,11 +39,15 @@ data Pattern = PVar Identifier
              | PWild  
   deriving (Eq,Ord,Show) -- Should be recursive later for nested lists ect
 
-data Expression a = EVar a Identifier
+data Expression a = EVar a Identifier -- TODO: Add EVal for fully applied functions when we have adts
                   | ECon a Constructor
                   | ELit a Literal
                   | ELambda a [Pattern] (Expression a)
                   | EApp a (Expression a) (Expression a)
+                 -- | EWhere [Function a]
+                  | ECase [([Pattern], Expression a)] 
+                 -- | ECall a Identifier Identifier [Expression a]
+                 -- | ELet [Pattern] (Expression a) (Expression a)
   deriving (Eq,Ord,Show)
  
 

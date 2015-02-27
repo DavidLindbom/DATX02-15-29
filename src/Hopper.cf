@@ -30,7 +30,7 @@ EString.  Exp2 ::= String;
 EChar.    Exp2 ::= Char;
 EInteger. Exp2 ::= Integer;
 EDouble.  Exp2 ::= Double;
-EInfix.   Exp1 ::= Exp1 IdOpr Exp2;
+EInfix.   Exp1 ::= Exp1 IdOpr Exp2; -- TODO: Add infix with backticks
 EApp.     Exp1 ::= Exp1 Exp2;
 ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
 
