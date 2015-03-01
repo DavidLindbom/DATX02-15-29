@@ -18,3 +18,5 @@ rel/example_project
 src/Parser/LexHopper.hs
 src/Parser/ParHopper.hs
 *.bak
+.#*
+\#*#
