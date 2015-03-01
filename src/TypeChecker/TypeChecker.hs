@@ -18,6 +18,12 @@
 -- https://github.com/wh5a/Algorithm-W-Step-By-Step
 -- The type checking process of algorithm W:
 -- 1. 
+-- The AST described by Grabmüller is a subset of the one defined in Hopper.
+-- For instance there is a notion of module in Hopper where Grabmüller only
+-- type checks expressions one at a time. Another significant difference is that
+-- algorithm W only  
+-- 
+
 
 -- Appendix I:
 -- monotype - A fully specified type (Int, [String], Int -> Int, Map Char Char)
@@ -147,6 +153,17 @@ composeSubst :: Subst -> Subst -> Subst
 composeSubst s1 s2 = (Map.map (apply s1) s2) `Map.union` s1
 
 -- Type Environments
+{-
+Maybe use record for TypeEnv?
+
+newtype TypeEnv = TypeEnv {typeEnv :: Map.Map String Scheme}
+
+updateTypeEnv :: (TypeEnv -> TypeEnv) -> TypeEnv -> TypeEnv
+updateTypeEnv f env = env { typeEnv = f (typeEnv env) }
+
+updateTypeEnv (Map.delete name) env
+updateTypeEnv (Map.map (apply s)) env
+-}
 newtype TypeEnv = TypeEnv (Map.Map String Scheme)
 
 instance TTypes TypeEnv where
@@ -155,8 +172,18 @@ instance TTypes TypeEnv where
 
 -- remove
 -- removes the binding for type x from environment e
-remove :: TypeEnv -> String -> TypeEnv
-remove (TypeEnv e) x = TypeEnv (Map.delete x e)
+{-
+data Pattern = PVar Identifier
+             | PCon Constructor
+             | PLit Literal
+             | PWild  
+-}
+
+remove :: TypeEnv -> Pattern -> TypeEnv
+remove (TypeEnv e) p = case p of
+  PVar name -> TypeEnv (Map.delete name e)
+  PCon name -> TypeEnv (Map.delete name e)
+  _         -> TypeEnv e
 
 -- generalize
 generalize :: TypeEnv -> TType -> Scheme
@@ -165,10 +192,10 @@ generalize e t = Scheme vars t
 
 -- instantiation
 instantiate :: Scheme -> TI TType
-instantiate (Scheme vars t) = do
-  nvars <- mapM (\_ -> newTyVar "a") vars
-  let s = Map.fromList (zip vars nvars)
-  return $ apply s t
+instantiate (Scheme vars t) = 
+  do  nvars <- mapM (\_ -> newTyVar "a") vars
+      let s = Map.fromList (zip vars nvars)
+      return $ apply s t
 
 
 -- "Fresh names for newly introduced type variables"
@@ -180,39 +207,46 @@ data TIState = TIState{ tiSupply :: Int }
 type TI a = ExceptT String (ReaderT TIEnv (StateT TIState IO)) a
 
 runTI :: TI a -> IO (Either String a, TIState)
-runTI t = do
-  (res, st) <- runStateT (runReaderT (runExceptT t) initTIEnv) initTIState
-  return (res, st)
-    where
-      initTIEnv = TIEnv
-      initTIState = TIState{ tiSupply = 0 }
+runTI t = 
+  do (res, st) <- runStateT (runReaderT (runExceptT t) initTIEnv) initTIState
+     return (res, st)
+       where
+         initTIEnv = TIEnv
+         initTIState = TIState{ tiSupply = 0 }
 
 newTyVar :: String -> TI TType
-newTyVar prefix = do
-  s <- get
-  put s{ tiSupply = tiSupply s + 1 }
-  return (TTVar (prefix ++ show (tiSupply s)))
+newTyVar prefix = 
+  do s <- get
+     put s{ tiSupply = tiSupply s + 1 }
+     return (TTVar (prefix ++ show (tiSupply s)))
 
 -- Unification
 mgu :: TType -> TType -> TI Subst
-mgu (TTFun t1 t2) (TTFun t3 t4) = do
-                                s1 <- mgu t1 t3
-                                s2 <- mgu (apply s1 t2) (apply s1 t4)
-                                return (s1 `composeSubst` s2)
+mgu (TTFun t1 t2) (TTFun t3 t4) =
+  do s1 <- mgu t1 t3
+     s2 <- mgu (apply s1 t2) (apply s1 t4)
+     return (s1 `composeSubst` s2)
 mgu (TTVar s) t = varBind s t
 mgu t (TTVar s) = varBind s t
 mgu TTInt TTInt = return nullSubst
 mgu TTBool TTBool = return nullSubst
-mgu t1 t2 = throwE $ "types do not unify: " ++ show t1 ++ " vs. " ++
-              show t2
+mgu t1 t2 = throwE $ "types do not unify: " ++ show t1 ++ " vs. " ++ show t2
 
 varBind :: VarName -> TType -> TI Subst
-varBind s t | t == (TTVar s) = return nullSubst
-             | s `Set.member` ftv t = throwE $ "occurs check fails: " ++
-               s ++ " vs. " ++ show t
-             | otherwise = return (Map.singleton s t)
+varBind s t
+  | t == (TTVar s)       = return nullSubst
+  | s `Set.member` ftv t = throwE $ "occurs check fails: " ++ s
+                           ++ " vs. " ++ show t
+  | otherwise            = return (Map.singleton s t)
 
 -- Main type inference function
+
+{-
+data Literal = LS String
+             | LC Char
+             | LI Integer
+             | LD Double
+-}
 
 tiLit :: Literal -> TI (Subst, TType)
 tiLit (LS _) = undefined
@@ -229,7 +263,7 @@ ti (TypeEnv env) (EVar n)       = case Map.lookup n env of
 ti _   (ELit l)       = tiLit l
 ti env (ELambda n e)     = 
   do tv <- newTyVar "a"
-     let TypeEnv env' = remove env n
+     let TypeEnv env' = foldl remove env n 
          env'' = TypeEnv (env' `Map.union` (Map.singleton n (Scheme [] tv)))
      (s1,t1) <- ti env'' e
      return (s1, TTFun (apply s1 tv) t1)
@@ -239,7 +273,7 @@ ti env exp@(EApp e1 e2) =
      (s2,t2) <- ti (apply s1 env) e2
      s3 <- mgu (apply s2 t1) (TTFun t2 tv)
      return (s3 `composeSubst` s2 `composeSubst` s1, apply s3 tv)
-  `catchE` -- ah så hör till do typ?
+  `catchE`
   \e -> throwE $ e ++ "\n in " ++ show exp
 -- There is not ELet yet
 {-
@@ -251,6 +285,9 @@ ti env (ELet x e1 e2) =
      (s2,t2) <- ti (apply s1 env'') e2
      return (s1 `composeSubst` s2, t2) 
 -}
+
+
+
 
 typeInference :: Map.Map String Scheme -> Expression -> TI TType
 typeInference env e = do
