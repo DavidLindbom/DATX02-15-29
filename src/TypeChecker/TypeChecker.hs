@@ -56,6 +56,7 @@ import Control.Monad.State
 import qualified Text.PrettyPrint as PP
 
 import AST.AST
+import Parser.ErrM
 
 {-
 data Module a = Mod String [Identifier] [Function a]
@@ -89,22 +90,52 @@ data Expression a = EVar a Identifier
                   | ECase [([Pattern], Expression a)] 
 -}
 
-typeCheck :: Module (Maybe Signature) -> Module Signature
-typeCheck = noCheck
+typeCheck :: Module (Maybe Signature) -> Err (Module Signature)
+typeCheck m = Ok $ noCheck m
+
+
 
 -- noCheck performes no type checking, assumes given types are correct and
 -- simply substitutes every Nothing with the empty list. noCheck allows
 -- the type checker to be in the compiler pipeline while under development.
-noCheck :: Module (Maybe Signature) -> Module Signature
-noCheck (Mod name exported functions) = Mod name exported $ map subst functions
-  where
-    -- subs performs substitution in function definitions.
-    subst :: Function (Maybe Signature) -> Function Signature
-    subst (Fun ident mt exprs) = Fun ident (Maybe.fromMaybe [] mt) exprs
+noCheck :: Module (Maybe Signature) -> (Module Signature)
+noCheck (Mod name exported functions) =
+  return (Mod name exported $ map subst functions)
+    where
+      -- subs performs substitution in function definitions.
+      subst :: Function (Maybe Signature) -> Function Signature
+      subst (Fun ident mt exprs) = Fun ident (Maybe.fromMaybe [] mt) exprs
 
 -- Algorithm W adapted from "Algorithm W Step by Step"
 
--- Using Exp and Lit from AST
+-- awCheck maps the main inference function on the function expressions
+-- Build environment delta with top level functions and their respective schemes
+-- Type check the function definitions with delta.
+-- Fill in missing type signatures.
+{-
+data Function a = Fun Identifier a [Expression]
+Signature = [Type]
+newtype TypeEnv = TypeEnv (Map.Map String Scheme)
+mgu :: TType -> TType -> TI Subst
+-}
+awCheck :: Module (Maybe Signature) -> Err (Module Signature)
+awCheck (Mod name exported functions) = do
+  let
+    delta = foldl buildDelta emptyTypeEnv functions
+    typed = map (check delta) functions
+  Mod name exported typed
+    where
+      buildDelta :: TypeEnv -> Function (Maybe Signature) -> TypeEnv
+      buildDelta = undefined
+      check :: TypeEnv -> Function (Maybe Signature) -> Err (Function Signature)
+      check e (Fun fname Nothing es) = undefined -- ? 
+      check e (Fun fname (Just ts) es) = undefined -- ?
+-- ser du?
+
+-- Usantateg Exp and Lit from AST
+-- jo borde bli nått sånt. 
+-- typeInference :: Map.Map String Scheme -> Expression -> TI TType
+
 
 type VarName = String
 
@@ -170,6 +201,9 @@ instance TTypes TypeEnv where
   ftv (TypeEnv e)     = ftv (Map.elems e)
   apply s (TypeEnv e) = TypeEnv (Map.map (apply s) e)
 
+emptyTypeEnv :: TypeEnv
+emptyTypeEnv = TypeEnv Map.empty
+
 -- remove
 -- removes the binding for type x from environment e
 {-
@@ -178,7 +212,6 @@ data Pattern = PVar Identifier
              | PLit Literal
              | PWild  
 -}
-
 remove :: TypeEnv -> Pattern -> TypeEnv
 remove (TypeEnv e) p = case p of
   PVar name -> TypeEnv (Map.delete name e)
@@ -241,13 +274,6 @@ varBind s t
 
 -- Main type inference function
 
-{-
-data Literal = LS String
-             | LC Char
-             | LI Integer
-             | LD Double
--}
-
 tiLit :: Literal -> TI (Subst, TType)
 tiLit (LS _) = undefined
 tiLit (LC _) = undefined
@@ -261,12 +287,35 @@ ti (TypeEnv env) (EVar n)       = case Map.lookup n env of
     do t <- instantiate sigma
        return (nullSubst, t)
 ti _   (ELit l)       = tiLit l
+-- awsbs assumes lambda only abstracts over one argument at a time.
+-- Hopper allows lambdas which abstract over a list of arguments.
+-- Possible adaptions:
+-- - Change ast in a prestep to conform to awsbs
+-- - Change ti of ELambda to work with the entire list
+-- - Change ti of ELambda to work only with the head of the list then
+--   solve the rest of the list recursively (recreate the node without head)
+-- Current solution is the last of the three
+ti env (ELambda [] e)     = ti env e
+ti env (ELambda (p:ps) e) =
+  do tv <- newTyVar "a"
+     let TypeEnv env' = remove env p
+     env'' <- case p of
+       PVar name ->
+         return $ TypeEnv (env' `Map.union` Map.singleton name (Scheme [] tv))
+       PCon name ->
+         return $ TypeEnv (env' `Map.union` Map.singleton name (Scheme [] tv))
+       PLit _    -> throwE "Cannot abstract over literal"
+       PWild     -> throwE "Cannot abstract over wild"
+     (s1,t1) <- ti env'' (ELambda ps e) -- under construction
+     return (s1, TTFun (apply s1 tv) t1)
+{-
 ti env (ELambda n e)     = 
   do tv <- newTyVar "a"
      let TypeEnv env' = foldl remove env n 
          env'' = TypeEnv (env' `Map.union` (Map.singleton n (Scheme [] tv)))
      (s1,t1) <- ti env'' e
      return (s1, TTFun (apply s1 tv) t1)
+-}
 ti env exp@(EApp e1 e2) =
   do tv <- newTyVar "a"
      (s1,t1) <- ti env e1
@@ -287,8 +336,6 @@ ti env (ELet x e1 e2) =
 -}
 
 
-
-
 typeInference :: Map.Map String Scheme -> Expression -> TI TType
 typeInference env e = do
   (s, t) <- ti (TypeEnv env) e
@@ -304,7 +351,7 @@ instance Show TType where
       prType TTInt         = PP.text "Int"
       prType TTBool        = PP.text "Bool"
       prType (TTFun t1 t2) = prParenType t1 PP.<+> PP.text "->" PP.<+> prType t2
-      prParenType :: TType -> PP.Doc
+      prParenType :: TType -> PP.Doc 
       prParenType t = case t of
         TTFun _ _ -> PP.parens (prType t)
         _         -> prType t
