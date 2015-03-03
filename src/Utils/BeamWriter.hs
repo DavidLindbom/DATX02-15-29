@@ -11,7 +11,7 @@ abstract module as seen in Language.CoreErlang.Syntax
 This module is part of the Hopper language project
 -}
 
-module CodeGenerator.BeamWriter (writeBeam) where
+module Utils.BeamWriter (writeBeam) where
 
 import System.Cmd
 import System.Directory
