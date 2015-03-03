@@ -18,122 +18,115 @@ This module is part of the Hopper language project
 
 module CodeGenerator.CodeGenerator where
 
-import Language.CoreErlang.Syntax
+import Language.CoreErlang.Syntax as CES
 import Language.CoreErlang.Pretty
-import Parser.ErrM
-import AST.AST
+import Utils.ErrM
+import AST.AST as HPR
 
--- |The 'compileModule' function compiles a ModuleAST
---  to a CoreErlang.Syntax.Module
-compileModule :: ModuleAST (Maybe TypeAST) -> Module
-compileModule cMod@(ModuleAST mId exports defs) = Module (Atom mId) es attribs ds
-  where attribs = []
-        es      = compileExports exports cMod
-        ds      = map compileFun defs ++ generateModuleInfo mId
+-- |The 'compileModule' function compiles a hopper Module
+--  to a CoreErlang<F6>fe<F6>tax.Module
+compileModule :: HPR.Module Signature -> CES.Module
+compileModule cMod@(Mod mId exports defs) = CES.Module (Atom mId) es as ds
+  where as = []
+        es = compileExports exports cMod
+        ds = map compileFun defs ++ generateModuleInfo mId
 
--- |The 'compileModuleString' function compiles a ModuleAST
+-- |The 'compileModuleString' function compiles a hoppper
 --  to a Core Erlang code string
-compileModuleString :: ModuleAST (Maybe TypeAST) -> Err String
+compileModuleString :: HPR.Module Signature -> Err String
 compileModuleString m = Ok $ prettyPrint cesModule
   where cesModule = compileModule m
 
--- |The 'compileExports' function compiles a list of ExportAST
+-- |The 'compileExports' function compiles a list of Identifier
 --  to a list of CoreErlang.Syntax.Function
-compileExports :: [ExportAST] -> ModuleAST (Maybe TypeAST) -> [Function]
+compileExports :: [Identifier] -> HPR.Module Signature -> [CES.Function]
 compileExports es m = map (compileExport m) es ++ [mi0,mi1]
-  where mi0  = Function (name,0)
-        mi1  = Function (name,1)
+  where mi0  = CES.Function (name,0)
+        mi1  = CES.Function (name,1)
         name = Atom "module_info"
 
--- |The 'compileExport' function compiles an ExportAST
+-- |The 'compileExport' function compiles an Identifier
 --  to a CoreErlang.Syntax.Function
-compileExport :: ModuleAST (Maybe TypeAST) -> ExportAST -> Function
-compileExport m (ExportAST eId) = Function (Atom eId, getArity eId m)
+compileExport :: HPR.Module Signature -> Identifier -> CES.Function
+compileExport m eId = CES.Function (Atom eId, getArity eId m)
 
--- |The 'compileFun' function compiles a DefAST
+-- |The 'compileFun' function compiles a hopper Function
 --  to a CoreErlang.FunDef
-compileFun :: DefAST (Maybe TypeAST) -> FunDef
-compileFun (DefAST fId t ast) = 
-  FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileAST ast' []))
-  where ast' = case ast of
-                 (LamAST _ _) -> ast
-                 _            -> LamAST [] ast
+compileFun :: HPR.Function Signature -> FunDef
+compileFun (HPR.Fun fId t e) = 
+  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' []))
+  where e' = case e of
+                 (ELambda _ _ _) -> e
+                 _               -> ELambda t [] e
 -- The empty lists here will be changed when we deal with parameters
-
--- |The 'compileType' function compiles a TypeAST
---  to CoreErlang data
---  Not implemented
-compileType :: TypeAST -> String
-compileType (VarType _vId)     = undefined
-compileType (ConType _cId _ts) = undefined
 
 -- |The 'compileExp' function compiles an AST
 --  to a CoreErlang.Exp
 --  Named and AppAst are implemented with parameterless functions in mind
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
-compileAST :: AST -> [PatAST] -> Exp
-compileAST (Named nId)     s = 
+compileExp :: Expression Signature -> [Pattern] -> CES.Exp
+compileExp (EVar _ nId) s = 
   if isIdBound nId s
-    then Var $ compileLambdaPat (VarPat nId)
-    else App (Exp (Constr (Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
-compileAST (LitStr s)      _ = Lit (LString s)
-compileAST (LitInteger i)  _ = Lit (LInt i)
-compileAST (LitDouble d)   _ = Lit (LFloat d) -- No double constructor in CoreErlang
-compileAST (LitChar c)     _ = Lit (LChar c)
-compileAST (LamAST pats a) s = Lambda (map compileLambdaPat pats) (Exp (Constr (compileAST a (pats++s))))
-compileAST (AppAST a1 a2)  _ = App (Exp (Constr (Fun (Function (Atom nId, arity))))) args
-  where arity       = toInteger $ length args
-        args        = compileAppArgs a2
-        (Named nId) = a1
+    then Var $ compileLambdaPat (HPR.PVar nId)
+    else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
+compileExp (ECon _ _)         _ = undefined -- when does this happen?
+compileExp (ELit _ (LS s))    _ = Lit (LString s)
+compileExp (ELit _ (LC c))    _ = Lit (LChar c)
+compileExp (ELit _ (LI i))    _ = Lit (LInt i)
+compileExp (ELit _ (LD d))    _ = Lit (LFloat d) -- No double constructor in CoreErlang
+compileExp (ELambda _ pats e) s = Lambda (map compileLambdaPat pats) 
+                                         (Exp (Constr (compileExp e (pats++s))))
+compileExp (EApp _ e1 e2)     _ = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
+  where arity        = toInteger $ length args
+        args         = compileAppArgs e2
+        (EVar _ nId) = e1
+compileExp (ECase _) _ = undefined -- wat
 
 -- |The 'compileAppArgs' function compiles a chain
 --  of AST's in the form of AppAST to a list of expressions
-compileAppArgs :: AST -> [Exps]
-compileAppArgs a@(AppAST (Named _) _) = [Exp (Constr (compileAST a []))]
-compileAppArgs (AppAST a1 a2)         = ann a1 ++ ann a2
+compileAppArgs :: Expression Signature -> [Exps]
+compileAppArgs e@(EApp _ (EVar _ _) _) = [Exp (Constr (compileExp e []))]
+compileAppArgs (EApp _ e1 e2)          = ann e1 ++ ann e2
   where ann x = case x of
-                  (AppAST _ _)            -> compileAppArgs x
-                  _                       -> [Exp (Constr (compileAST x []))]
-compileAppArgs ast = [Exp (Constr (compileAST ast []))]
+                  (EApp _ _ _) -> compileAppArgs x
+                  _            -> [Exp (Constr (compileExp x []))]
+compileAppArgs e = [Exp (Constr (compileExp e []))]
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
-compileLambdaPat :: PatAST -> Var
-compileLambdaPat (VarPat vId) = '_':vId -- _ garantuees valid core erlang variable name
-compileLambdaPat WildPat     = "_"
+compileLambdaPat :: Pattern -> Var
+compileLambdaPat (HPR.PVar vId) = '_':vId -- _ garantuees valid core erlang variable name
+compileLambdaPat PWild          = "_"
+compileLambdaPat (PCon _)       = undefined
+compileLambdaPat (HPR.PLit _)   = undefined
 
 -- |The 'isIdBound' checks if the given id is
 --  bound in the given scope
-isIdBound :: String -> [PatAST] -> Bool
+isIdBound :: String -> [Pattern] -> Bool
 isIdBound _ [] = False
-isIdBound i (VarPat i':pats)
+isIdBound i (HPR.PVar i':pats)
   | i == i' = True
   | otherwise  = isIdBound i pats
 isIdBound i (_:pats) = isIdBound i pats
 
 -- |The 'getArity' function gets the arity of the function
 --  with the given id in the given ModuleAST
-getArity :: String -> ModuleAST (Maybe TypeAST) -> Integer
+getArity :: String -> HPR.Module Signature -> Integer
 getArity fId m = typeToArity $ getTypeSig fId m
 
 -- |The 'typeToArity' returns the corresponding arity
---  of the given Maybe TypeAST. Nothing will just return 0
-typeToArity :: Maybe TypeAST -> Integer
-typeToArity t = case t of
-                  Just (ConType _ []) -> 0 -- Parameterless functions
-                  Just (ConType _ ts) -> toInteger $ length ts - 1
-                  Just (VarType _)    -> undefined
-                  Nothing             -> undefined
+--  of the given Signature. Nothing will just return 0
+typeToArity :: Signature -> Integer
+typeToArity t = toInteger $ length t - 1
 
--- |The 'getTypeSig' function gets the Maybe TypeAST signature
+-- |The 'getTypeSig' function gets the SignatureAST signature
 --  of the function with the given id in the given ModuleAST
-getTypeSig :: String -> ModuleAST (Maybe TypeAST) -> Maybe TypeAST
-getTypeSig _ (ModuleAST _ _ []) = undefined -- Signature could not be found, code generator should not be invoked if this is the case
-getTypeSig fId (ModuleAST mId es (def:defs))
+getTypeSig :: String -> HPR.Module Signature -> Signature
+getTypeSig _ (Mod _ _ []) = undefined -- Signature could not be found, code generator should not be invoked if this is the case
+getTypeSig fId (Mod mId es ((HPR.Fun funId typeSig _):defs))
   | fId == funId = typeSig
-  | otherwise    = getTypeSig fId (ModuleAST mId es defs)
-  where (DefAST funId typeSig _) = def
+  | otherwise    = getTypeSig fId (Mod mId es defs)
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and

@@ -5,11 +5,11 @@ import Test.HUnit hiding (Test)
 import Test.Framework
 import Test.Framework.Providers.HUnit
 
-import AST.AST
+import AST.AST as HPR
 import Parser.PrintHopper
-import Parser.ErrM
+import Utils.ErrM
 import CodeGenerator.CodeGenerator
-import CodeGenerator.BeamWriter
+import Utils.BeamWriter
 import Language.CoreErlang.Syntax as CES
 import Language.CoreErlang.Pretty as CEP
 import System.Directory
@@ -47,7 +47,7 @@ testCompiled =
 -- |Test that checks that the getSig function
 --  return the correct Def DSig for the function with
 --  the given id
-testGetTypeSig :: String -> Maybe TypeAST -> Assertion
+testGetTypeSig :: String -> Signature -> Assertion
 testGetTypeSig id expectedSig =
   if receivedSig == expectedSig
      then return ()
@@ -68,21 +68,21 @@ testGetArity id expectedArity =
 
 -- |Returns a function signature to use in testing
 --  with the given id
-tSig :: String -> Maybe TypeAST
-tSig "i" = Just (ConType "Int" [])
-tSig "s" = Just (ConType "String" [])
+tSig :: String -> Signature
+tSig "i" = [TName "Int" []]
+tSig "s" = [TName "String" []]
 
 -- |Returns a module to use when testing
 --  actual compilation
-tModule :: ModuleAST (Maybe TypeAST)
-tModule = ModuleAST "CodeGenTest"
-            [ ExportAST "i"
-            , ExportAST "s"
+tModule :: HPR.Module Signature
+tModule = Mod "CodeGenTest"
+            [ "i"
+            , "s"
             ]
-            [ DefAST "i"
-                (Just (ConType "Int" []))
-                (LitInteger 10)
-            , DefAST "s"
-                (Just (ConType "String" []))
-                (LitStr "test")
+            [ HPR.Fun "i"
+                [TName "Int" []]
+                (ELit [TName "Int" []] (LI 10))
+            , HPR.Fun "s"
+                [TName "String" []]
+                (ELit [TName "String" []] (LS "test"))
             ]

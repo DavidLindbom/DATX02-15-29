@@ -14,7 +14,7 @@ import Utils.ErrM
 
 import Renamer.Renamer (transform)
 import CodeGenerator.CodeGenerator
-import CodeGenerator.BeamWriter
+import Utils.BeamWriter
 
 data Flag = Verbose | Parse | TypeCheck | Core | NoBeam
   deriving (Show, Eq)
