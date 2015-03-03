@@ -23,7 +23,7 @@ data Literal = LS String
              -- | LL []
   deriving (Eq,Ord,Show)
 
-data Function a = Fun Identifier a [Expression a] 
+data Function a = Fun Identifier a (Expression a)
   deriving (Eq,Ord,Show) -- Function arguments is desugared to lambdas
 
 type Signature = [Type]
@@ -44,51 +44,10 @@ data Expression a = EVar a Identifier -- TODO: Add EVal for fully applied functi
                   | ELit a Literal
                   | ELambda a [Pattern] (Expression a)
                   | EApp a (Expression a) (Expression a)
-                 -- | EWhere [Function a]
+                 -- | EWhere [(Pattern,Expression)]
                   | ECase [([Pattern], Expression a)] 
                  -- | ECall a Identifier Identifier [Expression a]
-                 -- | ELet [Pattern] (Expression a) (Expression a)
+                 -- | ELet Pattern (Expression a) (Expression a)
   deriving (Eq,Ord,Show)
  
 
-
-{- 
- - module MyModule (a,b) where
- - a :: Int -> b -> Bool -> Int
- - a = \_ _ True -> 0
- - a = \n _ False -> n
- -
- - b = a 4 'c' False
- -}
-
-{-
-
-untyped :: Module (Maybe Signature)
-untyped = Mod "MyModule" e f
-  where e = ["a","b"]
-        f = [Fun "a" (Just [TName "Int" [], TVar "b", TName "Bool" [], TName "Int" []]) [a1,a2]
-            ,Fun "b" Nothing [b1]
-            ]
-        a1 = ELambda Nothing [PWild, PWild, PCon "True"] (ELit Nothing (LI 0))
-        a2 = ELambda Nothing [PVar "n", PWild, PWild] (EVar Nothing "n")
-        b1 = EApp Nothing (EApp Nothing (EApp Nothing (EVar Nothing "a") (ELit Nothing (LI 4))) 
-                                        (ELit Nothing (LC 'c')))
-                          (ECon Nothing "False")
-
--- Run some typecheck function: Module (Maybe Signature) -> Err (Module Signature)
-
-typed :: Module Signature
-typed = Mod "MyModule" e f
-  where e = ["a", "b"]
-        f = [Fun "a" [TName "Int" [], TVar "a", TName "Bool" [], TName "Int" []] [a1,a2]
-            ,Fun "b" [TName "Int" []] [b1]
-            ]
-        a1 = ELambda [TName "Int" [], TVar "a", TName "Int" []] 
-                     [PLit (LI 1), PWild] (ELit [TName "Int" []] (LI 0))
-        a2 = ELambda [TName "Int" [], TVar "a", TName "Int" []] 
-                     [PVar "n", PWild] (EVar [TName "Int" []] "n")
-        b1 = EApp [TName "Int" []] 
-                  (EApp [TVar "a", TName "Int" []] (EVar [TName "Int" [], TVar "a", TName "Int" []] "a") (ELit [TName "Int" []] (LI 4)))
-                  (ELit [TName "Char" []] (LC 'c'))
-
---}

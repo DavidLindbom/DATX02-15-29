@@ -18,8 +18,6 @@ transform (MModule (IdCon name) expo defs) = do
   checkExports expo' defs'
   return $ Mod name expo' defs'
 
-
-
 --
 -- All transform* functions is a transform from the parse tree to AST
 --
@@ -34,16 +32,23 @@ transformDefs defs = do
   where
     go :: M.Map Identifier (Function (Maybe Signature)) -> Def
        -> Err (M.Map Identifier (Function (Maybe Signature)))
-    go m (DSig (IdVar i) t) = 
-      case M.lookup i m of
-        Nothing                -> return $ M.insert i (Fun i (Just $ transformTypes t) []) m
-        Just (Fun _ Nothing e) -> return $ M.insert i (Fun i (Just $ transformTypes t) e) m
-        _                      -> fail $ "Multiple signatures for '" ++ i ++ "'"
+    
+    go m (DSig (IdVar i) t) = case M.lookup i m of
+        -- There is no function
+        Nothing -> 
+          return $ M.insert i (Fun i (Just $ transformTypes t) []) m
+        
+        -- There is a function, but no signature
+        Just (Fun _ Nothing e) -> 
+          return $ M.insert i (Fun i (Just $ transformTypes t) e) m
+        
+        -- There is a function and a signature
+        _ -> fail $ "Multiple signatures for '" ++ i ++ "'"
     
     go m (DFun (IdVar i) e) = do
       e' <- transformExp e
       case M.lookup i m of
-        Nothing           -> return $ M.insert i (Fun i Nothing [e']) m
+        Nothing           -> return $ M.insert i (Fun i Nothing  [e'])  m
         Just (Fun _ t es) -> return $ M.insert i (Fun i t (es ++ [e'])) m
 
 
@@ -70,11 +75,15 @@ transformExp e = case e of
   EInteger i         -> Ok $ ELit (Just [AST.TName "Integer" []]) $ LI i
   EDouble d          -> Ok $ ELit (Just [AST.TName "Double"  []]) $ LD d
 
-  EInfix a op b      -> (transformExp $ EOpr op) `app` (transformExp a) `app` (transformExp b)
+  EInfix a op b      -> (transformExp $ EOpr op) 
+                        `app` (transformExp a) 
+                        `app` (transformExp b)
+
   HPR.EApp a b       -> (transformExp a) `app` (transformExp b)
   HPR.ELambda ps a   -> do a'  <- transformExp a 
                            ps' <- mapM transformPat ps 
                            return $ AST.ELambda Nothing ps' a' 
+                           
   where app (Bad m) _      = Bad m
         app _      (Bad m) = Bad m 
         app (Ok a) (Ok b)  = Ok $ AST.EApp Nothing a b
@@ -91,8 +100,11 @@ transformPat p = case p of
 -- Helper functions
 --
 
+-- | Check that there are no signatures without function definitions
 checkLonelySignatures :: Function (Maybe Signature) -> Err ()
-checkLonelySignatures (Fun i (Just s) []) = Bad $ "Lonley signature '" ++ i ++ " :: " ++ showSignature s ++ "'" 
+checkLonelySignatures (Fun i (Just s) []) = Bad $ "Lonley signature '" 
+                                               ++ i ++ " :: " 
+                                               ++ showSignature s ++ "'" 
 checkLonelySignatures _ = Ok ()
 
 -- | Check that there is a definition for all exported functions
