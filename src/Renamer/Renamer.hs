@@ -141,6 +141,9 @@ mergeCase a b = case a of
   ECase t c -> case b of
     AST.ELambda _ p e -> Ok $ AST.ECase t (c++[(p,e)])
 
+  -- Replace eundefined with expression
+  AST.EVar Nothing "undefined" -> Ok b
+
   e -> Bad $ "undefined case in 'mergeCase': " ++ show e
 
 
