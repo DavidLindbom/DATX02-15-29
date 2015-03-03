@@ -81,7 +81,7 @@ compileExp (EApp _ e1 e2)     _ = App (Exp (Constr (CES.Fun (CES.Function (Atom 
   where arity        = toInteger $ length args
         args         = compileAppArgs e2
         (EVar _ nId) = e1
-compileExp (ECase _) _ = undefined -- wat
+compileExp (ECase _ _ _) _ = undefined -- wat
 
 -- |The 'compileAppArgs' function compiles a chain
 --  of AST's in the form of AppAST to a list of expressions

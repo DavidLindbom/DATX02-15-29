@@ -4,7 +4,7 @@
 module Parser.ParHopper where
 import Parser.AbsHopper
 import Parser.LexHopper
-import Parser.ErrM
+import Utils.ErrM
 
 }
 

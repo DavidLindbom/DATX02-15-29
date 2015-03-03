@@ -6,6 +6,7 @@ module Parser.PrintHopper where
 import Parser.AbsHopper
 import Data.Char
 
+import Prelude hiding (exp)
 
 -- the top-level printing method
 printTree :: Print a => a -> String
