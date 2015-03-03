@@ -36,16 +36,18 @@ data Type = TName String [Type]
 data Pattern = PVar Identifier
              | PCon Constructor
              | PLit Literal
-             | PWild  
+             | PWild
+             | PTuple [Pattern]
   deriving (Eq,Ord,Show) -- Should be recursive later for nested lists ect
 
 data Expression a = EVar a Identifier -- TODO: Add EVal for fully applied functions when we have adts
                   | ECon a Constructor
                   | ELit a Literal
+                  | ETuple a [Expression a]
                   | ELambda a [Pattern] (Expression a)
                   | EApp a (Expression a) (Expression a)
                  -- | EWhere [(Pattern,Expression)]
-                  | ECase a [([Pattern], Expression a)] 
+                  | ECase a (Expression a) [(Pattern, Expression a)] -- TODO: Extend with guards 
                  -- | ECall a Identifier Identifier [Expression a]
                  -- | ELet Pattern (Expression a) (Expression a)
   deriving (Eq,Ord,Show)

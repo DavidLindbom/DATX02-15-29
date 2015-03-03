@@ -120,6 +120,10 @@ instance Print Arg where
    ACon idcon -> prPrec i 0 (concatD [prt 0 idcon])
    AVar idvar -> prPrec i 0 (concatD [prt 0 idvar])
    AWild  -> prPrec i 0 (concatD [doc (showString "_")])
+   AString str -> prPrec i 0 (concatD [prt 0 str])
+   AChar c -> prPrec i 0 (concatD [prt 0 c])
+   AInteger n -> prPrec i 0 (concatD [prt 0 n])
+   ADouble d -> prPrec i 0 (concatD [prt 0 d])
 
   prtList es = case es of
    [] -> (concatD [])
@@ -154,6 +158,10 @@ instance Print Pat where
    PCon idcon -> prPrec i 0 (concatD [prt 0 idcon])
    PVar idvar -> prPrec i 0 (concatD [prt 0 idvar])
    PWild  -> prPrec i 0 (concatD [doc (showString "_")])
+   PString str -> prPrec i 0 (concatD [prt 0 str])
+   PChar c -> prPrec i 0 (concatD [prt 0 c])
+   PInteger n -> prPrec i 0 (concatD [prt 0 n])
+   PDouble d -> prPrec i 0 (concatD [prt 0 d])
 
   prtList es = case es of
    [x] -> (concatD [prt 0 x])

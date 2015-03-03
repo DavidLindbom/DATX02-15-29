@@ -94,4 +94,46 @@ transformed = Mod "MyModule" e f
               ,AST.ELambda Nothing [AST.PVar "n"
                                    ,AST.PWild
                                    ,AST.PWild] (AST.EVar Nothing "n")]
-          
+
+
+-- Transform
+-- module MyModule (f) where
+-- f :: Int -> Int -> Bool
+-- f 1 2 = True
+-- f 2 3 = True
+-- f n m = False
+in = transform $ MModule (IdCon "MyModule") 
+                         [MExport (IdVar "f")] 
+                         [DSig (IdVar "f") 
+                               [HPR.TName (IdCon "Int")
+                               ,HPR.TName (IdCon "Int")
+                               ,HPR.TName (IdCon "Bool")]
+                         ,DFun (IdVar "f") 
+                               [AInteger 1
+                               ,AInteger 2] 
+                               (HPR.ECon (IdCon "True"))
+                         ,DFun (IdVar "f") 
+                               [AInteger 2
+                               ,AInteger 3] 
+                               (HPR.ECon (IdCon "True"))
+                         ,DFun (IdVar "f") 
+                               [AVar (IdVar "n")
+                               ,AVar (IdVar "m")] 
+                               (HPR.ECon (IdCon "False"))
+                         ]
+
+out = Ok (Mod "MyModule" ["f"] 
+          [Fun "f" (Just [TName "Int" []
+                         ,TName "Int" []
+                         ,TName "Bool" []]) 
+                   (ELambda Nothing 
+                            [PVar "_arg1"
+                            ,PVar "_arg2"] 
+                            (ECase Nothing 
+                                   (ETuple Nothing 
+                                           [EVar Nothing "_arg1"
+                                           ,EVar Nothing "_arg2"]) 
+                                   [(PTuple [PLit (LI 1),PLit (LI 2)],ECon Nothing "True")
+                                   ,(PTuple [PLit (LI 2),PLit (LI 3)],ECon Nothing "True")
+                                   ,(PTuple [PCon "n",PCon "m"],ECon Nothing "False")]))])
+--}

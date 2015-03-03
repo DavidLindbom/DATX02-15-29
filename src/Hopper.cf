@@ -16,9 +16,14 @@ DSig. Def ::= IdVar "::" [Type];
 DFun. Def ::= IdVar [Arg] "=" "{" Exp "}"; -- TODO: Add function parameters
 
 -- Arguments
-ACon.  Arg ::= IdCon; -- Can we reuse Pat here?
-AVar.  Arg ::= IdVar; 
-AWild. Arg ::= "_";
+ACon.     Arg ::= IdCon; 
+AVar.     Arg ::= IdVar; 
+AWild.    Arg ::= "_";
+AString.  Arg ::= String;
+AChar.    Arg ::= Char;
+AInteger. Arg ::= Integer;
+ADouble.  Arg ::= Double;
+
 
 terminator Arg "";
 
@@ -44,9 +49,13 @@ ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
 coercions Exp 2;
 
 -- Patterns
-PCon.  Pat ::= IdCon;
-PVar.  Pat ::= IdVar;
-PWild. Pat ::= "_"; -- TODO: Add literal patterns
+PCon.     Pat ::= IdCon;
+PVar.     Pat ::= IdVar;
+PWild.    Pat ::= "_";
+PString.  Pat ::= String;
+PChar.    Pat ::= Char;
+PInteger. Pat ::= Integer;
+PDouble.  Pat ::= Double;
 
 terminator nonempty Pat "";
 

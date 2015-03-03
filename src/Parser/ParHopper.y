@@ -77,6 +77,10 @@ Arg :: { Arg }
 Arg : IdCon { ACon $1 } 
   | IdVar { AVar $1 }
   | '_' { AWild }
+  | String { AString $1 }
+  | Char { AChar $1 }
+  | Integer { AInteger $1 }
+  | Double { ADouble $1 }
 
 
 ListArg :: { [Arg] }
@@ -121,6 +125,10 @@ Pat :: { Pat }
 Pat : IdCon { PCon $1 } 
   | IdVar { PVar $1 }
   | '_' { PWild }
+  | String { PString $1 }
+  | Char { PChar $1 }
+  | Integer { PInteger $1 }
+  | Double { PDouble $1 }
 
 
 ListPat :: { [Pat] }

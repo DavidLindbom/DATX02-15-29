@@ -45,6 +45,10 @@ transArg x = case x of
   ACon idcon  -> failure x
   AVar idvar  -> failure x
   AWild  -> failure x
+  AString str  -> failure x
+  AChar c  -> failure x
+  AInteger n  -> failure x
+  ADouble d  -> failure x
 
 
 transType :: Type -> Result
@@ -73,6 +77,10 @@ transPat x = case x of
   PCon idcon  -> failure x
   PVar idvar  -> failure x
   PWild  -> failure x
+  PString str  -> failure x
+  PChar c  -> failure x
+  PInteger n  -> failure x
+  PDouble d  -> failure x
 
 
 

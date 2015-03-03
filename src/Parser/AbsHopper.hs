@@ -23,6 +23,10 @@ data Arg =
    ACon IdCon
  | AVar IdVar
  | AWild
+ | AString String
+ | AChar Char
+ | AInteger Integer
+ | ADouble Double
   deriving (Eq,Ord,Show)
 
 data Type =
@@ -48,5 +52,9 @@ data Pat =
    PCon IdCon
  | PVar IdVar
  | PWild
+ | PString String
+ | PChar Char
+ | PInteger Integer
+ | PDouble Double
   deriving (Eq,Ord,Show)
 

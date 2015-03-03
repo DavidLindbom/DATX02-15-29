@@ -9,9 +9,10 @@ import Control.Monad
 import Parser.PrintHopper (printTree)
 import Parser.ParHopper
 import Parser.LayoutHopper
-import Parser.ErrM
 
-import Renamer.Renamer (transformModule)
+import Utils.ErrM
+
+import Renamer.Renamer (transform)
 import CodeGenerator.CodeGenerator
 import CodeGenerator.BeamWriter
 

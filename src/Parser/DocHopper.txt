@@ -76,6 +76,10 @@ All other symbols are terminals.
   | //Arg// | -> | //IdCon// 
   |  |  **|**  | //IdVar// 
   |  |  **|**  | ``_`` 
+  |  |  **|**  | //String// 
+  |  |  **|**  | //Char// 
+  |  |  **|**  | //Integer// 
+  |  |  **|**  | //Double// 
   | //[Arg]// | -> | **eps**
   |  |  **|**  | //Arg// //[Arg]// 
   | //Type// | -> | //IdCon// 
@@ -99,6 +103,10 @@ All other symbols are terminals.
   | //Pat// | -> | //IdCon// 
   |  |  **|**  | //IdVar// 
   |  |  **|**  | ``_`` 
+  |  |  **|**  | //String// 
+  |  |  **|**  | //Char// 
+  |  |  **|**  | //Integer// 
+  |  |  **|**  | //Double// 
   | //[Pat]// | -> | //Pat// 
   |  |  **|**  | //Pat// //[Pat]// 
 

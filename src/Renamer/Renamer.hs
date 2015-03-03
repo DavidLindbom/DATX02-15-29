@@ -5,7 +5,7 @@ import Control.Monad
 
 import Parser.AbsHopper as HPR
 import AST.AST as AST
-import Parser.ErrM --Utils.ErrM
+import Utils.ErrM
 import Utils.PrettyPrint
 
 transform :: HPR.Module -> Err (AST.Module (Maybe Signature))
@@ -102,14 +102,20 @@ transformPat p = case p of
   HPR.PCon (IdCon i) -> Ok $ AST.PCon i
   HPR.PVar (IdVar i) -> Ok $ AST.PVar i
   HPR.PWild          -> Ok AST.PWild
-  -- TODO add literal pattern
-
+  HPR.PString s      -> Ok $ AST.PLit $ LS s
+  HPR.PChar c        -> Ok $ AST.PLit $ LC c
+  HPR.PInteger i     -> Ok $ AST.PLit $ LI i
+  HPR.PDouble d      -> Ok $ AST.PLit $ LD d
 
 transformArg :: Arg -> Err Pattern
 transformArg a = case a of
   ACon (IdCon i) -> Ok $ AST.PCon i
   AVar (IdVar i) -> Ok $ AST.PCon i
   AWild          -> Ok $ AST.PWild
+  AString s      -> Ok $ AST.PLit $ LS s
+  AChar c        -> Ok $ AST.PLit $ LC c
+  AInteger i     -> Ok $ AST.PLit $ LI i
+  ADouble d      -> Ok $ AST.PLit $ LD d
 
 --
 -- Helper functions
@@ -134,17 +140,48 @@ checkExports ids fs = sequence_ $ map exists ids
 
 -- | Convert two pattern matching functions to a case expression
 -- TODO: How should the signatures be handled here?
---mergeCase :: Expression a -> Expression a -> Err (Expression a)
-mergeCase a b = case a of
-  
-  -- Add a new clause to case
-  ECase t c -> case b of
-    AST.ELambda _ p e -> Ok $ AST.ECase t (c++[(p,e)])
+mergeCase :: Expression (Maybe Signature) 
+          -> Expression (Maybe Signature) 
+          -> Err (Expression (Maybe Signature))
+mergeCase a b = case (a,b) of
 
   -- Replace eundefined with expression
-  AST.EVar Nothing "undefined" -> Ok b
+  (c,d) | c == eundefined -> Ok d
 
-  e -> Bad $ "undefined case in 'mergeCase': " ++ show e
+  -- Add new clause to case 
+  (AST.ELambda t ps (AST.ECase t' e cs), (AST.ELambda _ ps' e')) ->
+    if length ps == length ps'
+      then Ok $ AST.ELambda t ps (AST.ECase t' e (cs++[(PTuple ps', e')]))
+      else Bad $ "Mismatched number of arguments in patternmatching when adding"
+              ++ show ps' ++ " -> " ++ show e' ++ " to case clause"
+
+  -- Convert two lambdas to case expression
+  (AST.ELambda t ps e, AST.ELambda _ ps' e') ->
+    if length ps == length ps'
+      then do let as = makeArgs ps
+              ts <- expressionFromArgs as
+              let cs = AST.ECase t ts [(PTuple ps, e), (PTuple ps', e')]
+              Ok $ AST.ELambda t as cs
+      else Bad $ "Mismatched number of arguments in patternmatching between '\\"
+              ++ show ps ++ " -> " ++ show e ++ "' and '\\"
+              ++ show ps' ++ " -> " ++ show e' ++ "'" 
+
+  -- Give over-shadowing error
+  (c,d) -> Bad $ "Expression '" ++ show c ++ "' over-shadows '"
+              ++ show d ++ "' in pattern matching"
+
+
+makeArgs :: [Pattern] -> [Pattern]
+makeArgs = zipWith (\n _ -> AST.PVar $ "_arg" ++ show n) [1..]
+
+-- | Convert PTuple to ETuple
+-- TODO: Make this code safe
+expressionFromArgs :: [Pattern] -> Err (Expression (Maybe Signature))
+expressionFromArgs ps = do
+  ps' <- mapM go ps
+  Ok $ ETuple Nothing ps'
+  where go (AST.PVar n) = Ok $ AST.EVar Nothing n
+        go e = Bad $ "That shouldn't be in expressionFromArgs: " ++ show e
 
 
 
