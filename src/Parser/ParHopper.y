@@ -74,7 +74,9 @@ Def : IdVar '::' ListType { DSig $1 $3 }
 
 
 Arg :: { Arg }
-Arg : Pat { AArg $1 } 
+Arg : IdCon { ACon $1 } 
+  | IdVar { AVar $1 }
+  | '_' { AWild }
 
 
 ListArg :: { [Arg] }

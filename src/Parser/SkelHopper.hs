@@ -42,7 +42,9 @@ transDef x = case x of
 
 transArg :: Arg -> Result
 transArg x = case x of
-  AArg pat  -> failure x
+  ACon idcon  -> failure x
+  AVar idvar  -> failure x
+  AWild  -> failure x
 
 
 transType :: Type -> Result

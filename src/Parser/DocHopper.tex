@@ -70,8 +70,8 @@ The symbols used in Hopper are the following: \\
 \begin{tabular}{lll}
 {\symb{(}} &{\symb{)}} &{\symb{;}} \\
 {\symb{,}} &{\symb{::}} &{\symb{{$=$}}} \\
-{\symb{\{}} &{\symb{\}}} &{\symb{{$-$}{$>$}}} \\
-{\symb{$\backslash$}} &{\symb{\_}} & \\
+{\symb{\{}} &{\symb{\}}} &{\symb{\_}} \\
+{\symb{{$-$}{$>$}}} &{\symb{$\backslash$}} & \\
 \end{tabular}\\
 
 \subsection*{Comments}
@@ -108,7 +108,9 @@ All other symbols are terminals.\\
 \end{tabular}\\
 
 \begin{tabular}{lll}
-{\nonterminal{Arg}} & {\arrow}  &{\nonterminal{Pat}}  \\
+{\nonterminal{Arg}} & {\arrow}  &{\nonterminal{IdCon}}  \\
+ & {\delimit}  &{\nonterminal{IdVar}}  \\
+ & {\delimit}  &{\terminal{\_}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}

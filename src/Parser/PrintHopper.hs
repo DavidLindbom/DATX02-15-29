@@ -117,7 +117,9 @@ instance Print Def where
 
 instance Print Arg where
   prt i e = case e of
-   AArg pat -> prPrec i 0 (concatD [prt 0 pat])
+   ACon idcon -> prPrec i 0 (concatD [prt 0 idcon])
+   AVar idvar -> prPrec i 0 (concatD [prt 0 idvar])
+   AWild  -> prPrec i 0 (concatD [doc (showString "_")])
 
   prtList es = case es of
    [] -> (concatD [])

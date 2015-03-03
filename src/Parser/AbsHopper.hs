@@ -20,7 +20,9 @@ data Def =
   deriving (Eq,Ord,Show)
 
 data Arg =
-   AArg Pat
+   ACon IdCon
+ | AVar IdVar
+ | AWild
   deriving (Eq,Ord,Show)
 
 data Type =

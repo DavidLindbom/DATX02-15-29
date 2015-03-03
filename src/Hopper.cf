@@ -16,10 +16,9 @@ DSig. Def ::= IdVar "::" [Type];
 DFun. Def ::= IdVar [Arg] "=" "{" Exp "}"; -- TODO: Add function parameters
 
 -- Arguments
---ACon.  Arg ::= IdCon; -- Can we reuse Pat here?
---AVar.  Arg ::= IdVar; 
---AWild. Arg ::= "_";
-AArg. Arg ::= Pat;
+ACon.  Arg ::= IdCon; -- Can we reuse Pat here?
+AVar.  Arg ::= IdVar; 
+AWild. Arg ::= "_";
 
 terminator Arg "";
 
