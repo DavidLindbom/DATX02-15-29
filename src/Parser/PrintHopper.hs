@@ -108,12 +108,20 @@ instance Print Export where
 instance Print Def where
   prt i e = case e of
    DSig idvar types -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "::") , prt 0 types])
-   DFun idvar exp -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "=") , doc (showString "{") , prt 0 exp , doc (showString "}")])
+   DFun idvar args exp -> prPrec i 0 (concatD [prt 0 idvar , prt 0 args , doc (showString "=") , doc (showString "{") , prt 0 exp , doc (showString "}")])
 
   prtList es = case es of
    [] -> (concatD [])
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ";") , prt 0 xs])
+
+instance Print Arg where
+  prt i e = case e of
+   AArg pat -> prPrec i 0 (concatD [prt 0 pat])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   x:xs -> (concatD [prt 0 x , prt 0 xs])
 
 instance Print Type where
   prt i e = case e of

@@ -37,7 +37,12 @@ transExport x = case x of
 transDef :: Def -> Result
 transDef x = case x of
   DSig idvar types  -> failure x
-  DFun idvar exp  -> failure x
+  DFun idvar args exp  -> failure x
+
+
+transArg :: Arg -> Result
+transArg x = case x of
+  AArg pat  -> failure x
 
 
 transType :: Type -> Result

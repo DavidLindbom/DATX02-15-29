@@ -104,7 +104,16 @@ All other symbols are terminals.\\
 
 \begin{tabular}{lll}
 {\nonterminal{Def}} & {\arrow}  &{\nonterminal{IdVar}} {\terminal{::}} {\nonterminal{ListType}}  \\
- & {\delimit}  &{\nonterminal{IdVar}} {\terminal{{$=$}}} {\terminal{\{}} {\nonterminal{Exp}} {\terminal{\}}}  \\
+ & {\delimit}  &{\nonterminal{IdVar}} {\nonterminal{ListArg}} {\terminal{{$=$}}} {\terminal{\{}} {\nonterminal{Exp}} {\terminal{\}}}  \\
+\end{tabular}\\
+
+\begin{tabular}{lll}
+{\nonterminal{Arg}} & {\arrow}  &{\nonterminal{Pat}}  \\
+\end{tabular}\\
+
+\begin{tabular}{lll}
+{\nonterminal{ListArg}} & {\arrow}  &{\emptyP} \\
+ & {\delimit}  &{\nonterminal{Arg}} {\nonterminal{ListArg}}  \\
 \end{tabular}\\
 
 \begin{tabular}{lll}

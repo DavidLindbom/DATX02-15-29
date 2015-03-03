@@ -70,7 +70,16 @@ ListDef : {- empty -} { [] }
 
 Def :: { Def }
 Def : IdVar '::' ListType { DSig $1 $3 } 
-  | IdVar '=' '{' Exp '}' { DFun $1 $4 }
+  | IdVar ListArg '=' '{' Exp '}' { DFun $1 (reverse $2) $5 }
+
+
+Arg :: { Arg }
+Arg : Pat { AArg $1 } 
+
+
+ListArg :: { [Arg] }
+ListArg : {- empty -} { [] } 
+  | ListArg Arg { flip (:) $1 $2 }
 
 
 Type :: { Type }

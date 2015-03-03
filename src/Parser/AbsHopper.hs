@@ -16,7 +16,11 @@ data Export =
 
 data Def =
    DSig IdVar [Type]
- | DFun IdVar Exp
+ | DFun IdVar [Arg] Exp
+  deriving (Eq,Ord,Show)
+
+data Arg =
+   AArg Pat
   deriving (Eq,Ord,Show)
 
 data Type =
