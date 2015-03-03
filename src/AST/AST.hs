@@ -45,7 +45,7 @@ data Expression a = EVar a Identifier -- TODO: Add EVal for fully applied functi
                   | ELambda a [Pattern] (Expression a)
                   | EApp a (Expression a) (Expression a)
                  -- | EWhere [(Pattern,Expression)]
-                  | ECase [([Pattern], Expression a)] 
+                  | ECase a [([Pattern], Expression a)] 
                  -- | ECall a Identifier Identifier [Expression a]
                  -- | ELet Pattern (Expression a) (Expression a)
   deriving (Eq,Ord,Show)

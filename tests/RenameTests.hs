@@ -57,3 +57,41 @@ doRenameTest (ma,mb) =
                      then return ()
                      else assertFailure $ failmsg ma' mb
   where failmsg m1 m2 = "Expected:\n" ++ (printTree m2) ++ "\nGot:\n" ++ (printTree m1)
+
+
+{-
+
+untransformed :: HPR.Module
+untransformed = MModule (IdCon "MyModule") e f
+ where e = [MExport (IdVar "a"),MExport (IdVar "b")] 
+       f = [DSig (IdVar "a") [HPR.TName (IdCon "Int")
+                             ,HPR.TVar (IdVar "b")
+                             ,HPR.TName (IdCon "Bool")
+                             ,HPR.TName (IdCon "Int")]
+           ,DFun (IdVar "a") (HPR.ELambda [HPR.PWild
+                                          ,HPR.PWild
+                                          ,HPR.PCon (IdCon "True")] (EInteger 0))
+           ,DFun (IdVar "a") (HPR.ELambda [HPR.PVar (IdVar "n")
+                                          ,HPR.PWild
+                                          ,HPR.PWild] (HPR.EVar (IdVar "n")))
+           ,DFun (IdVar "b") (HPR.EApp 
+                               (HPR.EApp 
+                                 (HPR.EApp (HPR.EVar (IdVar "a")) 
+                                           (EInteger 4)) 
+                                 (EChar 'c')) 
+                               (HPR.ECon (IdCon "False")))]
+
+            
+transformed = Mod "MyModule" e f 
+  where e = ["a","b"] 
+        f = [Fun "a" (Just [AST.TName "Int" []
+                           ,AST.TVar "b"
+                           ,AST.TName "Bool" []
+                           ,AST.TName "Int" []]) 
+              [AST.ELambda Nothing [AST.PWild
+                                   ,AST.PWild
+                                   ,AST.PCon "True"] (ELit (Just [AST.TName "Integer" []]) (LI 0))
+              ,AST.ELambda Nothing [AST.PVar "n"
+                                   ,AST.PWild
+                                   ,AST.PWild] (AST.EVar Nothing "n")]
+          

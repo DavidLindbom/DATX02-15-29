@@ -36,7 +36,7 @@ transformDefs defs = do
     go m (DSig (IdVar i) t) = case M.lookup i m of
         -- There is no function
         Nothing -> 
-          return $ M.insert i (Fun i (Just $ transformTypes t) []) m
+          return $ M.insert i (Fun i (Just $ transformTypes t) eundefined) m
         
         -- There is a function, but no signature
         Just (Fun _ Nothing e) -> 
@@ -45,11 +45,20 @@ transformDefs defs = do
         -- There is a function and a signature
         _ -> fail $ "Multiple signatures for '" ++ i ++ "'"
     
-    go m (DFun (IdVar i) e) = do
+    go m (DFun (IdVar i) as e) = do
       e' <- transformExp e
+
+      -- Add lambda if arguments
+      e'' <- if null as
+              then return e'
+              else do pat <- mapM transformArg as
+                      return $ AST.ELambda Nothing pat e'     
+
       case M.lookup i m of
-        Nothing           -> return $ M.insert i (Fun i Nothing  [e'])  m
-        Just (Fun _ t es) -> return $ M.insert i (Fun i t (es ++ [e'])) m
+        Nothing           -> return $ M.insert i (Fun i Nothing e'') m
+        Just (Fun _ t es) -> do
+          cs <- mergeCase es e''
+          return $ M.insert i (Fun i t cs) m
 
 
 transformTypes :: [HPR.Type] -> Signature
@@ -96,15 +105,24 @@ transformPat p = case p of
   -- TODO add literal pattern
 
 
+transformArg :: Arg -> Err Pattern
+transformArg a = case a of
+  ACon (IdCon i) -> Ok $ AST.PCon i
+  AVar (IdVar i) -> Ok $ AST.PCon i
+  AWild          -> Ok $ AST.PWild
+
 --
 -- Helper functions
 --
 
+-- | A temporary expression representing a function without an expression yet
+eundefined = AST.EVar Nothing "undefined" 
+
 -- | Check that there are no signatures without function definitions
 checkLonelySignatures :: Function (Maybe Signature) -> Err ()
-checkLonelySignatures (Fun i (Just s) []) = Bad $ "Lonley signature '" 
-                                               ++ i ++ " :: " 
-                                               ++ showSignature s ++ "'" 
+checkLonelySignatures (Fun i (Just s) e) = case e == eundefined of
+  True -> Bad $ "Lonley signature '" ++ i ++ " :: " ++ showSignature s ++ "'" 
+  _    -> Ok ()
 checkLonelySignatures _ = Ok ()
 
 -- | Check that there is a definition for all exported functions
@@ -114,49 +132,16 @@ checkExports ids fs = sequence_ $ map exists ids
                   then Ok ()
                   else Bad $ "Undefined export '" ++ i ++ "'"
 
+-- | Convert two pattern matching functions to a case expression
+-- TODO: How should the signatures be handled here?
+--mergeCase :: Expression a -> Expression a -> Err (Expression a)
+mergeCase a b = case a of
+  
+  -- Add a new clause to case
+  ECase t c -> case b of
+    AST.ELambda _ p e -> Ok $ AST.ECase t (c++[(p,e)])
+
+  e -> Bad $ "undefined case in 'mergeCase': " ++ show e
 
 
-{-
 
-untransformed :: HPR.Module
-untransformed = MModule (IdCon "MyModule") e f
- where e = [MExport (IdVar "a"),MExport (IdVar "b")] 
-       f = [DSig (IdVar "a") [HPR.TName (IdCon "Int")
-                             ,HPR.TVar (IdVar "b")
-                             ,HPR.TName (IdCon "Bool")
-                             ,HPR.TName (IdCon "Int")]
-           ,DFun (IdVar "a") (HPR.ELambda [HPR.PWild
-                                          ,HPR.PWild
-                                          ,HPR.PCon (IdCon "True")] (EInteger 0))
-           ,DFun (IdVar "a") (HPR.ELambda [HPR.PVar (IdVar "n")
-                                          ,HPR.PWild
-                                          ,HPR.PWild] (HPR.EVar (IdVar "n")))
-           ,DFun (IdVar "b") (HPR.EApp 
-                               (HPR.EApp 
-                                 (HPR.EApp (HPR.EVar (IdVar "a")) 
-                                           (EInteger 4)) 
-                                 (EChar 'c')) 
-                               (HPR.ECon (IdCon "False")))]
-
-            
-transformed = Mod "MyModule" e f 
-  where e = ["a","b"] 
-        f = [Fun "a" (Just [AST.TName "Int" []
-                           ,AST.TVar "b"
-                           ,AST.TName "Bool" []
-                           ,AST.TName "Int" []]) 
-              [AST.ELambda Nothing [AST.PWild
-                                   ,AST.PWild
-                                   ,AST.PCon "True"] (ELit (Just [AST.TName "Integer" []]) (LI 0))
-              ,AST.ELambda Nothing [AST.PVar "n"
-                                   ,AST.PWild
-                                   ,AST.PWild] (AST.EVar Nothing "n")]
-            ,Fun "b" Nothing [AST.EApp Nothing 
-                              (AST.EApp Nothing 
-                                (AST.EApp Nothing 
-                                  (AST.EVar Nothing "a") 
-                                  (ELit (Just [AST.TName "Integer" []]) (LI 4))) 
-                                (ELit (Just [AST.TName "Char" []]) (LC 'c'))) 
-                              (AST.ECon Nothing "False")]]
-
---}
