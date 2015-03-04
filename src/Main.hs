@@ -17,13 +17,14 @@ import TypeChecker.TypeChecker (typeCheck)
 import CodeGenerator.CodeGenerator
 import Utils.BeamWriter
 
-data Flag = Verbose | Parse | TypeCheck | Core | NoBeam
+data Flag = Verbose | Parse | AST | TypeCheck | Core | NoBeam
   deriving (Show, Eq)
 
 options :: [OptDescr Flag]
 options = 
   [ Option ['v'] ["verbose"]   (NoArg Verbose)   "show everything thats happening"
   , Option ['p'] ["parse"]     (NoArg Parse)     "write a hopper parse file"
+  , Option ['a'] ["ast"]       (NoArg AST)       "print the ast to haskell file"
   , Option ['t'] ["typecheck"] (NoArg TypeCheck) "print the type checked tree" 
   , Option ['c'] ["core"]      (NoArg Core)      "write a erlang core file"
   , Option ['b'] ["nobeam"]    (NoArg NoBeam)    "don't do the erlc compilation"
@@ -62,10 +63,16 @@ main' args = do
       -- Convert to AST
       let astE = treeE >>= transform
 
+      whenFlag AST astE $ \ast -> do
+        writeFile (f'++".ast.hs") ("import AST.AST\nast="++show ast)
+        write $ "Wrote ast to " ++ f' ++ ".ast.hs"
+
       -- Typechecker
       let typedE = astE >>= typeCheck
 
-      -- whenFlag TypeCheck
+      whenFlag TypeCheck typedE $ \typed -> do
+        writeFile (f'++".typed.hs") ("import AST.AST\ntyped="++show typed)
+        write $ "Wrote typed ast to " ++ f' ++ ".typed.hs"
 
       -- Code generation
       let coreE = typedE >>= compileModuleString 
@@ -111,5 +118,3 @@ main' args = do
       when (flag `elem` opt) $ case a of
         Bad e -> putStrLn e >> exitFailure 
         Ok  t -> f t 
-
-
