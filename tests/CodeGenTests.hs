@@ -81,8 +81,8 @@ tModule = Mod "CodeGenTest"
             ]
             [ HPR.Fun "i"
                 [TName "Int" []]
-                (ELit [TName "Int" []] (LI 10))
+                (ELit (LI 10))
             , HPR.Fun "s"
                 [TName "String" []]
-                (ELit [TName "String" []] (LS "test"))
+                (ELit (LS "test"))
             ]

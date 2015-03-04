@@ -56,8 +56,8 @@ compileFun :: HPR.Function Signature -> FunDef
 compileFun (HPR.Fun fId t e) = 
   CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' []))
   where e' = case e of
-                 (ELambda _ _) -> e
-                 _             -> ELambda [] e
+                 ELambda{} -> e
+                 _         -> ELambda [] e
 -- The empty lists here will be changed when we deal with parameters
 
 -- |The 'compileExp' function compiles an AST
@@ -71,17 +71,15 @@ compileExp (EVar nId) s =
     then Var $ compileLambdaPat (HPR.PVar nId)
     else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
 compileExp (ECon _)         _ = undefined -- when does this happen?
-compileExp (ELit (LS s))    _ = Lit (LString s)
-compileExp (ELit (LC c))    _ = Lit (LChar c)
-compileExp (ELit (LI i))    _ = Lit (LInt i)
-compileExp (ELit (LD d))    _ = Lit (LFloat d) -- No double constructor in CoreErlang
+compileExp (ELit l)         _ = Lit $ compileLiteral l
+compileExp (ETuple es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
 compileExp (ELambda pats e) s = Lambda (map compileLambdaPat pats) 
                                          (Exp (Constr (compileExp e (pats++s))))
 compileExp (EApp e1 e2)     _ = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
   where arity        = toInteger $ length args
         args         = compileAppArgs e2
         (EVar nId) = e1
-compileExp (ECase _ _) _ = undefined -- wat
+compileExp (ECase e cases)  s = Case (Exp (Constr (compileExp e s))) (compileCases cases)
 
 -- |The 'compileAppArgs' function compiles a chain
 --  of AST's in the form of AppAST to a list of expressions
@@ -89,17 +87,51 @@ compileAppArgs :: Expression -> [Exps]
 compileAppArgs e@(EApp (EVar _) _) = [Exp (Constr (compileExp e []))]
 compileAppArgs (EApp e1 e2)          = ann e1 ++ ann e2
   where ann x = case x of
-                  (EApp _ _) -> compileAppArgs x
-                  _            -> [Exp (Constr (compileExp x []))]
+                  EApp{} -> compileAppArgs x
+                  _      -> [Exp (Constr (compileExp x []))]
 compileAppArgs e = [Exp (Constr (compileExp e []))]
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
+--
+--  We need to think about how to deal with tuples in lambdas.
+--  In hopper, the lambda patterns may be variables, wildcards or
+--  tuples of variables. In core erlang the lambda patterns is just
+--  a list of variables. In this case, a tuple would be translated
+--  to a single variable, which is then matched in a generated case
+--  clause within the lambda expression.
 compileLambdaPat :: Pattern -> Var
-compileLambdaPat (HPR.PVar vId) = '_':vId -- _ garantuees valid core erlang variable name
-compileLambdaPat PWild          = "_"
-compileLambdaPat (PCon _)       = undefined
-compileLambdaPat (HPR.PLit _)   = undefined
+compileLambdaPat (HPR.PVar vId)  = '_':vId -- _ garantuees valid core erlang variable name
+compileLambdaPat PWild           = "_"
+compileLambdaPat (HPR.PTuple ps) = undefined -- TODO
+compileLambdaPat _               = undefined
+
+-- |The 'compileCases' function converts a list of
+--  cases to a list of annotated alts as seen in
+--  Language.CoreErlang.Syntax case expressions
+compileCases :: [(Pattern, Expression)] -> [Ann Alt]
+compileCases [] = []
+compileCases ((p, e):rest) = Constr (Alt pats guard exps ) : compileCases rest
+  where pats  = Pat $ compileCasePat p
+        guard = Guard (Exps (Constr []))
+        exps  = Exp (Constr (compileExp e [])) -- TODO add virables in pats to scope
+
+-- |The 'compileCasePat' function compiles a hopper pattern
+--  to a core erlang pattern
+compileCasePat :: Pattern -> Pat
+compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
+compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
+compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
+compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
+compileCasePat _                 = undefined
+
+-- |The 'compileLiteral' function compiles a hopper literal
+--  to a core erlang literal
+compileLiteral :: HPR.Literal -> CES.Literal
+compileLiteral (LS s) = LString s
+compileLiteral (LC c) = LChar c
+compileLiteral (LI i) = LInt i
+compileLiteral (LD d) = LFloat d -- No double constructor in CoreErlang
 
 -- |The 'isIdBound' checks if the given id is
 --  bound in the given scope
@@ -124,7 +156,7 @@ typeToArity t = toInteger $ length t - 1
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Signature -> Signature
 getTypeSig _ (Mod _ _ []) = undefined -- Signature could not be found, code generator should not be invoked if this is the case
-getTypeSig fId (Mod mId es ((HPR.Fun funId typeSig _):defs))
+getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs))
   | fId == funId = typeSig
   | otherwise    = getTypeSig fId (Mod mId es defs)
 
