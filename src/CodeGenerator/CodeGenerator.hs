@@ -57,7 +57,7 @@ compileFun (HPR.Fun fId t e) =
   CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' []))
   where e' = case e of
                  ELambda{} -> e
-                 _         -> ELambda t [] e
+                 _         -> ELambda [] e
 -- The empty lists here will be changed when we deal with parameters
 
 -- |The 'compileExp' function compiles an AST
@@ -65,27 +65,27 @@ compileFun (HPR.Fun fId t e) =
 --  Named and AppAst are implemented with parameterless functions in mind
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
-compileExp :: Expression Signature -> [Pattern] -> CES.Exp
-compileExp (EVar _ nId) s = 
+compileExp :: Expression -> [Pattern] -> CES.Exp
+compileExp (EVar nId) s = 
   if isIdBound nId s
     then Var $ compileLambdaPat (HPR.PVar nId)
     else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
-compileExp (ECon _ _)         _ = undefined -- when does this happen?
-compileExp (ELit _ l)         _ = Lit $ compileLiteral l
-compileExp (ETuple _ es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
-compileExp (ELambda _ pats e) s = Lambda (map compileLambdaPat pats) 
+compileExp (ECon _)         _ = undefined -- when does this happen?
+compileExp (ELit l)         _ = Lit $ compileLiteral l
+compileExp (ETuple es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
+compileExp (ELambda pats e) s = Lambda (map compileLambdaPat pats) 
                                          (Exp (Constr (compileExp e (pats++s))))
-compileExp (EApp _ e1 e2)     _ = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
+compileExp (EApp e1 e2)     _ = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
   where arity        = toInteger $ length args
         args         = compileAppArgs e2
-        (EVar _ nId) = e1
-compileExp (ECase _ e cases)  s = Case (Exp (Constr (compileExp e s))) (compileCases cases)
+        (EVar nId) = e1
+compileExp (ECase e cases)  s = Case (Exp (Constr (compileExp e s))) (compileCases cases)
 
 -- |The 'compileAppArgs' function compiles a chain
 --  of AST's in the form of AppAST to a list of expressions
-compileAppArgs :: Expression Signature -> [Exps]
-compileAppArgs e@(EApp _ (EVar _ _) _) = [Exp (Constr (compileExp e []))]
-compileAppArgs (EApp _ e1 e2)          = ann e1 ++ ann e2
+compileAppArgs :: Expression -> [Exps]
+compileAppArgs e@(EApp (EVar _) _) = [Exp (Constr (compileExp e []))]
+compileAppArgs (EApp e1 e2)          = ann e1 ++ ann e2
   where ann x = case x of
                   EApp{} -> compileAppArgs x
                   _      -> [Exp (Constr (compileExp x []))]
@@ -109,7 +109,7 @@ compileLambdaPat _               = undefined
 -- |The 'compileCases' function converts a list of
 --  cases to a list of annotated alts as seen in
 --  Language.CoreErlang.Syntax case expressions
-compileCases :: [(Pattern, Expression Signature)] -> [Ann Alt]
+compileCases :: [(Pattern, Expression)] -> [Ann Alt]
 compileCases [] = []
 compileCases ((p, e):rest) = Constr (Alt pats guard exps ) : compileCases rest
   where pats  = Pat $ compileCasePat p
