@@ -23,7 +23,7 @@ data Literal = LS String
              -- | LL []
   deriving (Eq,Ord,Show)
 
-data Function a = Fun Identifier a (Expression a)
+data Function a = Fun Identifier a Expression
   deriving (Eq,Ord,Show) -- Function arguments is desugared to lambdas
 
 type Signature = [Type]
@@ -40,16 +40,17 @@ data Pattern = PVar Identifier
              | PTuple [Pattern]
   deriving (Eq,Ord,Show) -- Should be recursive later for nested lists ect
 
-data Expression a = EVar a Identifier -- TODO: Add EVal for fully applied functions when we have adts
-                  | ECon a Constructor
-                  | ELit a Literal
-                  | ETuple a [Expression a]
-                  | ELambda a [Pattern] (Expression a)
-                  | EApp a (Expression a) (Expression a)
-                 -- | EWhere [(Pattern,Expression)]
-                  | ECase a (Expression a) [(Pattern, Expression a)] -- TODO: Extend with guards 
-                 -- | ECall a Identifier Identifier [Expression a]
-                 -- | ELet Pattern (Expression a) (Expression a)
+-- Removed type parameter from expression. Type checker got too confused.
+data Expression = EVar Identifier -- TODO: Add EVal for fully applied functions when we have adts
+                | ECon Constructor
+                | ELit Literal
+                | ETuple [Expression]
+                | ELambda [Pattern] Expression
+                | EApp Expression Expression
+               -- | EWhere [Function a]
+                | ECase Expression [(Pattern, Expression)] 
+               -- | ECall Identifier Identifier [Expression]
+               -- | ELet Pattern Expression Expression
   deriving (Eq,Ord,Show)
  
 

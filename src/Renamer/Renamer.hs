@@ -52,7 +52,7 @@ transformDefs defs = do
       e'' <- if null as
               then return e'
               else do pat <- mapM transformArg as
-                      return $ AST.ELambda Nothing pat e'     
+                      return $ AST.ELambda pat e'     
 
       case M.lookup i m of
         Nothing           -> return $ M.insert i (Fun i Nothing e'') m
@@ -73,16 +73,16 @@ transformTypes = map go
 -- Questions: 
 -- * Should we add some type inference here? At least on literals?
 -- * Should EOpr be special in some way?
-transformExp :: Exp -> Err (Expression (Maybe Signature))
+transformExp :: Exp -> Err Expression
 transformExp e = case e of
-  HPR.EVar (IdVar i) -> Ok $ AST.EVar Nothing i
-  HPR.ECon (IdCon i) -> Ok $ AST.ECon Nothing i
-  EOpr (IdOpr i)     -> Ok $ AST.EVar Nothing i
+  HPR.EVar (IdVar i) -> Ok $ AST.EVar i
+  HPR.ECon (IdCon i) -> Ok $ AST.ECon i
+  EOpr (IdOpr i)     -> Ok $ AST.EVar i
 
-  EString s          -> Ok $ ELit (Just [AST.TName "String"  []]) $ LS s
-  EChar c            -> Ok $ ELit (Just [AST.TName "Char"    []]) $ LC c
-  EInteger i         -> Ok $ ELit (Just [AST.TName "Integer" []]) $ LI i
-  EDouble d          -> Ok $ ELit (Just [AST.TName "Double"  []]) $ LD d
+  EString s          -> Ok $ ELit $ LS s
+  EChar c            -> Ok $ ELit $ LC c
+  EInteger i         -> Ok $ ELit $ LI i
+  EDouble d          -> Ok $ ELit $ LD d
 
   EInfix a op b      -> (transformExp $ EOpr op) 
                         `app` (transformExp a) 
@@ -91,11 +91,11 @@ transformExp e = case e of
   HPR.EApp a b       -> (transformExp a) `app` (transformExp b)
   HPR.ELambda ps a   -> do a'  <- transformExp a 
                            ps' <- mapM transformPat ps 
-                           return $ AST.ELambda Nothing ps' a' 
+                           return $ AST.ELambda ps' a' 
                            
   where app (Bad m) _      = Bad m
         app _      (Bad m) = Bad m 
-        app (Ok a) (Ok b)  = Ok $ AST.EApp Nothing a b
+        app (Ok a) (Ok b)  = Ok $ AST.EApp a b
 
 transformPat :: Pat -> Err Pattern
 transformPat p = case p of
@@ -122,7 +122,8 @@ transformArg a = case a of
 --
 
 -- | A temporary expression representing a function without an expression yet
-eundefined = AST.EVar Nothing "undefined" 
+eundefined :: Expression
+eundefined = AST.EVar "undefined" 
 
 -- | Check that there are no signatures without function definitions
 checkLonelySignatures :: Function (Maybe Signature) -> Err ()
@@ -140,28 +141,26 @@ checkExports ids fs = sequence_ $ map exists ids
 
 -- | Convert two pattern matching functions to a case expression
 -- TODO: How should the signatures be handled here?
-mergeCase :: Expression (Maybe Signature) 
-          -> Expression (Maybe Signature) 
-          -> Err (Expression (Maybe Signature))
+mergeCase :: Expression -> Expression -> Err Expression
 mergeCase a b = case (a,b) of
 
   -- Replace eundefined with expression
   (c,d) | c == eundefined -> Ok d
 
   -- Add new clause to case 
-  (AST.ELambda t ps (AST.ECase t' e cs), (AST.ELambda _ ps' e')) ->
+  (AST.ELambda ps (AST.ECase e cs), (AST.ELambda ps' e')) ->
     if length ps == length ps'
-      then Ok $ AST.ELambda t ps (AST.ECase t' e (cs++[(PTuple ps', e')]))
+      then Ok $ AST.ELambda ps (AST.ECase e (cs++[(PTuple ps', e')]))
       else Bad $ "Mismatched number of arguments in patternmatching when adding"
               ++ show ps' ++ " -> " ++ show e' ++ " to case clause"
 
   -- Convert two lambdas to case expression
-  (AST.ELambda t ps e, AST.ELambda _ ps' e') ->
+  (AST.ELambda ps e, AST.ELambda ps' e') ->
     if length ps == length ps'
       then do let as = makeArgs ps
               ts <- expressionFromArgs as
-              let cs = AST.ECase t ts [(PTuple ps, e), (PTuple ps', e')]
-              Ok $ AST.ELambda t as cs
+              let cs = AST.ECase ts [(PTuple ps, e), (PTuple ps', e')]
+              Ok $ AST.ELambda as cs
       else Bad $ "Mismatched number of arguments in patternmatching between '\\"
               ++ show ps ++ " -> " ++ show e ++ "' and '\\"
               ++ show ps' ++ " -> " ++ show e' ++ "'" 
@@ -172,15 +171,16 @@ mergeCase a b = case (a,b) of
 
 
 makeArgs :: [Pattern] -> [Pattern]
-makeArgs = zipWith (\n _ -> AST.PVar $ "_arg" ++ show n) [1..]
+makeArgs = zipWith (\n _ -> AST.PVar $ "_arg" ++ show n) ([1..] :: [Integer])
+
 
 -- | Convert PTuple to ETuple
 -- TODO: Make this code safe
-expressionFromArgs :: [Pattern] -> Err (Expression (Maybe Signature))
+expressionFromArgs :: [Pattern] -> Err Expression
 expressionFromArgs ps = do
   ps' <- mapM go ps
-  Ok $ ETuple Nothing ps'
-  where go (AST.PVar n) = Ok $ AST.EVar Nothing n
+  Ok $ ETuple ps'
+  where go (AST.PVar n) = Ok $ AST.EVar n
         go e = Bad $ "That shouldn't be in expressionFromArgs: " ++ show e
 
 

@@ -20,6 +20,9 @@ executable hopper
                        process,
                        directory,
                        array >=0.4,
+                       pretty >=1.1.1.0,
+                       mtl >=2.2.1,
+                       transformers >=0.4.2.0,
                        containers, process, directory
   GHC-Options:         -O2 -Wall
   hs-source-dirs:      src
@@ -36,6 +39,9 @@ test-suite test-hopper
                        base >=4.5 && <4.8, 
                        process,
                        directory,
+                       pretty >=1.1.1.0,
+                       mtl >=2.2.1,
+                       transformers >=0.4.2.0,
                        array >=0.4, containers,
                        HUnit,
                        test-framework,

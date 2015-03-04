@@ -13,6 +13,7 @@ import Parser.LayoutHopper
 import Utils.ErrM
 
 import Renamer.Renamer (transform)
+import TypeChecker.TypeChecker (typeCheck)
 import CodeGenerator.CodeGenerator
 import Utils.BeamWriter
 
@@ -62,12 +63,12 @@ main' args = do
       let astE = treeE >>= transform
 
       -- Typechecker
-      -- todo
+      let typedE = astE >>= typeCheck
 
       -- whenFlag TypeCheck
 
       -- Code generation
-      let coreE = astE >>= compileModuleString 
+      let coreE = typedE >>= compileModuleString 
 
       whenFlag Core coreE $ \core -> do
         writeFile (f'++".core") core
