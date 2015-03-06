@@ -67,28 +67,28 @@ compileFun (HPR.Fun fId t e) =
 compileExp :: Expression -> [Pattern] -> CES.Exp
 compileExp (EVar nId) s = 
   if isIdBound ('_':nId) s || isIdBound nId s
-    then Var $ compileLambdaPat (HPR.PVar nId)
-    else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
+     then Var $ compileLambdaPat (HPR.PVar nId)
+     else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
 compileExp (ECon c)         _ = error $ "Got expression constructor: " ++ c
 compileExp (ELit l)         _ = Lit $ compileLiteral l
 compileExp (ETuple es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
 compileExp (ELambda pats e) s = Lambda (map compileLambdaPat pats) 
                                          (Exp (Constr (compileExp e (pats++s))))
-compileExp (EApp e1 e2)     _ = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
+compileExp (EApp e1 e2)     s = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
   where arity        = toInteger $ length args
-        args         = compileAppArgs e2
-        (EVar nId) = e1
+        args         = compileAppArgs e2 s
+        (EVar nId)   = e1
 compileExp (ECase e cases)  s = Case (Exp (Constr (compileExp e s))) (compileCases cases)
 
 -- |The 'compileAppArgs' function compiles a chain
 --  of AST's in the form of AppAST to a list of expressions
-compileAppArgs :: Expression -> [Exps]
-compileAppArgs e@(EApp (EVar _) _) = [Exp (Constr (compileExp e []))]
-compileAppArgs (EApp e1 e2)          = ann e1 ++ ann e2
+compileAppArgs :: Expression -> [Pattern] -> [Exps]
+compileAppArgs e@(EApp (EVar _) _) s = [Exp (Constr (compileExp e s))]
+compileAppArgs (EApp e1 e2)        s = ann e1 ++ ann e2
   where ann x = case x of
-                  EApp{} -> compileAppArgs x
-                  _      -> [Exp (Constr (compileExp x []))]
-compileAppArgs e = [Exp (Constr (compileExp e []))]
+                  EApp{} -> compileAppArgs x s
+                  _      -> [Exp (Constr (compileExp x s))]
+compileAppArgs e s = [Exp (Constr (compileExp e s))]
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
