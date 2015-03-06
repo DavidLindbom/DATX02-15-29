@@ -23,7 +23,6 @@ import Control.Monad
 writeBeam :: String -> String -> Bool -> IO ()
 writeBeam path code keepCore = 
   do writeFile coreFile code
-     putStrLn $ "compiling " ++ coreFile ++ " to " ++ targetBeam ++ "..."
      _ <- rawSystem "erlc" [coreFile, "-o", targetBeam]
      unless keepCore $ removeFile coreFile
   where targetBeam = path ++ ".beam"
