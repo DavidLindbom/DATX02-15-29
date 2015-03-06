@@ -54,11 +54,10 @@ compileExport m eId = CES.Function (Atom eId, getArity eId m)
 --  to a CoreErlang.FunDef
 compileFun :: HPR.Function Signature -> FunDef
 compileFun (HPR.Fun fId t e) = 
-  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' []))
-  where e' = case e of
-                 ELambda{} -> e
-                 _         -> ELambda [] e
--- The empty lists here will be changed when we deal with parameters
+  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' s))
+  where (e', s) = case e of -- binds lambda pats to scope, if lambda
+                    (ELambda pats _) -> (e, pats)
+                    _                -> (ELambda [] e, [])
 
 -- |The 'compileExp' function compiles an AST
 --  to a CoreErlang.Exp
@@ -67,10 +66,10 @@ compileFun (HPR.Fun fId t e) =
 --  an AppAST will be a function identifier
 compileExp :: Expression -> [Pattern] -> CES.Exp
 compileExp (EVar nId) s = 
-  if isIdBound nId s
+  if isIdBound ('_':nId) s || isIdBound nId s
     then Var $ compileLambdaPat (HPR.PVar nId)
     else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
-compileExp (ECon _)         _ = undefined -- when does this happen?
+compileExp (ECon c)         _ = error $ "Got expression constructor: " ++ c
 compileExp (ELit l)         _ = Lit $ compileLiteral l
 compileExp (ETuple es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
 compileExp (ELambda pats e) s = Lambda (map compileLambdaPat pats) 
@@ -101,10 +100,11 @@ compileAppArgs e = [Exp (Constr (compileExp e []))]
 --  to a single variable, which is then matched in a generated case
 --  clause within the lambda expression.
 compileLambdaPat :: Pattern -> Var
-compileLambdaPat (HPR.PVar vId)  = '_':vId -- _ garantuees valid core erlang variable name
 compileLambdaPat PWild           = "_"
-compileLambdaPat (HPR.PTuple ps) = undefined -- TODO
-compileLambdaPat _               = undefined
+compileLambdaPat (HPR.PTuple ps) = error $ "Tuple not implemented yet, got: " ++ show ps
+compileLambdaPat (HPR.PLit l)    = error $ "Unallowed literal in lambda pattern: " ++ show l 
+compileLambdaPat (HPR.PVar v)    = '_':v
+compileLambdaPat (PCon c)        = error $ "Constructors not implemented: " ++ show c
 
 -- |The 'compileCases' function converts a list of
 --  cases to a list of annotated alts as seen in
@@ -113,17 +113,25 @@ compileCases :: [(Pattern, Expression)] -> [Ann Alt]
 compileCases [] = []
 compileCases ((p, e):rest) = Constr (Alt pats guard exps ) : compileCases rest
   where pats  = Pat $ compileCasePat p
-        guard = Guard (Exps (Constr []))
-        exps  = Exp (Constr (compileExp e [])) -- TODO add virables in pats to scope
+        guard = Guard (Exp (Constr (Lit (LAtom (Atom "true"))))) -- Change when guards are implemented
+        exps  = Exp (Constr (compileExp e bVars)) -- TODO add virables in pats to scope
+        bVars = getCasePatterns p
+
+-- |The 'getCasePatterns' function converts a pattern
+--  to a list of patterns. This means a tuple will be
+--  converted to a list of its patterns.
+getCasePatterns :: Pattern -> [Pattern]
+getCasePatterns (HPR.PTuple ps) = ps
+getCasePatterns p               = [p]
 
 -- |The 'compileCasePat' function compiles a hopper pattern
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
 compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
+compileCasePat (HPR.PCon c)    = error $ "Constructors not implemented: " ++ show c
 compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
-compileCasePat _                 = undefined
 
 -- |The 'compileLiteral' function compiles a hopper literal
 --  to a core erlang literal
@@ -155,7 +163,7 @@ typeToArity t = toInteger $ length t - 1
 -- |The 'getTypeSig' function gets the SignatureAST signature
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Signature -> Signature
-getTypeSig _ (Mod _ _ []) = undefined -- Signature could not be found, code generator should not be invoked if this is the case
+getTypeSig fId (Mod _ _ []) = error $ "Could not find function when looking for signature: " ++ fId
 getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs))
   | fId == funId = typeSig
   | otherwise    = getTypeSig fId (Mod mId es defs)

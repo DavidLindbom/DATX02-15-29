@@ -110,7 +110,7 @@ transformPat p = case p of
 transformArg :: Arg -> Err Pattern
 transformArg a = case a of
   ACon (IdCon i) -> Ok $ AST.PCon i
-  AVar (IdVar i) -> Ok $ AST.PCon i
+  AVar (IdVar i) -> Ok $ AST.PVar i
   AWild          -> Ok $ AST.PWild
   AString s      -> Ok $ AST.PLit $ LS s
   AChar c        -> Ok $ AST.PLit $ LC c
