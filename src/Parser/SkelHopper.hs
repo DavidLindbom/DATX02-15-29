@@ -69,7 +69,13 @@ transExp x = case x of
   EDouble d  -> failure x
   EInfix exp1 idopr2 exp3  -> failure x
   EApp exp1 exp2  -> failure x
+  ECase exp clas  -> failure x
   ELambda pats exp  -> failure x
+
+
+transCla :: Cla -> Result
+transCla x = case x of
+  CClause pat exp  -> failure x
 
 
 transPat :: Pat -> Result

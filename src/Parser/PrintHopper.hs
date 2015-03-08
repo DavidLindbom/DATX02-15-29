@@ -6,7 +6,6 @@ module Parser.PrintHopper where
 import Parser.AbsHopper
 import Data.Char
 
-import Prelude hiding (exp)
 
 -- the top-level printing method
 printTree :: Print a => a -> String
@@ -103,6 +102,7 @@ instance Print Export where
    MExport idvar -> prPrec i 0 (concatD [prt 0 idvar])
 
   prtList es = case es of
+   [] -> (concatD [])
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
 
@@ -151,8 +151,17 @@ instance Print Exp where
    EDouble d -> prPrec i 2 (concatD [prt 0 d])
    EInfix exp0 idopr exp -> prPrec i 1 (concatD [prt 1 exp0 , prt 0 idopr , prt 2 exp])
    EApp exp0 exp -> prPrec i 1 (concatD [prt 1 exp0 , prt 2 exp])
+   ECase exp clas -> prPrec i 1 (concatD [doc (showString "case") , prt 1 exp , doc (showString "of") , doc (showString "{") , prt 0 clas , doc (showString "}")])
    ELambda pats exp -> prPrec i 0 (concatD [doc (showString "\\") , prt 0 pats , doc (showString "->") , prt 0 exp])
 
+
+instance Print Cla where
+  prt i e = case e of
+   CClause pat exp -> prPrec i 0 (concatD [prt 0 pat , doc (showString "->") , prt 0 exp])
+
+  prtList es = case es of
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString ";") , prt 0 xs])
 
 instance Print Pat where
   prt i e = case e of

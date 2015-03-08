@@ -14,20 +14,22 @@ import Utils.ErrM
 %monad { Err } { thenM } { returnM }
 %tokentype { Token }
 
-%token 
- '(' { PT _ (TS _ 1) }
- ')' { PT _ (TS _ 2) }
- ',' { PT _ (TS _ 3) }
- '->' { PT _ (TS _ 4) }
- '::' { PT _ (TS _ 5) }
- ';' { PT _ (TS _ 6) }
- '=' { PT _ (TS _ 7) }
- '\\' { PT _ (TS _ 8) }
- '_' { PT _ (TS _ 9) }
- 'module' { PT _ (TS _ 10) }
- 'where' { PT _ (TS _ 11) }
- '{' { PT _ (TS _ 12) }
- '}' { PT _ (TS _ 13) }
+%token
+  '(' { PT _ (TS _ 1) }
+  ')' { PT _ (TS _ 2) }
+  ',' { PT _ (TS _ 3) }
+  '->' { PT _ (TS _ 4) }
+  '::' { PT _ (TS _ 5) }
+  ';' { PT _ (TS _ 6) }
+  '=' { PT _ (TS _ 7) }
+  '\\' { PT _ (TS _ 8) }
+  '_' { PT _ (TS _ 9) }
+  'case' { PT _ (TS _ 10) }
+  'module' { PT _ (TS _ 11) }
+  'of' { PT _ (TS _ 12) }
+  'where' { PT _ (TS _ 13) }
+  '{' { PT _ (TS _ 14) }
+  '}' { PT _ (TS _ 15) }
 
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
@@ -36,7 +38,6 @@ L_doubl  { PT _ (TD $$) }
 L_IdVar { PT _ (T_IdVar $$) }
 L_IdCon { PT _ (T_IdCon $$) }
 L_IdOpr { PT _ (T_IdOpr $$) }
-L_err    { _ }
 
 
 %%
@@ -58,7 +59,8 @@ Export : IdVar { MExport $1 }
 
 
 ListExport :: { [Export] }
-ListExport : Export { (:[]) $1 } 
+ListExport : {- empty -} { [] } 
+  | Export { (:[]) $1 }
   | Export ',' ListExport { (:) $1 $3 }
 
 
@@ -113,12 +115,22 @@ Exp2 : IdVar { EVar $1 }
 Exp1 :: { Exp }
 Exp1 : Exp1 IdOpr Exp2 { EInfix $1 $2 $3 } 
   | Exp1 Exp2 { EApp $1 $2 }
+  | 'case' Exp1 'of' '{' ListCla '}' { ECase $2 $5 }
   | Exp2 { $1 }
 
 
 Exp :: { Exp }
 Exp : '\\' ListPat '->' Exp { ELambda $2 $4 } 
   | Exp1 { $1 }
+
+
+Cla :: { Cla }
+Cla : Pat '->' Exp { CClause $1 $3 } 
+
+
+ListCla :: { [Cla] }
+ListCla : Cla { (:[]) $1 } 
+  | Cla ';' ListCla { (:) $1 $3 }
 
 
 Pat :: { Pat }

@@ -1,4 +1,4 @@
-layout "=";
+layout "=", "of";
 layout toplevel;
 
 entrypoints Module;
@@ -7,7 +7,7 @@ entrypoints Module;
 MModule. Module ::= "module" IdCon "(" [Export] ")" "where" ";" [Def];
 MExport. Export ::= IdVar;
 
-separator nonempty Export ",";
+separator Export ",";
 
 -- Signatures and functions 
 separator Def ";";
@@ -44,9 +44,17 @@ EInteger. Exp2 ::= Integer;
 EDouble.  Exp2 ::= Double;
 EInfix.   Exp1 ::= Exp1 IdOpr Exp2; -- TODO: Add infix with backticks
 EApp.     Exp1 ::= Exp1 Exp2;
+ECase.    Exp1 ::= "case" Exp1 "of" "{" [Cla] "}";
 ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
 
 coercions Exp 2;
+
+-- Clauses
+
+CClause. Cla ::= Pat "->" Exp;
+
+separator nonempty Cla ";";
+
 
 -- Patterns
 PCon.     Pat ::= IdCon;

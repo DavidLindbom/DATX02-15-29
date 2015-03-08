@@ -89,6 +89,11 @@ transformExp e = case e of
                         `app` (transformExp b)
 
   HPR.EApp a b       -> (transformExp a) `app` (transformExp b)
+
+  HPR.ECase a c      -> do e' <- transformExp a
+                           c' <- mapM transformClause c
+                           return $ AST.ECase e' c'
+
   HPR.ELambda ps a   -> do a'  <- transformExp a 
                            ps' <- mapM transformPat ps 
                            return $ AST.ELambda ps' a' 
@@ -116,6 +121,12 @@ transformArg a = case a of
   AChar c        -> Ok $ AST.PLit $ LC c
   AInteger i     -> Ok $ AST.PLit $ LI i
   ADouble d      -> Ok $ AST.PLit $ LD d
+
+transformClause :: Cla -> Err (Pattern, Expression)
+transformClause c = case c of
+  CClause p e -> do p' <- transformPat p
+                    e' <- transformExp e
+                    return (p',e')
 
 --
 -- Helper functions
