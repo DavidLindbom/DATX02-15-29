@@ -1,4 +1,4 @@
-module Test2 (print, p2, p3, p4, p5, p6) where
+module Test4 (print, p2, p3, p4, p5, p6) where
 
 print :: Int -> Int -> Int -> Int
 print 1 2 c = c
