@@ -45,6 +45,7 @@ EDouble.  Exp2 ::= Double;
 EInfix.   Exp1 ::= Exp1 IdOpr Exp2; -- TODO: Add infix with backticks
 EApp.     Exp1 ::= Exp1 Exp2;
 ECase.    Exp1 ::= "case" Exp1 "of" "{" [Cla] "}";
+EIf.      Exp1 ::= "if" Exp1 "then" Exp2 "else" Exp2;
 ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
 
 coercions Exp 2;

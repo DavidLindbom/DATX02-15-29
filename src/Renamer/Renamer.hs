@@ -92,11 +92,17 @@ transformExp e = case e of
 
   HPR.ECase a c      -> do e' <- transformExp a
                            c' <- mapM transformClause c
-                           return $ AST.ECase e' c'
+                           Ok $ AST.ECase e' c'
+  
+  HPR.EIf a b c      -> do a' <- transformExp a
+                           b' <- transformExp b
+                           c' <- transformExp c
+                           Ok $ AST.ECase a' [(AST.PCon "True", b')
+                                             ,(AST.PCon "False", c')]
 
   HPR.ELambda ps a   -> do a'  <- transformExp a 
                            ps' <- mapM transformPat ps 
-                           return $ AST.ELambda ps' a' 
+                           Ok $ AST.ELambda ps' a' 
                            
   where app (Bad m) _      = Bad m
         app _      (Bad m) = Bad m 
@@ -126,7 +132,7 @@ transformClause :: Cla -> Err (Pattern, Expression)
 transformClause c = case c of
   CClause p e -> do p' <- transformPat p
                     e' <- transformExp e
-                    return (p',e')
+                    Ok (p',e')
 
 --
 -- Helper functions

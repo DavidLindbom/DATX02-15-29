@@ -25,11 +25,14 @@ import Utils.ErrM
   '\\' { PT _ (TS _ 8) }
   '_' { PT _ (TS _ 9) }
   'case' { PT _ (TS _ 10) }
-  'module' { PT _ (TS _ 11) }
-  'of' { PT _ (TS _ 12) }
-  'where' { PT _ (TS _ 13) }
-  '{' { PT _ (TS _ 14) }
-  '}' { PT _ (TS _ 15) }
+  'else' { PT _ (TS _ 11) }
+  'if' { PT _ (TS _ 12) }
+  'module' { PT _ (TS _ 13) }
+  'of' { PT _ (TS _ 14) }
+  'then' { PT _ (TS _ 15) }
+  'where' { PT _ (TS _ 16) }
+  '{' { PT _ (TS _ 17) }
+  '}' { PT _ (TS _ 18) }
 
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
@@ -116,6 +119,7 @@ Exp1 :: { Exp }
 Exp1 : Exp1 IdOpr Exp2 { EInfix $1 $2 $3 } 
   | Exp1 Exp2 { EApp $1 $2 }
   | 'case' Exp1 'of' '{' ListCla '}' { ECase $2 $5 }
+  | 'if' Exp1 'then' Exp2 'else' Exp2 { EIf $2 $4 $6 }
   | Exp2 { $1 }
 
 

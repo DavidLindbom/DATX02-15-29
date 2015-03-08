@@ -50,6 +50,7 @@ data Exp =
  | EInfix Exp IdOpr Exp
  | EApp Exp Exp
  | ECase Exp [Cla]
+ | EIf Exp Exp Exp
  | ELambda [Pat] Exp
   deriving (Eq,Ord,Show,Read)
 

@@ -70,6 +70,7 @@ transExp x = case x of
   EInfix exp1 idopr2 exp3  -> failure x
   EApp exp1 exp2  -> failure x
   ECase exp clas  -> failure x
+  EIf exp1 exp2 exp3  -> failure x
   ELambda pats exp  -> failure x
 
 

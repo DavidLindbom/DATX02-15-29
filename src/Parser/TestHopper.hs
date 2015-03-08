@@ -15,7 +15,7 @@ import Parser.LayoutHopper
 
 
 
-import Parser.ErrM
+import Utils.ErrM
 
 type ParseFun a = [Token] -> Err a
 

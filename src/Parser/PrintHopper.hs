@@ -152,6 +152,7 @@ instance Print Exp where
    EInfix exp0 idopr exp -> prPrec i 1 (concatD [prt 1 exp0 , prt 0 idopr , prt 2 exp])
    EApp exp0 exp -> prPrec i 1 (concatD [prt 1 exp0 , prt 2 exp])
    ECase exp clas -> prPrec i 1 (concatD [doc (showString "case") , prt 1 exp , doc (showString "of") , doc (showString "{") , prt 0 clas , doc (showString "}")])
+   EIf exp0 exp1 exp -> prPrec i 1 (concatD [doc (showString "if") , prt 1 exp0 , doc (showString "then") , prt 2 exp1 , doc (showString "else") , prt 2 exp])
    ELambda pats exp -> prPrec i 0 (concatD [doc (showString "\\") , prt 0 pats , doc (showString "->") , prt 0 exp])
 
 
