@@ -47,6 +47,7 @@ data Expression = EVar Identifier -- TODO: Add EVal for fully applied functions 
                 | ETuple [Expression]
                 | ELambda [Pattern] Expression
                 | EApp Expression Expression
+                | EVal Identifier [Expression]
                -- | EWhere [Function a]
                 | ECase Expression [(Pattern, Expression)] 
                 | ECall Identifier Identifier Expression

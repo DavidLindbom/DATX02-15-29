@@ -26,10 +26,11 @@ import AST.AST as HPR
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Signature -> CES.Module
-compileModule cMod@(Mod mId exports defs) = CES.Module (Atom mId) es as ds
+compileModule m@(Mod mId exports defs) = CES.Module (Atom mId) es as ds
   where as = []
-        es = compileExports exports cMod
-        ds = map compileFun defs ++ generateModuleInfo mId
+        ds = map (compileFun fs) defs ++ generateModuleInfo mId
+        es = compileExports exports m
+        fs = getSignatures m
 
 -- |The 'compileModuleString' function compiles a hoppper
 --  to a Core Erlang code string
@@ -52,9 +53,9 @@ compileExport m eId = CES.Function (Atom eId, getArity eId m)
 
 -- |The 'compileFun' function compiles a hopper Function
 --  to a CoreErlang.FunDef
-compileFun :: HPR.Function Signature -> FunDef
-compileFun (HPR.Fun fId t e) = 
-  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' s))
+compileFun :: [(Identifier, Integer)] -> HPR.Function Signature -> FunDef
+compileFun fs (HPR.Fun fId t e) = 
+  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' s fs))
   where (e', s) = case e of -- binds lambda pats to scope, if lambda
                     (ELambda pats _) -> (e, pats)
                     _                -> (ELambda [] e, [])
@@ -64,31 +65,71 @@ compileFun (HPR.Fun fId t e) =
 --  Named and AppAst are implemented with parameterless functions in mind
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
-compileExp :: Expression -> [Pattern] -> CES.Exp
-compileExp (EVar nId) s = 
+compileExp :: Expression -> [Pattern] -> [(Identifier, Integer)] -> CES.Exp
+compileExp (EVar nId) s _ = 
   if isIdBound ('_':nId) s || isIdBound nId s
      then Var $ compileLambdaPat (HPR.PVar nId)
      else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
-compileExp (ECon c)         _ = error $ "Got expression constructor: " ++ c
-compileExp (ELit l)         _ = Lit $ compileLiteral l
-compileExp (ETuple es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
-compileExp (ELambda pats e) s = Lambda (map compileLambdaPat pats) 
-                                         (Exp (Constr (compileExp e (pats++s))))
-compileExp (EApp e1 e2)     s = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
-  where arity        = toInteger $ length args
-        args         = compileAppArgs e2 s
-        (EVar nId)   = e1
-compileExp (ECase e cases)  s = Case (Exp (Constr (compileExp e s))) (compileCases cases)
+compileExp (ECon c)          _ _  = error $ "Got expression constructor: " ++ c
+compileExp (ELit l)          _ _  = Lit $ compileLiteral l
+compileExp (ETuple es)       s fs = Tuple $ map (\e -> Exp (Constr (compileExp e s fs))) es
+compileExp (ELambda pats e)  s fs = Lambda (map compileLambdaPat pats) 
+                                       (Exp (Constr (compileExp e (pats++s) fs)))
+compileExp e@(EApp e1 e2)    s fs = 
+  case e1 of
+    -- ECalls should be lifted out of their EApps, so the first argument is included in e2
+    (ECall mId fId ce) -> compileExp (ECall mId fId (EApp ce e2)) s fs
+    _                  -> compileExp (packUnfolded (unfoldEApp e s) s fs) s fs
+compileExp (EVal i args)     s fs = App f a
+  where f = Exp (Constr (CES.Fun (Function (Atom i, toInteger (length args)))))
+        a = map (\e -> Exp (Constr (compileExp e s fs))) args
+compileExp (ECase e cases)   s fs = Case (Exp (Constr (compileExp e s fs))) (compileCases cases fs)
+compileExp (ECall mId fId e) s fs = ModCall (m, fun) (map f as)
+  where m   = Exp (Constr (Lit (LAtom (Atom mId))))
+        fun = Exp (Constr (Lit (LAtom (Atom fId))))
+        as  = unfoldEApp e s
+        f x = Exp (Constr (compileExp x s fs))
 
--- |The 'compileAppArgs' function compiles a chain
---  of AST's in the form of AppAST to a list of expressions
-compileAppArgs :: Expression -> [Pattern] -> [Exps]
-compileAppArgs e@(EApp (EVar _) _) s = [Exp (Constr (compileExp e s))]
-compileAppArgs (EApp e1 e2)        s = ann e1 ++ ann e2
-  where ann x = case x of
-                  EApp{} -> compileAppArgs x s
-                  _      -> [Exp (Constr (compileExp x s))]
-compileAppArgs e s = [Exp (Constr (compileExp e s))]
+-- |The 'unfoldEApp' function unfolds a chain of EApp to a list of
+--  expressions. It won't recurse through the whole tree,
+--  it stops when all branches currently contains no EApps
+unfoldEApp :: Expression -> [Pattern] -> [Expression]
+unfoldEApp (EApp e1 e2) s = 
+  case e1 of
+    (EVar i) -> if not (isIdBound ('_':i) s || isIdBound i s) 
+                   then [e1] ++ unfoldEApp e2 s
+                   else unfoldEApp e1 s ++ unfoldEApp e2 s
+    _        -> unfoldEApp e1 s ++ unfoldEApp e2 s
+unfoldEApp e _ = [e]
+
+-- |The 'foldEApp' function folds a list of expressions
+--  to a chain of EApp. This is used to rebuild a chain
+--  with additional expressions on top
+foldEApp :: [Expression] -> Expression
+foldEApp []     = error "Can't fold empty list to EApp"
+foldEApp [e]    = e
+foldEApp (h:t)  = EApp h $ foldEApp t
+
+-- |The 'packUnfolded' takes a list of expressions as built
+--  by the unfoldEApp function. It then identifies all
+--  function calls and packs them to EVal's
+packUnfolded :: [Expression] -> [Pattern] -> [(Identifier, Integer)] -> Expression
+packUnfolded uf scope sigs = f (reverse uf) [] scope sigs
+  where f [] [e] _ _ = e -- When the recursion is done, the packed list should be a single expression
+        f [] _   _ _ = error $ "Error while packing unfolded EApp: " ++ show uf
+        f (e@(EVar i):ufs) as sc si =
+          if isIdBound ('_':i) sc || isIdBound i sc
+             then f ufs (e:as) sc si
+             else f ufs packed sc si
+          where packed  = (EVal i args):(drop arity as)
+                args    = take arity as
+                arity   = fromInteger $ g i si
+        f [e] _ _ _ = e
+        f (e:ufs) as sc si = f ufs (e:as) sc si
+        g i' [] = error $ "Signature for function not found: " ++ show i'
+        g i' ((i'', a):si) 
+          | i' == i'' = a
+          | otherwise = g i' si
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
@@ -109,12 +150,12 @@ compileLambdaPat (PCon c)        = error $ "Constructors not implemented: " ++ s
 -- |The 'compileCases' function converts a list of
 --  cases to a list of annotated alts as seen in
 --  Language.CoreErlang.Syntax case expressions
-compileCases :: [(Pattern, Expression)] -> [Ann Alt]
-compileCases [] = []
-compileCases ((p, e):rest) = Constr (Alt pats guard exps ) : compileCases rest
+compileCases :: [(Pattern, Expression)] -> [(Identifier, Integer)] -> [Ann Alt]
+compileCases [] _ = []
+compileCases ((p, e):rest) fs = Constr (Alt pats guard exps ) : compileCases rest fs
   where pats  = Pat $ compileCasePat p
         guard = Guard (Exp (Constr (Lit (LAtom (Atom "true"))))) -- Change when guards are implemented
-        exps  = Exp (Constr (compileExp e bVars)) -- TODO add virables in pats to scope
+        exps  = Exp (Constr (compileExp e bVars fs))
         bVars = getCasePatterns p
 
 -- |The 'getCasePatterns' function converts a pattern
@@ -128,7 +169,7 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
 compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
-compileCasePat (HPR.PCon c)    = error $ "Constructors not implemented: " ++ show c
+compileCasePat (HPR.PCon c)      = error $ "Constructors not implemented: " ++ show c
 compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
@@ -141,7 +182,7 @@ compileLiteral (LC c) = LChar c
 compileLiteral (LI i) = LInt i
 compileLiteral (LD d) = LFloat d -- No double constructor in CoreErlang
 
--- |The 'isIdBound' checks if the given id is
+-- |The 'isIdBound' function checks if the given id is
 --  bound in the given scope
 isIdBound :: String -> [Pattern] -> Bool
 isIdBound _ [] = False
@@ -160,13 +201,18 @@ getArity fId m = typeToArity $ getTypeSig fId m
 typeToArity :: Signature -> Integer
 typeToArity t = toInteger $ length t - 1
 
--- |The 'getTypeSig' function gets the SignatureAST signature
+-- |The 'getTypeSig' function gets the Signature
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Signature -> Signature
 getTypeSig fId (Mod _ _ []) = error $ "Could not find function when looking for signature: " ++ fId
 getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs))
   | fId == funId = typeSig
   | otherwise    = getTypeSig fId (Mod mId es defs)
+
+-- |The 'gitSignatures' function gets the function
+--  signatures from the give module
+getSignatures :: HPR.Module Signature -> [(Identifier, Integer)]
+getSignatures (Mod _ _ defs) = map (\(HPR.Fun i sig _) -> (i, toInteger (length sig - 1))) defs
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
@@ -184,3 +230,4 @@ generateModuleInfo mId = [mi0,mi1]
                         (Exp (Constr (Lit (LAtom (Atom "erlang")))),
                          Exp (Constr (Lit (LAtom (Atom "get_module_info")))))
                         [Exp (Constr (Lit (LAtom (Atom mId)))),Exp (Constr (Var "_cor0"))])))))
+
