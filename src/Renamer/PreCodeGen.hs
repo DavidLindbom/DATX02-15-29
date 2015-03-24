@@ -7,7 +7,7 @@ import Utils.ErrM
 --  module to a module of the same structure, where expressions
 --  are transformed to fit the codegenerator
 transform2 :: Module Signature -> Err (Module Signature)
-transform2 m@(Mod mId es funs) = Ok $ Mod mId es $ map transformFun funs
+transform2 (Mod mId es funs) = Ok $ Mod mId es $ map transformFun funs
  
 -- |The 'transformFun' function transforms a Signature annotated
 --  function to a function of the same structure, where expressions
@@ -37,6 +37,7 @@ transformExp _     e                = e
 --  to EVals and recursively calls transformExp on the arguments
 transformEApp :: Expression -> [Expression] -> [Pattern] -> Expression
 transformEApp (EApp l@EApp{}      r) args scope = transformEApp l (r:args) scope
+transformEApp (EApp l@(ECon i)    r) args scope = ETuple (l:(map (transformExp scope) (r:args)))
 transformEApp (EApp l@(EVar i)    r) args scope = 
   if not (isIdBound i scope)
      then EVal i (map (transformExp scope) (r:args))

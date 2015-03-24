@@ -66,7 +66,7 @@ compileFun (HPR.Fun fId t e) =
 --  an AppAST will be a function identifier
 compileExp :: Expression -> CES.Exp
 compileExp (EVar nId)        = Var $ compileLambdaPat (HPR.PVar nId)
-compileExp (ECon c)          = error $ "Got expression constructor: " ++ c
+compileExp (ECon c)          = Lit $ LAtom $ Atom c
 compileExp (ELit l)          = Lit $ compileLiteral l
 compileExp (ETuple es)       = Tuple $ map (\e -> Exp (Constr (compileExp e))) es
 compileExp (ELambda pats e)  = Lambda (map compileLambdaPat pats) (Exp (Constr (compileExp e)))
@@ -118,7 +118,7 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
 compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
-compileCasePat (HPR.PCon c)      = error $ "Constructors not implemented: " ++ show c
+compileCasePat (HPR.PCon c)      = CES.PLit $ LAtom $ Atom c
 compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
