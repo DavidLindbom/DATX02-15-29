@@ -2,6 +2,7 @@ module Renamer.Renamer (transform) where
 
 import qualified Data.Map as M
 import Control.Monad 
+import Data.Monoid
 
 import Parser.AbsHopper as HPR
 import AST.AST as AST
@@ -10,13 +11,17 @@ import Utils.PrettyPrint
 
 transform :: HPR.Module -> Err (AST.Module (Maybe Signature))
 transform (MModule (IdCon name) expo defs) = do
-  defs' <- transformDefs defs
-  mapM_ checkLonelySignatures defs'
+  let (adts,defs') = findADTs defs
+  defs'' <- transformDefs defs'
+  mapM_ checkLonelySignatures defs''
   expo' <- case expo of
-            [] -> return $ map (\(Fun n _ _) -> n) defs'
+            [] -> let e1 = map (\(Fun n _ _) -> n) defs''
+                      e2 = M.keys adts
+                  in return (e1++e2)
             _  -> transformExports expo
-  checkExports expo' defs'
-  return $ Mod name expo' defs'
+  -- TODO: Should be moved to after dependency resolver
+  --checkExports expo' defs''
+  return $ Mod name expo' defs'' adts
 
 --
 -- All transform* functions is a transform from the parse tree to AST
@@ -137,6 +142,29 @@ transformClause c = case c of
 --
 -- Helper functions
 --
+
+-- | Find ADT declarations and take them out to an own map
+findADTs :: [Def] -> (M.Map Identifier Signature, [Def])
+findADTs defs = foldr go (M.empty,[]) defs -- reverse? 
+  where 
+    go :: Def -> (M.Map Identifier Signature,[Def]) -> (M.Map Identifier Signature,[Def])
+    go d (m,ds) = case d of 
+      
+      DDat (IdCon t) cons -> let m' = M.fromList $ map (dataToSignature t) cons
+                             in (m <> m', ds)
+      
+      d' -> (m,d':ds)
+
+
+-- | Convert a data constructor to signature
+--   The first argument is the last part of the signature
+--   
+dataToSignature :: Identifier -> Cons -> (Identifier, Signature)
+dataToSignature ty cons = case cons of
+  FCon (IdCon c) cs -> (c, map go cs ++ [AST.TName ty []])
+  where 
+    go :: Par -> AST.Type
+    go (GCon (IdCon s)) = AST.TName s []
 
 -- | A temporary expression representing a function without an expression yet
 eundefined :: Expression
