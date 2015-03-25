@@ -203,9 +203,20 @@ instance Print Pat where
    PChar c -> prPrec i 0 (concatD [prt 0 c])
    PInteger n -> prPrec i 0 (concatD [prt 0 n])
    PDouble d -> prPrec i 0 (concatD [prt 0 d])
+   PTuple qpats -> prPrec i 0 (concatD [doc (showString "(") , prt 0 qpats , doc (showString ")")])
 
   prtList es = case es of
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , prt 0 xs])
+
+instance Print Qpat where
+  prt i e = case e of
+   QCon idcon qpats -> prPrec i 0 (concatD [prt 0 idcon , prt 0 qpats])
+   QPat pat -> prPrec i 0 (concatD [prt 0 pat])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
 
 

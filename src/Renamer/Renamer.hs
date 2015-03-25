@@ -37,7 +37,7 @@ transformDefs defs = do
   where
     go :: M.Map Identifier (Function (Maybe Signature)) -> Def
        -> Err (M.Map Identifier (Function (Maybe Signature)))
-    
+   
     go m (DSig (IdVar i) t) = case M.lookup i m of
         -- There is no function
         Nothing -> 
@@ -65,6 +65,8 @@ transformDefs defs = do
           cs <- mergeCase es e''
           return $ M.insert i (Fun i t cs) m
 
+    go _ (DDat (IdCon s) _) = fail $ "Bug! Found data declaration '" 
+                                     ++ s ++ "' in transformDefs"
 
 transformTypes :: [HPR.Type] -> Signature
 transformTypes = map go
@@ -123,6 +125,16 @@ transformPat p = case p of
   HPR.PInteger i     -> Ok $ AST.PLit $ LI i
   HPR.PDouble d      -> Ok $ AST.PLit $ LD d
 
+  HPR.PTuple [p]     -> transformQpat p
+  HPR.PTuple ps      -> do ps' <- mapM transformQpat ps
+                           Ok $ AST.PTuple ps'
+
+transformQpat :: Qpat -> Err Pattern
+transformQpat a = case a of
+  QCon (IdCon s) qs -> do qs' <- mapM transformQpat qs
+                          Ok $ AST.PCon s qs'
+  QPat p            -> transformPat p
+
 transformArg :: Arg -> Err Pattern
 transformArg a = case a of
   ACon (IdCon i) -> Ok $ AST.PCon i []
@@ -135,12 +147,13 @@ transformArg a = case a of
 
   ATuple [b]     -> transformBarg b
   ATuple bs      -> do bs' <- mapM transformBarg bs
-                       Ok $ PTuple bs'
+                       Ok $ AST.PTuple bs'
 
 transformBarg :: Barg -> Err Pattern
 transformBarg a = case a of
   BCon (IdCon s) as -> do as' <- mapM transformArg as
                           Ok $ AST.PCon s as'
+  BArg a            -> transformArg a                        
 
 transformClause :: Cla -> Err (Pattern, Expression)
 transformClause c = case c of
@@ -204,7 +217,7 @@ mergeCase a b = case (a,b) of
   -- Add new clause to case 
   (AST.ELambda ps (AST.ECase e cs), (AST.ELambda ps' e')) ->
     if length ps == length ps'
-      then Ok $ AST.ELambda ps (AST.ECase e (cs++[(PTuple ps', e')]))
+      then Ok $ AST.ELambda ps (AST.ECase e (cs++[(AST.PTuple ps', e')]))
       else Bad $ "Mismatched number of arguments in patternmatching when adding"
               ++ show ps' ++ " -> " ++ show e' ++ " to case clause"
 
@@ -213,7 +226,7 @@ mergeCase a b = case (a,b) of
     if length ps == length ps'
       then do let as = makeArgs ps
               ts <- expressionFromArgs as
-              let cs = AST.ECase ts [(PTuple ps, e), (PTuple ps', e')]
+              let cs = AST.ECase ts [(AST.PTuple ps, e), (AST.PTuple ps', e')]
               Ok $ AST.ELambda as cs
       else Bad $ "Mismatched number of arguments in patternmatching between '\\"
               ++ show ps ++ " -> " ++ show e ++ "' and '\\"

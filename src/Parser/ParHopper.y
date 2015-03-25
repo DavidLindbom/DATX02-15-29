@@ -180,11 +180,23 @@ Pat : IdCon { PCon $1 }
   | Char { PChar $1 }
   | Integer { PInteger $1 }
   | Double { PDouble $1 }
+  | '(' ListQpat ')' { PTuple $2 }
 
 
 ListPat :: { [Pat] }
 ListPat : Pat { (:[]) $1 } 
   | Pat ListPat { (:) $1 $2 }
+
+
+Qpat :: { Qpat }
+Qpat : IdCon ListQpat { QCon $1 $2 } 
+  | Pat { QPat $1 }
+
+
+ListQpat :: { [Qpat] }
+ListQpat : {- empty -} { [] } 
+  | Qpat { (:[]) $1 }
+  | Qpat ',' ListQpat { (:) $1 $3 }
 
 
 

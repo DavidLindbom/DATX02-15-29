@@ -106,6 +106,13 @@ transPat x = case x of
   PChar c  -> failure x
   PInteger n  -> failure x
   PDouble d  -> failure x
+  PTuple qpats  -> failure x
+
+
+transQpat :: Qpat -> Result
+transQpat x = case x of
+  QCon idcon qpats  -> failure x
+  QPat pat  -> failure x
 
 
 

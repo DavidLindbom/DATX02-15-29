@@ -81,8 +81,14 @@ PString.  Pat ::= String;
 PChar.    Pat ::= Char;
 PInteger. Pat ::= Integer;
 PDouble.  Pat ::= Double;
+PTuple.   Pat ::= "(" [Qpat] ")";
 
 terminator nonempty Pat "";
+
+QCon. Qpat ::= IdCon [Qpat];
+QPat. Qpat ::= Pat;
+
+separator Qpat ",";
 
 -- Tokens
 token IdVar (lower (digit | letter | '_' )* ); 

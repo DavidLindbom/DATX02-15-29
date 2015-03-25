@@ -81,5 +81,11 @@ data Pat =
  | PChar Char
  | PInteger Integer
  | PDouble Double
+ | PTuple [Qpat]
+  deriving (Eq,Ord,Show,Read)
+
+data Qpat =
+   QCon IdCon [Qpat]
+ | QPat Pat
   deriving (Eq,Ord,Show,Read)
 
