@@ -35,7 +35,7 @@ data Type = TName String [Type]
   deriving (Eq,Ord,Show)
 
 data Pattern = PVar Identifier
-             | PCon Constructor
+             | PCon Constructor [Pattern]
              | PLit Literal
              | PWild
              | PTuple [Pattern]

@@ -74,7 +74,7 @@ separator nonempty Cla ";";
 
 
 -- Patterns
-PCon.     Pat ::= IdCon;
+PCon.     Pat ::= IdCon; -- TODO: Tuples, parameters to constructors
 PVar.     Pat ::= IdVar;
 PWild.    Pat ::= "_";
 PString.  Pat ::= String;

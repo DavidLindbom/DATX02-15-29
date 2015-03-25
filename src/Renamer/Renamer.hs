@@ -102,8 +102,8 @@ transformExp e = case e of
   HPR.EIf a b c      -> do a' <- transformExp a
                            b' <- transformExp b
                            c' <- transformExp c
-                           Ok $ AST.ECase a' [(AST.PCon "True", b')
-                                             ,(AST.PCon "False", c')]
+                           Ok $ AST.ECase a' [(AST.PCon "True"  [], b')
+                                             ,(AST.PCon "False" [], c')]
 
   HPR.ELambda ps a   -> do a'  <- transformExp a 
                            ps' <- mapM transformPat ps 
@@ -115,9 +115,9 @@ transformExp e = case e of
 
 transformPat :: Pat -> Err Pattern
 transformPat p = case p of
-  HPR.PCon (IdCon i) -> Ok $ AST.PCon i
+  HPR.PCon (IdCon i) -> Ok $ AST.PCon i []
   HPR.PVar (IdVar i) -> Ok $ AST.PVar i
-  HPR.PWild          -> Ok AST.PWild
+  HPR.PWild          -> Ok $ AST.PWild
   HPR.PString s      -> Ok $ AST.PLit $ LS s
   HPR.PChar c        -> Ok $ AST.PLit $ LC c
   HPR.PInteger i     -> Ok $ AST.PLit $ LI i
@@ -125,13 +125,22 @@ transformPat p = case p of
 
 transformArg :: Arg -> Err Pattern
 transformArg a = case a of
-  ACon (IdCon i) -> Ok $ AST.PCon i
+  ACon (IdCon i) -> Ok $ AST.PCon i []
   AVar (IdVar i) -> Ok $ AST.PVar i
   AWild          -> Ok $ AST.PWild
   AString s      -> Ok $ AST.PLit $ LS s
   AChar c        -> Ok $ AST.PLit $ LC c
   AInteger i     -> Ok $ AST.PLit $ LI i
   ADouble d      -> Ok $ AST.PLit $ LD d
+
+  ATuple [b]     -> transformBarg b
+  ATuple bs      -> do bs' <- mapM transformBarg bs
+                       Ok $ PTuple bs'
+
+transformBarg :: Barg -> Err Pattern
+transformBarg a = case a of
+  BCon (IdCon s) as -> do as' <- mapM transformArg as
+                          Ok $ AST.PCon s as'
 
 transformClause :: Cla -> Err (Pattern, Expression)
 transformClause c = case c of
