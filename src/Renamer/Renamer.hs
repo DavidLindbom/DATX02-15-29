@@ -7,6 +7,7 @@ import Parser.AbsHopper as HPR
 import AST.AST as AST
 import Utils.ErrM
 import Utils.PrettyPrint
+import Utils.BIF
 
 transform :: HPR.Module -> Err (AST.Module (Maybe Signature))
 transform (MModule (IdCon name) expo defs) = do
@@ -84,11 +85,25 @@ transformExp e = case e of
   EInteger i         -> Ok $ ELit $ LI i
   EDouble d          -> Ok $ ELit $ LD d
 
-  EInfix a op b      -> (transformExp $ EOpr op) 
-                        `app` (transformExp a) 
-                        `app` (transformExp b)
+  EInfix a (IdOpr op) b -> transformExp $ HPR.EApp
+                                            (HPR.EApp
+                                              (HPR.EVar (IdVar op))
+                                              a)
+                                            b
 
-  HPR.EApp a b       -> (transformExp a) `app` (transformExp b)
+  --EInfix a op b      -> (transformExp $ EOpr op)
+  --                      `app` (transformExp a)
+  --                      `app` (transformExp b)
+
+  HPR.EApp a b       -> do a' <- transformExp a
+                           b' <- transformExp b
+                           case a' of
+                            AST.EVar i -> case lookupBIF i of
+                              Just (m,f,_) -> Ok $ ECall m f b'
+                              _            -> Ok $ AST.EApp a' b'
+                            _          -> Ok $ AST.EApp a' b'
+
+  --HPR.EApp a b       -> (transformExp a) `app` (transformExp b)
 
   HPR.ECase a c      -> do e' <- transformExp a
                            c' <- mapM transformClause c
