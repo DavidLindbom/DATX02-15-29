@@ -15,26 +15,27 @@ import Data.List (partition,union)
 
 --NOTE: I assume String == Prim.String,
 --Atom == Prim.Atom, (->) == Prim.(->) etc.
---Change depending on module structure.
+--Change depending on hopper module structure.
 
+--TODO typecheck also returns modified expression
 typecheck :: [(Name,TypeAST)] -> --imports, constructors
              [(Name,AST,Maybe TypeAST)] -> --defs
             Either String [(Name,TypeAST)]
-typecheck imps vs = let (withDecls,woDecls) = ((map $ \(n,ast,Just t)->
+typecheck imps'cons vs = let (withDecls,woDecls) = ((map $ \(n,ast,Just t)->
                                                     (n,ast,t)) 
                                                ***
                                                (map $ \(n,ast,_)->(n,ast)))$
                                               partition 
                                               (\(n,ast,m)->m/=Nothing) vs
-                        tmap = M.fromList $ 
+                             tmap = M.fromList $ 
                                map (\(n,_,t) -> (n,t)) withDecls 
-                               ++ imps
-                        sccs :: [[(Name,AST)]]
-                        sccs = map G.flattenSCC $ G.stronglyConnComp $ 
+                               ++ imps'cons
+                             sccs :: [[(Name,AST)]]
+                             sccs = map G.flattenSCC $ G.stronglyConnComp $ 
                                map (\(n,ast)->
                                         ((n,ast),n,namesOccuring ast)) 
                                woDecls
-                        names = map (\(n,_,_) -> n) vs
+                             names = map (\(n,_,_) -> n) vs
                         in runTCMonad (typecheckDefs names sccs withDecls)
                            tmap (0,M.empty)
 typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
@@ -185,22 +186,6 @@ namesOccP _ = []
 --typecheck scc:
 --make a variable for each expression;
 --mapM typecheckExpr (flattenSCC scc)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 type Constraint = M.Map TyVarName TypeAST
 type TCMonad a = R.ReaderT (M.Map Name TypeAST) 

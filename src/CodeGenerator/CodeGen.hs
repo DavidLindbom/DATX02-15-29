@@ -1,6 +1,6 @@
 
 
-module TypeChecker.SimpleCodeGen where
+module CodeGenerator.CodeGen where
 import AST.AST
 
 import Language.CoreErlang.Syntax
