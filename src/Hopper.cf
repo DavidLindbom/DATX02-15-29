@@ -33,9 +33,15 @@ AString.  Arg ::= String;
 AChar.    Arg ::= Char;
 AInteger. Arg ::= Integer;
 ADouble.  Arg ::= Double;
+ATuple.   Arg ::= "(" [Barg] ")";
 
-
+separator Arg "";
 terminator Arg "";
+
+BCon. Barg ::= IdCon [Arg];
+BArg. Barg ::= Arg;
+
+separator Barg ",";
 
 -- Types
 TName. Type ::= IdCon; -- Todo: Add parameters here
