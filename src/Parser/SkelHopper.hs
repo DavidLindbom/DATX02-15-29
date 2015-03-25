@@ -60,6 +60,13 @@ transArg x = case x of
   AChar c  -> failure x
   AInteger n  -> failure x
   ADouble d  -> failure x
+  ATuple bargs  -> failure x
+
+
+transBarg :: Barg -> Result
+transBarg x = case x of
+  BCon idcon args  -> failure x
+  BArg arg  -> failure x
 
 
 transType :: Type -> Result

@@ -40,6 +40,12 @@ data Arg =
  | AChar Char
  | AInteger Integer
  | ADouble Double
+ | ATuple [Barg]
+  deriving (Eq,Ord,Show,Read)
+
+data Barg =
+   BCon IdCon [Arg]
+ | BArg Arg
   deriving (Eq,Ord,Show,Read)
 
 data Type =

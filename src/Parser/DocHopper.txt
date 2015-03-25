@@ -89,8 +89,16 @@ All other symbols are terminals.
   |  |  **|**  | //Char// 
   |  |  **|**  | //Integer// 
   |  |  **|**  | //Double// 
+  |  |  **|**  | ``(`` //[Barg]// ``)`` 
   | //[Arg]// | -> | **eps**
   |  |  **|**  | //Arg// //[Arg]// 
+  |  |  **|**  | **eps**
+  |  |  **|**  | //Arg// //[Arg]// 
+  | //Barg// | -> | //IdCon// //[Arg]// 
+  |  |  **|**  | //Arg// 
+  | //[Barg]// | -> | **eps**
+  |  |  **|**  | //Barg// 
+  |  |  **|**  | //Barg// ``,`` //[Barg]// 
   | //Type// | -> | //IdCon// 
   |  |  **|**  | //IdVar// 
   |  |  **|**  | ``(`` //Type// ``->`` //[Type]// ``)`` 
