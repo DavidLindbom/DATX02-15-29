@@ -21,6 +21,15 @@ data Export =
 data Def =
    DSig IdVar [Type]
  | DFun IdVar [Arg] Exp
+ | DDat IdCon [Cons]
+  deriving (Eq,Ord,Show,Read)
+
+data Cons =
+   FCon IdCon [Par]
+  deriving (Eq,Ord,Show,Read)
+
+data Par =
+   GCon IdCon
   deriving (Eq,Ord,Show,Read)
 
 data Arg =

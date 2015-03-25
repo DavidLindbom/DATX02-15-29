@@ -25,14 +25,16 @@ import Utils.ErrM
   '\\' { PT _ (TS _ 8) }
   '_' { PT _ (TS _ 9) }
   'case' { PT _ (TS _ 10) }
-  'else' { PT _ (TS _ 11) }
-  'if' { PT _ (TS _ 12) }
-  'module' { PT _ (TS _ 13) }
-  'of' { PT _ (TS _ 14) }
-  'then' { PT _ (TS _ 15) }
-  'where' { PT _ (TS _ 16) }
-  '{' { PT _ (TS _ 17) }
-  '}' { PT _ (TS _ 18) }
+  'data' { PT _ (TS _ 11) }
+  'else' { PT _ (TS _ 12) }
+  'if' { PT _ (TS _ 13) }
+  'module' { PT _ (TS _ 14) }
+  'of' { PT _ (TS _ 15) }
+  'then' { PT _ (TS _ 16) }
+  'where' { PT _ (TS _ 17) }
+  '{' { PT _ (TS _ 18) }
+  '|' { PT _ (TS _ 19) }
+  '}' { PT _ (TS _ 20) }
 
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
@@ -76,6 +78,25 @@ ListDef : {- empty -} { [] }
 Def :: { Def }
 Def : IdVar '::' ListType { DSig $1 $3 } 
   | IdVar ListArg '=' '{' Exp '}' { DFun $1 (reverse $2) $5 }
+  | 'data' IdCon '=' '{' ListCons '}' { DDat $2 $5 }
+
+
+Cons :: { Cons }
+Cons : IdCon ListPar { FCon $1 (reverse $2) } 
+
+
+ListCons :: { [Cons] }
+ListCons : Cons { (:[]) $1 } 
+  | Cons '|' ListCons { (:) $1 $3 }
+
+
+Par :: { Par }
+Par : IdCon { GCon $1 } 
+
+
+ListPar :: { [Par] }
+ListPar : {- empty -} { [] } 
+  | ListPar Par { flip (:) $1 $2 }
 
 
 Arg :: { Arg }

@@ -14,6 +14,16 @@ separator Def ";";
 
 DSig. Def ::= IdVar "::" [Type];
 DFun. Def ::= IdVar [Arg] "=" "{" Exp "}"; -- TODO: Add function parameters
+DDat. Def ::= "data" IdCon "=" "{" [Cons] "}";
+
+-- Constructors in data declarations
+FCon. Cons ::= IdCon [Par];
+separator nonempty Cons "|";
+
+GCon. Par ::= IdCon;
+--GVar. Par ::= IdVar; -- TODO: Parameters to data decl
+
+terminator Par "";
 
 -- Arguments
 ACon.     Arg ::= IdCon; 

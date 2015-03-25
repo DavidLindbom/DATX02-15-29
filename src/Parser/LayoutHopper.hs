@@ -202,14 +202,16 @@ sToken p s = PT p (TS s i)
       "\\" -> 8
       "_" -> 9
       "case" -> 10
-      "else" -> 11
-      "if" -> 12
-      "module" -> 13
-      "of" -> 14
-      "then" -> 15
-      "where" -> 16
-      "{" -> 17
-      "}" -> 18
+      "data" -> 11
+      "else" -> 12
+      "if" -> 13
+      "module" -> 14
+      "of" -> 15
+      "then" -> 16
+      "where" -> 17
+      "{" -> 18
+      "|" -> 19
+      "}" -> 20
       _ -> error $ "not a reserved word: " ++ show s
 
 -- | Get the position of a token.

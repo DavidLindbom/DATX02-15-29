@@ -9,8 +9,9 @@
 -- to add its own data structure
 
 module AST.AST where
+import Data.Map as M
 
-data Module a = Mod String [Identifier] [Function a]
+data Module a = Mod String [Identifier] [Function a] (Map Identifier Signature)
   deriving (Eq,Ord,Show)
 
 type Identifier  = String

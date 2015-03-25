@@ -5,7 +5,7 @@ module Parser.PrintHopper where
 
 import Parser.AbsHopper
 import Data.Char
-
+import Prelude hiding (exp)
 
 -- the top-level printing method
 printTree :: Print a => a -> String
@@ -110,11 +110,28 @@ instance Print Def where
   prt i e = case e of
    DSig idvar types -> prPrec i 0 (concatD [prt 0 idvar , doc (showString "::") , prt 0 types])
    DFun idvar args exp -> prPrec i 0 (concatD [prt 0 idvar , prt 0 args , doc (showString "=") , doc (showString "{") , prt 0 exp , doc (showString "}")])
+   DDat idcon conss -> prPrec i 0 (concatD [doc (showString "data") , prt 0 idcon , doc (showString "=") , doc (showString "{") , prt 0 conss , doc (showString "}")])
 
   prtList es = case es of
    [] -> (concatD [])
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ";") , prt 0 xs])
+
+instance Print Cons where
+  prt i e = case e of
+   FCon idcon pars -> prPrec i 0 (concatD [prt 0 idcon , prt 0 pars])
+
+  prtList es = case es of
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString "|") , prt 0 xs])
+
+instance Print Par where
+  prt i e = case e of
+   GCon idcon -> prPrec i 0 (concatD [prt 0 idcon])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   x:xs -> (concatD [prt 0 x , prt 0 xs])
 
 instance Print Arg where
   prt i e = case e of
