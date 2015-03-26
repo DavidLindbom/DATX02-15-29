@@ -1,4 +1,4 @@
-module AST.AST where
+module AST.Liam_TC_AST where
 
 data TCModule = TCModule Name [Name] [(Name,AST,TypeAST)]
   deriving (Eq,Ord,Show,Read)

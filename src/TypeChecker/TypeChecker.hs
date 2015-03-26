@@ -1,9 +1,9 @@
 {-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses,
 FlexibleInstances #-}
-module TypeChecker.TC where
+module TypeChecker.TypeChecker where
 
 import Control.Monad.State
-import AST.AST 
+import AST.Liam_TC_AST 
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Foldable as F
@@ -19,8 +19,12 @@ import Data.List (partition,union)
 --Tuple-cons: Prim.*
 --Tuplr-nil: Prim.()??
 
-
-
+import TypeChecker.Convert (moduleToRenamed)
+import Utils.ErrM (Err(..))
+typeCheck mod = case typecheckModule $ moduleToRenamed mod of
+                  Left s -> Bad s
+                  Right tcmod -> Ok $ tcModToModule tcmod
+                  
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do 
   names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
