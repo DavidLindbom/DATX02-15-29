@@ -1,12 +1,28 @@
 
 
-TCModule HelloString [b] [(fun,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (VarPat x),AsPat (VarPat X@2) (VarPat y)],Named x)]))]
+TCModule HPR [f,const] [(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (IntegerL 2))])])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
 
 
 
-TCModule HelloString [b] [(fun,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (VarPat x),AsPat (VarPat X@2) (VarPat y)],Named x)]))]
+TCModule HPR [f,const] [(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (StringL "bah, humbug!"))])])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
 
 
 
-TCModule HelloString [b] [(fun,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (VarPat x),AsPat (VarPat X@2) (VarPat y)],Named x)]))]
+TCModule HPR [f,const] [(M,LitAST (AtomL "M")),(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (StringL "bah, humbug!"))])])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
+
+
+
+TCModule HPR [f,const] [(M,LitAST (AtomL "M")),(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (StringL "bah, humbug!"))])])),(cool_cool,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],Named M)])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
+
+
+
+TCModule HPR [f,const,cool_cool] [(M,LitAST (AtomL "M")),(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (StringL "bah, humbug!"))])])),(cool_cool,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],Named M)])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
+
+
+
+TCModule HPR [f,const,cool_cool] [(M,LitAST (AtomL "M")),(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (StringL "bah, humbug!"))])])),(cool_cool,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],Named M)])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
+
+
+
+TCModule HPR [f,const,cool_cool] [(M,LitAST (AtomL "M")),(const,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (LitPat (StringL "String")),AsPat (VarPat X@2) (VarPat x)],CaseAST (Named x) [(LitPat (IntegerL 3),LitAST (StringL "ok")),(LitPat (IntegerL 2),LitAST (StringL "bah, humbug!"))])])),(cool_cool,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],Named M)])),(f,LamAST [] (CaseAST (TupleAST []) [(TuplePat [],LitAST (IntegerL 3))]))]
 

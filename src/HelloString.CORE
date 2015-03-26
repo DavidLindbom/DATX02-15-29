@@ -1,8 +1,0 @@
-module 'HelloString' ['__b'/0] attributes []
-'__fun'/0 =
-    fun(PX@1, PX@2) ->
-        case {PX@1, PX@2} of
-            {PX@1 = Px, PX@2 = Py} when 'true' ->
-                Px
-        end
-end

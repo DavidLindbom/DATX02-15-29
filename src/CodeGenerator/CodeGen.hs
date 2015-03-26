@@ -20,13 +20,22 @@ codeGen (TCModule (Name _ s) exports defs) =
     Module 
         (Atom s) 
         (map (__fun . (\(Name _ s) -> s)) exports)
-        []
+        [] $
         (map (\((Name _ s),ast) -> FunDef (Constr $ __fun s) $ 
-                                   Constr $ R.runReader 
-                          (astToCore $ AppAST
-                                     (Named $ Name (Just["curry"]) "curry")
-                                     ast) S.empty) defs)
-
+                                   Constr $ Lambda [] $ exps $
+                                          apply 
+                                          (fun "curry" "curry" 1)
+                                          (R.runReader 
+                                           (astToCore ast) S.empty))) 
+        defs
+            where
+              apply ef ex =  App (exps ef) [exps ex]
+              fun mod name arity = modCall 
+                                   (atom "erlang")
+                                   (atom "make_fun")
+                                   [atom mod,atom name,Lit$LInt arity]
+--(Lambda[]$ 
+--apply (fun "curry" "curry" 1) $
 --cerl distinguishes between named functions and variables
 --three cases: local named function;
 --             named function from other module;
@@ -91,6 +100,12 @@ patToCore (AppPat
             x)
            xs) = PList (LL [patToCore x] $ patToCore xs)
 patToCore (AsPat (VarPat n) p) = PAlias (Alias (handleVarName n) $ patToCore p)
+--Oh no! Core Erlang has no wildcard pattern!
+--Problem with making _ ==> Wild@Pat:
+--    what about receive? what about \_ _ -> bla?
+--Refactoring to make it possible to generate unique variable names
+--will be necessary.
+patToCore WildPat = PVar "Wild@Pat"
 
 inserts ns set = foldr (\n set -> S.insert n set) set ns
 

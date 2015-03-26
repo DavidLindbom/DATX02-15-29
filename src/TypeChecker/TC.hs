@@ -178,9 +178,10 @@ tcExpr (TupleAST (x:tup)) = do tx <- tcExpr x
                                return $ prim"*" `AppT` tx `AppT` ttup
 --problem: variables in case patterns must be put in type map.
 tcExpr (CaseAST exp clauses) = do
-  (t:_) <- mapM (\(pat,res) -> 
+  t:ts <- mapM (\(pat,res) -> 
                      tcExpr (LamAST[pat]res `AppAST` exp))
            clauses
+  t <- foldM unifyT t ts
   return t
     where
       unifyT t1 t2 = unify t1 t2 >> return t1

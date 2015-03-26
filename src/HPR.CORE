@@ -1,0 +1,32 @@
+module 'HPR' ['__f'/0, '__const'/0, '__cool_cool'/0] attributes []
+'__M'/0 =
+    fun() -> apply call 'erlang':'make_fun' ('curry', 'curry', 1)('M')
+'__const'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)(fun(PX@1,
+                                                                 PX@2) ->
+                                                                 case {PX@1, PX@2} of
+                                                                     {PX@1 = "String", PX@2 = Px}
+                                                                         when 'true' ->
+                                                                         case Px of
+                                                                             3 when 'true' ->
+                                                                                 "ok"
+                                                                             2 when 'true' ->
+                                                                                 "bah, humbug!"
+                                                                         end
+                                                                 end)
+'__cool_cool'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)(fun() ->
+                                                                 case {} of
+                                                                     {} when 'true' ->
+                                                                         '__M'/0
+                                                                 end)
+'__f'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)(fun() ->
+                                                                 case {} of
+                                                                     {} when 'true' ->
+                                                                         3
+                                                                 end)
+end
