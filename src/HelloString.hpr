@@ -1,5 +1,3 @@
 
 module HelloString (b) where
-plus = plus
-loop = 3
 fun x y = x

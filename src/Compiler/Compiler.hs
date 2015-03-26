@@ -29,10 +29,14 @@ compile mds = do s <- readFile $ (foldr1 (\m ms -> m ++ "/" ++ ms) mds)++".hpr"
                                    in case typecheckModule mod
                                       of
                                         Left message -> putStrLn $
-                                                        "TC error:" ++ message
-                                        Right tcm -> writeFile 
-                                                     ((mds>>=(++"."))++"CORE")
-                                                     $ prettyPrint $
-                                                       codeGen tcm
+                                                        "TC error:" ++ message++
+                                                        "; with mod: \n"++
+                                                        show mod
+                                        Right tcm -> logval tcm >>
+                                            (writeFile 
+                                            ((mds>>=(++"."))++"CORE")
+                                            $ prettyPrint $
+                                              codeGen tcm)
 parseModule s = pModule $ myLLexer s
                  where myLLexer = resolveLayout True . myLexer
+logval x = appendFile "log.txt" ("\n\n"++show x++"\n\n")

@@ -77,10 +77,17 @@ renameDef' m ds@((A.DFun idvar _ _):_) = (idvarToName idvar,
                                                       "Different numbers "++
                                                       "of arguments in "++
                                                       show id
-                                             else LamAST (newVars numArgs)
+                                             else {-if numArgs == 0
+                                                  then if ds == []
+                                                       then expToAST b
+                                                       else error $
+                                                            "Unreachable case"
+                                                            ++" in "++show id
+                                                  else -}
+                                                      LamAST (newVars numArgs)
                                                   $ cases ((args,b):
                                                            (map
-                                                           (\(A.DFun _ args b)
+                                                            (\(A.DFun _ args b)
                                                            -> (args,b)) ds))
                                                            numArgs
           newVars numArgs= 
@@ -89,7 +96,9 @@ renameDef' m ds@((A.DFun idvar _ _):_) = (idvarToName idvar,
                                             (\(VarPat nm)->
                                              Named nm)
                                           $ newVars numArgs)
-                                  $ map ((TuplePat . map argToPatAST) *** 
+                                  $ map ((TuplePat . zipWith AsPat 
+                                                   (newVars numArgs) .
+                                                   map argToPatAST) *** 
                                          expToAST) args'bs
           argToPatAST (A.ACon idcon) = ConPat $ idconToName idcon
           argToPatAST (A.AVar idvar) = VarPat $ idvarToName idvar

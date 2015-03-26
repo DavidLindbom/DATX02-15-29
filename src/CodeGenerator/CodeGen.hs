@@ -23,7 +23,9 @@ codeGen (TCModule (Name _ s) exports defs) =
         []
         (map (\((Name _ s),ast) -> FunDef (Constr $ __fun s) $ 
                                    Constr $ R.runReader 
-                          (astToCore ast) S.empty) defs)
+                          (astToCore $ AppAST
+                                     (Named $ Name (Just["curry"]) "curry")
+                                     ast) S.empty) defs)
 
 --cerl distinguishes between named functions and variables
 --three cases: local named function;
@@ -44,7 +46,6 @@ astToCore (Named (Name (Just mid) s)) = return $ modCall
     where
       moduleAtom = atom $ foldr1 (\s atname -> s++"."++atname) mid
 --Two cases: variable or named value
---TODO ask Johan what names are permitted for variables
 astToCore (Named n@(Name _ s)) = do isAVariable <- R.asks (S.member n)
                                     return $ if isAVariable
                                              then Var $ handleVarName n 
@@ -58,7 +59,7 @@ astToCore (LamAST ps body) = do let varNames = map (\(VarPat n)-> n) ps
                                          (inserts varNames)$
                                          astToCore body
                                 return $ Lambda (map 
-                                                 (\(Name _ s)->s)
+                                                 handleVarName
                                                  varNames) $ exps bodyc
 astToCore (CaseAST x clauses) = do exp <- astToCore x
                                    alts <- mapM (\(pat,res)->
@@ -89,6 +90,7 @@ patToCore (AppPat
             (ConPat (Name (Just["Prim"]) ":"))
             x)
            xs) = PList (LL [patToCore x] $ patToCore xs)
+patToCore (AsPat (VarPat n) p) = PAlias (Alias (handleVarName n) $ patToCore p)
 
 inserts ns set = foldr (\n set -> S.insert n set) set ns
 

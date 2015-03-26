@@ -1,0 +1,12 @@
+
+
+TCModule HelloString [b] [(fun,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (VarPat x),AsPat (VarPat X@2) (VarPat y)],Named x)]))]
+
+
+
+TCModule HelloString [b] [(fun,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (VarPat x),AsPat (VarPat X@2) (VarPat y)],Named x)]))]
+
+
+
+TCModule HelloString [b] [(fun,LamAST [VarPat X@1,VarPat X@2] (CaseAST (TupleAST [Named X@1,Named X@2]) [(TuplePat [AsPat (VarPat X@1) (VarPat x),AsPat (VarPat X@2) (VarPat y)],Named x)]))]
+

@@ -6,6 +6,7 @@ data RenamedModule = RenamedModule{modId::ModuleId,
                                    exports::[Name],
                                    cons ::[(Name,TypeAST)],
                                    defs::[(Name,AST,Maybe TypeAST)]}
+                     deriving (Eq,Ord,Show,Read)
 --Module data: name, exports, definitions, types?
 --TODO instances
 --UntypedModule
@@ -25,6 +26,9 @@ data AST = Named Name
          | IfAST AST AST AST
          | TupleAST [AST]
          | WildAST --used in type checker
+         | AsAST AST AST --used in type checker.
+           --I'm beginning to regret converting patterns
+           --to exprs to typecheck them.
   deriving (Eq,Ord,Show,Read)
 
 --renamer should guarantee lambdas only have
@@ -35,6 +39,9 @@ data PatAST = VarPat Name
             | ConPat Name
             | LitPat Lit
             | TuplePat [PatAST]
+            | AsPat 
+              PatAST --always a variable
+              PatAST
   deriving (Eq,Ord,Show,Read)
 
 type TyVarName = Name

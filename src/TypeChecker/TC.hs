@@ -66,12 +66,12 @@ typecheck imps'cons vs = let (withDecls,woDecls) = ((map $ \(n,ast,Just t)->
                            tmap (0,M.empty)
 typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                               R.local (const tmap) $ checkTypes wd
-                              return $ getVals ns tmap
+                              return (getVals ns tmap)
                                   where
                                     getVals [] _ = []
                                     getVals (n:ns) map = 
                                         (n,case M.lookup n map of
-                                             Nothing -> error $ 
+                                             Nothing -> error $
                                                         "Unexpected Nothing "++
                                                         "in TC.typecheckDefs"
                                              Just x -> x):
@@ -145,7 +145,7 @@ tcExpr (Named n) = do map <- R.ask
                        Just (ForallT t) -> do t' <- newVarNames t
                                               return t'
                        Just t -> return t
-                       Nothing -> error $
+                       Nothing -> complain $
                                   "Unexpected Nothing in tcExpr "++
                                   "when looking up " ++ show n
 tcExpr (AppAST f x) = do a <- newTyVar
@@ -176,20 +176,19 @@ tcExpr (TupleAST []) = return $ prim "()"
 tcExpr (TupleAST (x:tup)) = do tx <- tcExpr x
                                ttup <- tcExpr $ TupleAST tup
                                return $ prim"*" `AppT` tx `AppT` ttup
-tcExpr (CaseAST exp ((pat,res):clauses)) = do texp <- tcExpr exp
-                                              tpat <- tcPattern pat
-                                              tres <- tcExpr res
-                                              tps <- mapM tcPattern $
-                                                     map fst clauses
-                                              trs <- mapM tcExpr $
-                                                     map snd clauses
-                                              unify texp tpat
-                                              foldM_ unifyT tpat tps
-                                              foldM_ unifyT tres trs
-                                              return tres
+--problem: variables in case patterns must be put in type map.
+tcExpr (CaseAST exp clauses) = do
+  (t:_) <- mapM (\(pat,res) -> 
+                     tcExpr (LamAST[pat]res `AppAST` exp))
+           clauses
+  return t
     where
       unifyT t1 t2 = unify t1 t2 >> return t1
 tcExpr WildAST = newTyVar
+tcExpr (AsAST a b) = do ta <- tcExpr a
+                        tb <- tcExpr b
+                        unify ta tb
+                        return ta
 --Todo receive uses different tcPattern function
 tcPattern :: PatAST -> TCMonad TypeAST
 tcPattern = tcExpr . patToExpr
@@ -202,6 +201,7 @@ patToExpr p = case p of
                 ConPat n -> Named n
                 LitPat l -> LitAST l
                 TuplePat xs -> TupleAST $ map patToExpr xs
+                AsPat p1 p2 -> AsAST (patToExpr p1) (patToExpr p2)
                   
 --make new type variable for each variable in pattern,
 --locally modify name->type environment.
@@ -227,6 +227,8 @@ namesOccuring _ = []
 namesOccP :: PatAST -> [TyVarName]
 namesOccP (VarPat n) = [n]
 namesOccP (AppPat f x) = namesOccP f `union` namesOccP x
+namesOccP (AsPat v p) = namesOccP v `union` namesOccP p
+namesOccP (TuplePat ps) = foldr union [] $ map namesOccP ps
 namesOccP _ = []
 
 --make imports into map
@@ -333,6 +335,8 @@ tyVarNamesOf (AppT a b) = S.union (tyVarNamesOf a) $ tyVarNamesOf b
 tyVarNamesOf _ = S.empty
 
 name = Name Nothing 
+
+complain = lift . lift . Left
 
 --DEBUGGING ||
 --          \/
