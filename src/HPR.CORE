@@ -8,10 +8,10 @@ module 'HPR' ['__f'/0, '__const'/0, '__cool_cool'/0] attributes []
                                                                  case {PX@1, PX@2} of
                                                                      {PX@1 = "String", PX@2 = Px}
                                                                          when 'true' ->
-                                                                         case Px of
-                                                                             3 when 'true' ->
+                                                                         case 2.0 of
+                                                                             3.0 when 'true' ->
                                                                                  "ok"
-                                                                             2 when 'true' ->
+                                                                             2.0 when 'true' ->
                                                                                  "bah, humbug!"
                                                                          end
                                                                  end)

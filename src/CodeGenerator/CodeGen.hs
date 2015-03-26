@@ -21,7 +21,7 @@ codeGen (TCModule (Name _ s) exports defs) =
         (Atom s) 
         (map (__fun . (\(Name _ s) -> s)) exports)
         [] $
-        (map (\((Name _ s),ast) -> FunDef (Constr $ __fun s) $ 
+        (map (\((Name _ s),ast,_) -> FunDef (Constr $ __fun s) $ 
                                    Constr $ Lambda [] $ exps $
                                           apply 
                                           (fun "curry" "curry" 1)

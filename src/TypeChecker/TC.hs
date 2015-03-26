@@ -19,16 +19,18 @@ import Data.List (partition,union)
 --Tuple-cons: Prim.*
 --Tuplr-nil: Prim.()??
 
+
+
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do 
-  _ <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
+  names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)
              (map constructorDef (cons rnm) ++
-              map (\(n,ast,mtype)->(n,ast))(defs rnm))
+              recombineTypes'Sigh names'types (defs rnm))
       where
-        constructorDef (n,t) = (n,argsToValue n $ arity t)
+        constructorDef (n,t) = (n,argsToValue n $ arity t,t)
         --TODO make n fully qualified!
         argsToValue n 0 = nameToAtom n
         argsToValue n ar = LamAST 
@@ -43,6 +45,8 @@ typecheckModule rnm = do
         arity (AppT (AppT (ConT(Name(Just["Prim"])"->")) _) t) = 
             1 + arity t
         arity _ = 0
+        recombineTypes'Sigh ns'ts  = 
+            map (\(n,ast,_) -> (n,ast,fromJust $ lookup n ns'ts))
 --TODO typecheck also returns modified expression
 typecheck :: [(Name,TypeAST)] -> --imports, constructors
              [(Name,AST,Maybe TypeAST)] -> --defs
