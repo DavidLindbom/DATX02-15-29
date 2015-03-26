@@ -17,6 +17,7 @@ import Data.List (partition,union)
 --Atom == Prim.Atom, (->) == Prim.(->) etc.
 --Change depending on hopper module structure.
 
+typeCheckModule :: RenamedModule -> TCModule
 --TODO typecheck also returns modified expression
 typecheck :: [(Name,TypeAST)] -> --imports, constructors
              [(Name,AST,Maybe TypeAST)] -> --defs

@@ -1,6 +1,6 @@
 module AST.AST where
 
-data TCModule = TCModule String [String] [(String,AST)]
+data TCModule = TCModule Name [Name] [(Name,AST)]
   deriving (Eq,Ord,Show,Read)
 data RenamedModule = RenamedModule{modId::ModuleId,
                                    exps::[String],

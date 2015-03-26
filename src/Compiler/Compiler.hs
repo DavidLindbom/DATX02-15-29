@@ -10,7 +10,7 @@ import Parser.LayoutHopper
 import Utils.ErrM
 
 import Renamer.Rename (rename)
-import TypeChecker.TC (typecheck)
+import TypeChecker.TC (typecheckModule)
 
 --Takes a given module (e.g. M1.M2.M3),
 --parses;
