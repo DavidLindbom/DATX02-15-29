@@ -2,9 +2,9 @@
 module HPR (f,const,cool_cool) where
 
 f = 3
-const "String" x = case x of
-      	       3 -> "ok"
-	       2 -> "bah, humbug!"
+const "String" x = case 2.0 of
+      	       3.0 -> "ok"
+	       2.0 -> "bah, humbug!"
 
 data M = M
 cool_cool = M

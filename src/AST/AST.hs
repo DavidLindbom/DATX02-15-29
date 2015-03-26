@@ -1,67 +1,48 @@
+module DevTC_AST where
+
+-- Inspired by "Syntax summary" in "An introduction to Core Erlang"
+-- 
+-- Should be somewhere between Haskell syntax and Core Erlang syntax
+-- but simple to typecheck
+-- https://www.haskell.org/onlinereport/haskell2010/haskellch10.html
+-- www.erlang.se/workshop/carlsson.ps
+-- 
+-- The typevariable exists for making it extensible for the typechecker
+-- to add its own data structure
 module AST.AST where
-
-data TCModule = TCModule Name [Name] [(Name,AST,TypeAST)]
-  deriving (Eq,Ord,Show,Read)
-data RenamedModule = RenamedModule{modId::ModuleId,
-                                   exports::[Name],
-                                   cons ::[(Name,TypeAST)],
-                                   defs::[(Name,AST,Maybe TypeAST)]}
-                     deriving (Eq,Ord,Show,Read)
---Module data: name, exports, definitions, types?
---TODO instances
---UntypedModule
---TypedModule?No, InterfaceFile
-
-data Name = Name (Maybe ModuleId) String deriving (Eq,Ord,Read)
-type ModuleId = [String]
-instance Show Name where
-    show (Name Nothing s) = s
-    show (Name (Just ms) s) = (ms >>= (++".")) ++ s
-
-data AST = Named Name
-         | LitAST Lit
-         | LamAST [PatAST] AST
-         | AppAST AST AST
-         | CaseAST AST [(PatAST,AST)]
-         | IfAST AST AST AST
-         | TupleAST [AST]
-         | WildAST --used in type checker
-         | AsAST AST AST --used in type checker.
-           --I'm beginning to regret converting patterns
-           --to exprs to typecheck them.
-  deriving (Eq,Ord,Show,Read)
-
---renamer should guarantee lambdas only have
---variables and underscores in their pats
-data PatAST = VarPat Name
-            | WildPat
-            | AppPat PatAST PatAST
-            | ConPat Name
-            | LitPat Lit
-            | TuplePat [PatAST]
-            | AsPat 
-              PatAST --always a variable
-              PatAST
-  deriving (Eq,Ord,Show,Read)
-
-type TyVarName = Name
-tyVar :: String -> TypeAST
-tyVar = VarT . Name Nothing
-data TypeAST = ForallT TypeAST 
-             --a -> forall a . a
-             --may refactor later
-             | VarT TyVarName
-             | ConT Name
-             | AppT TypeAST TypeAST
-    deriving (Eq,Ord,Show,Read)
-
-data Lit = StringL String
-         | IntegerL Integer
-         | DoubleL Double
-         | CharL Char
-         | AtomL String deriving (Eq,Ord,Show,Read)
-
---a -> Int = AppT (ConT (Name (Just ["Prim"]) "->")
---           VarT (Name Nothing "a") `AppT` (Name Nothing "b")
-
-
+data Module a = Mod String [Identifier] [Function a]
+deriving (Eq,Ord,Show)
+type Identifier = String
+type Constructor = String
+data Literal = LS String
+| LC Char
+| LI Integer
+| LD Double
+-- | LL []
+deriving (Eq,Ord,Show)
+data Function a = Fun Identifier a Expression
+deriving (Eq,Ord,Show) -- Function arguments is desugared to lambdas
+type Signature = [Type]
+data Type = TName String [Type]
+| TVar String
+| TFun [Type] -- For functions as arguments
+deriving (Eq,Ord,Show)
+data Pattern = PVar Identifier
+| PCon Constructor
+| PLit Literal
+| PWild
+| PTuple [Pattern]
+deriving (Eq,Ord,Show) -- Should be recursive later for nested lists ect
+-- Removed type parameter from expression. Type checker got too confused.
+data Expression = EVar Identifier 
+                -- TODO: Add EVal for fully applied functions when we have adts
+| ECon Constructor
+| ELit Literal
+| ETuple [Expression]
+| ELambda [Pattern] Expression
+| EApp Expression Expression
+-- | EWhere [Function a]
+| ECase Expression [(Pattern, Expression)]
+-- | ECall Identifier Identifier [Expression]
+-- | ELet Pattern Expression Expression
+deriving (Eq,Ord,Show)

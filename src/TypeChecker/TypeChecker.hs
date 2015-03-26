@@ -1,313 +1,391 @@
-module TypeChecker.TypeChecker (typeCheck) where
+{-# LANGUAGE ScopedTypeVariables, MultiParamTypeClasses,
+FlexibleInstances #-}
+module TypeChecker.TC where
 
-{-| 
-Module      : TypeChecker
-Description : Type checks Hopper abstract syntax trees
-Copyright   : -
-License     : -
-Status      : Partly implemented, non-working. There is an dummy type checker
-              which can be used 
-
-  Hopper using the Hindley-Milner (HM) type system.
-  It is a type system for lambda calculus with parametric polymorphism.
-  The programmer does not need to give any type signatures, the algorithm can
-  reconstruct (infer) the type of any expression in the language. Instead type
-  signatures are used as a means of specification.  (Types as specification).
-  "The purpose of the notion [of type] in functional programming is to assure
-  us at compile-time that a program will not 'go wrong' [at run-time], where
-  we do not count a program to have gone wrong if it does not terminate,
-  or a function is applied to arguments for which it has not been defined."
-  - The Implementation of Functional Programming Languages, p. 162
-  To 'go wrong' we need to add the 'recieve' construct (and others?) for which
-  we do not know the type of the recieved data until runtime.
-  A type system is a formal system where type checking amounts to proving the
-  type of an expression. The proofs are carried out using inference rules over
-  the abstract syntax tree. These rules are sometimes called judgments.
-  (Inference rules, judgments)
-  Based on "Algorithhm W Step by Step" by Martin Grabmüller available at
-  https://github.com/wh5a/Algorithm-W-Step-By-Step
-  The type checking process of algorithm W:
-  1. 
-  The AST described by Grabmüller is a subset of the one defined in Hopper.
-  For instance there is a notion of module in Hopper where Grabmüller only
-  type checks expressions one at a time. Another significant difference is that
-  algorithm W abstracts lambdas over one variable at a time where Hopper allows
-  a list of variables to be abstracted over.
-
-  Appendix I:
-  monotype - A fully specified type (Int, [String], Int -> Int, Map Char Char)
-  polytype - A partially applied type (a, [a] -> Int, (a -> b) -> [a] -> [b])
-  inference rule - Tells us what type-conclusion we can draw from types from
-                   the sub expressions.
-  judgment - see inference rule
-  free type variables - Type variables not bound by a quantifier.
-  unification - A function that given two types either fails or
-                returns a type equal to both the given types.
-  specialization - A relation between types signifying one being more 
-                   general and the other more "special"
-  instantiation - "Specialization of types".
-                  An expression of type a is instantiated to type b
-                  if type a is more general than type b.
-  generalization - "Generalization of types".
-                   An expression e of type T in environment Gamma is
-                   generalized to type (forall a.T) where a is a type
-                   variable not free in Gamma 
-
-This module is part of the Hopper language project
--}
-
-import qualified Data.Map   as Map
-import qualified Data.Set   as Set
-import qualified Data.Maybe as Maybe
-import Control.Monad.Trans.Except
-import Control.Monad.Reader
 import Control.Monad.State
+import AST.AST 
+import qualified Data.Map as M
+import qualified Data.Set as S
+import qualified Data.Foldable as F
+import qualified Control.Monad.Reader as R
+import qualified Data.Graph as G
+import Control.Arrow ((***))
+import Data.Maybe (fromJust)
+import Data.List (partition,union)
 
-import qualified Text.PrettyPrint as PP
+--NOTE: I assume String == Prim.String,
+--Atom == Prim.Atom, (->) == Prim.(->) etc.
+--Change depending on hopper module structure.
+--Tuple-cons: Prim.*
+--Tuplr-nil: Prim.()??
 
-import AST.AST
-import Utils.ErrM
 
-typeCheck :: Module (Maybe Signature) -> Err (Module Signature)
-typeCheck m = Ok $ noCheck m
 
--- noCheck performes no type checking, assumes given types are correct and
--- simply substitutes every Nothing with the empty list. noCheck allows
--- the type checker to be in the compiler pipeline while under development.
-noCheck :: Module (Maybe Signature) -> Module Signature
-noCheck (Mod name exported functions) =
-  Mod name exported $ map subst functions
-    where
-      -- subs performs substitution in function definitions.
-      subst :: Function (Maybe Signature) -> Function Signature
-      subst (Fun ident mt exprs) = Fun ident (Maybe.fromMaybe [] mt) exprs
-
--- Algorithm W adapted from "Algorithm W Step by Step"
-
--- awCheck maps the main inference function on the function expressions
--- Build environment delta with top level functions and their respective schemes
--- Type check the function definitions with delta.
--- Fill in missing type signatures.
-awCheck :: Module (Maybe Signature) -> TI (Module Signature)
-awCheck (Mod name exported functions) = do
-  let delta = foldl buildDelta emptyTypeEnv functions
-  typed <- mapM (check delta) functions
-  return (Mod name exported typed)
-    where
-      buildDelta :: TypeEnv -> Function (Maybe Signature) -> TypeEnv
-      buildDelta = undefined
-      check :: TypeEnv -> Function (Maybe Signature) -> TI (Function Signature)
-      check e (Fun fname Nothing es) = undefined -- ? 
-      check e (Fun fname (Just ts) es) = undefined -- ?
-
-type VarName = String
-
--- Monotype
-data TType
-  = TTVar VarName
-  | TTInt
-  | TTBool
-  | TTFun TType TType
-    deriving (Eq, Ord)
-
--- Polytype
-data Scheme = Scheme [VarName] TType
-
--- The members of TTypes can have their free type variables collected and
--- have substitutions applied to them.
-class TTypes a where
-  -- ftv collects free type variable names
-  ftv   :: a -> Set.Set VarName
-  -- apply applies a substitution where free type variables are replaced by
-  -- an instantiation(?)
-  apply :: Subst -> a -> a
-
-instance TTypes TType where
-  ftv (TTVar name)  = Set.singleton name
-  ftv (TTFun t1 t2) = ftv t1 `Set.union` ftv t2
-  ftv _             = Set.empty
-  apply s (TTVar name)  = Maybe.fromMaybe (TTVar name) (Map.lookup name s)
-  apply s (TTFun t1 t2) = TTFun (apply s t1) (apply s t2)
-  apply _ t             = t
-
-instance TTypes a => TTypes [a] where
-  ftv = foldr (Set.union . ftv) Set.empty -- why foldr instead of foldl?
-  apply s = map (apply s)
-
-instance TTypes Scheme where
-  ftv (Scheme vars t)     = ftv t Set.\\ Set.fromList vars
-  apply s (Scheme vars t) = Scheme vars (apply (foldr Map.delete s vars) t)
+typecheckModule :: RenamedModule -> Either String TCModule
+typecheckModule rnm = do 
+  names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
+  return $ TCModule 
+             (Name (Just $ init $ modId rnm)$last$modId rnm)
+             (exports rnm)
+             (map constructorDef (cons rnm) ++
+              recombineTypes'Sigh names'types (defs rnm))
+      where
+        constructorDef (n,t) = (n,argsToValue n $ arity t,t)
+        --TODO make n fully qualified!
+        argsToValue n 0 = nameToAtom n
+        argsToValue n ar = LamAST 
+                           (map VarPat vs)
+                           $ TupleAST $
+                           nameToAtom n:
+                           map Named vs
+                               where
+                                 vs = [name $ "x"++show n |
+                                       n <- [1..ar]]
+        nameToAtom = LitAST . AtomL . show
+        arity (AppT (AppT (ConT(Name(Just["Prim"])"->")) _) t) = 
+            1 + arity t
+        arity _ = 0
+        recombineTypes'Sigh ns'ts  = 
+            map (\(n,ast,_) -> (n,ast,fromJust $ lookup n ns'ts))
+--TODO typecheck also returns modified expression
+typecheck :: [(Name,TypeAST)] -> --imports, constructors
+             [(Name,AST,Maybe TypeAST)] -> --defs
+            Either String [(Name,TypeAST)]
+typecheck imps'cons vs = let (withDecls,woDecls) = ((map $ \(n,ast,Just t)->
+                                                    (n,ast,t)) 
+                                               ***
+                                               (map $ \(n,ast,_)->(n,ast)))$
+                                              partition 
+                                              (\(n,ast,m)->m/=Nothing) vs
+                             tmap = M.fromList $ 
+                               map (\(n,_,t) -> (n,t)) withDecls 
+                               ++ imps'cons
+                             sccs :: [[(Name,AST)]]
+                             sccs = map G.flattenSCC $ G.stronglyConnComp $ 
+                               map (\(n,ast)->
+                                        ((n,ast),n,namesOccuring ast)) 
+                               woDecls
+                             names = map (\(n,_,_) -> n) vs
+                        in runTCMonad (typecheckDefs names sccs withDecls)
+                           tmap (0,M.empty)
+typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
+                              R.local (const tmap) $ checkTypes wd
+                              return (getVals ns tmap)
+                                  where
+                                    getVals [] _ = []
+                                    getVals (n:ns) map = 
+                                        (n,case M.lookup n map of
+                                             Nothing -> error $
+                                                        "Unexpected Nothing "++
+                                                        "in TC.typecheckDefs"
+                                             Just x -> x):
+                                        getVals ns map
+                                    checkTypes [] = return ()
+                                    checkTypes ((n,ast,t):nastts) = do
+                                      put (0,M.empty) --start new session
+                                      t' <- tcExpr ast
+                                      t'' <- getFullType' S.empty t'
+                                      if t == t'' 
+                                       then return ()
+                                       else do
+                                         p <- get
+                                         lift$lift$Left 
+                                            ("Incorrect type signature: "
+                                             ++show (n,t,t',p))
+                                                
+                                                
+                                          
+typecheckSCCs :: [[(Name,AST)]] -> 
+                  TCMonad (M.Map Name TypeAST)
+typecheckSCCs [] = R.ask
+typecheckSCCs (scc:sccs) = do map <- typecheckSCC scc
+                              R.local (const map) (typecheckSCCs sccs)
+typecheckSCC :: [(Name,AST)] -> TCMonad (M.Map Name TypeAST)
+typecheckSCC nasts = do
+  --given type variable to each name
+  ntasts <- mapM (\(n,ast) -> do t <- newTyVar
+                                 return (n,t,ast)) nasts
+  let ns = map fst nasts
+      nts = map (\(n,t,_)->(n,t)) ntasts
+      tvAndDefs = map (\(_,t,ast)->(t,ast)) ntasts
+  R.local (M.union (M.fromList nts)) $ do 
+    mapM typecheckDef tvAndDefs
+    --s <- get
+    --m <- R.ask
+    --error $ show (s,m)
+    --getFullType (name "loop")
+    --error "Done"
+    namesTypes <- mapM getFullType ns
+    ntmap <- R.ask
+    put (0,M.empty)
+    return $ M.fromList namesTypes `M.union` ntmap
+getFullType :: Name -> TCMonad (Name,TypeAST)
+getFullType n = do m <- R.ask
+                   let Just tyvar = M.lookup n m  
+                   t <- getFullType' S.empty tyvar
+                   return $ if S.null $ tyVarNamesOf t 
+                            then (n,t)
+                            else (n,ForallT t)
+getFullType' s (VarT n) | S.member n s = return (VarT n)
+                        | otherwise = do (_,con) <- get
+                                         case M.lookup n con of
+                                           Nothing -> return $ VarT n
+                                           Just t  -> getFullType' 
+                                                      (S.insert n s) t
+getFullType' s (AppT tf tx) = do t1 <- getFullType' s tf
+                                 t2 <- getFullType' s tx
+                                 return $ AppT t1 t2
+getFullType' _ t = return t
   
-
--- Substitutions
-type Subst = Map.Map VarName TType
-
-nullSubst :: Subst
-nullSubst = Map.empty
-
-composeSubst :: Subst -> Subst -> Subst
-composeSubst s1 s2 = Map.map (apply s1) s2 `Map.union` s1
-
--- Type Environments
-{-
-Maybe use record for TypeEnv?
-
-newtype TypeEnv = TypeEnv {typeEnv :: Map.Map String Scheme}
-
-updateTypeEnv :: (TypeEnv -> TypeEnv) -> TypeEnv -> TypeEnv
-updateTypeEnv f env = env { typeEnv = f (typeEnv env) }
-
-updateTypeEnv (Map.delete name) env
-updateTypeEnv (Map.map (apply s)) env
--}
-newtype TypeEnv = TypeEnv (Map.Map String Scheme)
-
-instance TTypes TypeEnv where
-  ftv (TypeEnv e)     = ftv (Map.elems e)
-  apply s (TypeEnv e) = TypeEnv (Map.map (apply s) e)
-
-emptyTypeEnv :: TypeEnv
-emptyTypeEnv = TypeEnv Map.empty
-
--- remove
--- removes the binding for type x from environment e
-remove :: TypeEnv -> Pattern -> TypeEnv
-remove (TypeEnv e) p = case p of
-  PVar name -> TypeEnv (Map.delete name e)
-  PCon name -> TypeEnv (Map.delete name e)
-  _         -> TypeEnv e
-
--- generalize
-generalize :: TypeEnv -> TType -> Scheme
-generalize e t = Scheme vars t
-  where vars = Set.toList (ftv t Set.\\ ftv e)
-
--- instantiation
-instantiate :: Scheme -> TI TType
-instantiate (Scheme vars t) = 
-  do  nvars <- mapM (\_ -> newTyVar "'t") vars
-      let s = Map.fromList (zip vars nvars)
-      return $ apply s t
-
-
--- "Fresh names for newly introduced type variables"
-data TIEnv = TIEnv{}
-data TIState = TIState{ tiSupply :: Int }
-
--- ErrorT used in the tutorial is deprecated, using ExceptT instead.
--- ExceptT gives us the 
-type TI a = ExceptT String (ReaderT TIEnv (StateT TIState IO)) a
-
-runTI :: TI a -> IO (Either String a, TIState)
-runTI t = 
-  do (res, st) <- runStateT (runReaderT (runExceptT t) initTIEnv) initTIState
-     return (res, st)
+--takes the type variable assigned to the expression and its definition
+typecheckDef :: (TypeAST,AST) -> TCMonad TypeAST
+typecheckDef (tv,ast) = do t <- tcExpr ast
+                           unify tv t
+                           return tv
+tcExpr :: AST -> TCMonad TypeAST
+tcExpr (LitAST lit) = return $ litType lit
+tcExpr (Named n) = do map <- R.ask
+                      case M.lookup n map of
+                       Just (ForallT t) -> do t' <- newVarNames t
+                                              return t'
+                       Just t -> return t
+                       Nothing -> complain $
+                                  "Unexpected Nothing in tcExpr "++
+                                  "when looking up " ++ show n
+tcExpr (AppAST f x) = do a <- newTyVar
+                         b <- newTyVar
+                         let a_arrow_b = prim "->" `AppT` a `AppT` b
+                         tf <- tcExpr f
+                         tx <- tcExpr x
+                         unify tf a_arrow_b
+                         unify tx a
+                         return b
+tcExpr (LamAST [] body) = tcExpr body 
+-- \->body is not valid AST, constructed within the typechecker only
+tcExpr (LamAST (p:ps) body) = do 
+  let pns = namesOccP p
+  pnts <- mapM (\n -> do t <- newTyVar
+                         return (n,t)) pns
+  R.local (M.union (M.fromList pnts)) $ do a <- tcPattern p
+                                           b <- tcExpr (LamAST ps body)
+                                           return (AppT (prim"->") a
+                                                   `AppT` b)
+tcExpr (IfAST i t e) = do ti <- tcExpr i
+                          unify ti (prim"Bool")
+                          tt <- tcExpr t
+                          te <- tcExpr e
+                          unify tt te
+                          return tt
+tcExpr (TupleAST []) = return $ prim "()"
+tcExpr (TupleAST (x:tup)) = do tx <- tcExpr x
+                               ttup <- tcExpr $ TupleAST tup
+                               return $ prim"*" `AppT` tx `AppT` ttup
+--problem: variables in case patterns must be put in type map.
+tcExpr (CaseAST exp clauses) = do
+  t:ts <- mapM (\(pat,res) -> 
+                     tcExpr (LamAST[pat]res `AppAST` exp))
+           clauses
+  t <- foldM unifyT t ts
+  return t
     where
-      initTIEnv   = TIEnv
-      initTIState = TIState{ tiSupply = 0 }
+      unifyT t1 t2 = unify t1 t2 >> return t1
+tcExpr WildAST = newTyVar
+tcExpr (AsAST a b) = do ta <- tcExpr a
+                        tb <- tcExpr b
+                        unify ta tb
+                        return ta
+--Todo receive uses different tcPattern function
+tcPattern :: PatAST -> TCMonad TypeAST
+tcPattern = tcExpr . patToExpr
 
-newTyVar :: String -> TI TType
-newTyVar prefix = 
-  do s <- get
-     put s{ tiSupply = tiSupply s + 1 }
-     return (TTVar (prefix ++ show (tiSupply s)))
+patToExpr :: PatAST -> AST
+patToExpr p = case p of
+                VarPat n -> Named n
+                WildPat -> WildAST
+                AppPat f x -> AppAST (patToExpr f) (patToExpr x)
+                ConPat n -> Named n
+                LitPat l -> LitAST l
+                TuplePat xs -> TupleAST $ map patToExpr xs
+                AsPat p1 p2 -> AsAST (patToExpr p1) (patToExpr p2)
+                  
+--make new type variable for each variable in pattern,
+--locally modify name->type environment.
 
--- Unification
--- mgu - most general unifier
-mgu :: TType -> TType -> TI Subst
-mgu (TTFun t1 t2) (TTFun t3 t4) =
-  do s1 <- mgu t1 t3
-     s2 <- mgu (apply s1 t2) (apply s1 t4)
-     return (s1 `composeSubst` s2)
-mgu (TTVar s) t = varBind s t
-mgu t (TTVar s) = varBind s t
-mgu TTInt TTInt = return nullSubst
-mgu TTBool TTBool = return nullSubst
-mgu t1 t2 = throwE $ "types do not unify: " ++ show t1 ++ " vs. " ++ show t2
+--adds the module prefix Prim to a type name.
+prim = ConT . Name (Just ["Prim"])  
 
-varBind :: VarName -> TType -> TI Subst
-varBind s t
-  | t == TTVar s         = return nullSubst
-  | s `Set.member` ftv t = throwE $ "occurs check fails: " ++ s
-                           ++ " vs. " ++ show t
-  | otherwise            = return (Map.singleton s t)
+litType lit = case lit of 
+                StringL _ -> prim "String"
+                IntegerL _ -> prim "Integer"
+                DoubleL _ -> prim "Double"
+                CharL _ -> prim "Char"
+                AtomL _ -> prim "Atom"                               
 
--- Main type inference functions
+namesOccuring :: AST -> [Name]
+namesOccuring (Named n) = [n]
+namesOccuring (AppAST f x) = namesOccuring f `union` namesOccuring x
+namesOccuring (LamAST [] x) = namesOccuring x
+namesOccuring (LamAST (p:ps) x) = filter (not . flip elem (namesOccP p)) 
+                                  (namesOccuring $ LamAST ps x)
+namesOccuring _ = []
 
--- tiLit infers types of literals
-tiLit :: Literal -> TI (Subst, TType)
-tiLit (LS _) = undefined
-tiLit (LC _) = undefined
-tiLit (LI _) = return (nullSubst, TTInt)
-tiLit (LD _) = undefined
+namesOccP :: PatAST -> [TyVarName]
+namesOccP (VarPat n) = [n]
+namesOccP (AppPat f x) = namesOccP f `union` namesOccP x
+namesOccP (AsPat v p) = namesOccP v `union` namesOccP p
+namesOccP (TuplePat ps) = foldr union [] $ map namesOccP ps
+namesOccP _ = []
 
--- ti infers the type of expressions
-ti :: TypeEnv -> Expression -> TI (Subst, TType) -- Do we need a in expr?
-ti (TypeEnv env) (EVar n) =
-  case Map.lookup n env of
-    Nothing -> throwE $ "unbound variable: " ++ n
-    Just sigma -> 
-      do t <- instantiate sigma
-         return (nullSubst, t)
-ti _   (ELit l) = tiLit l
--- awsbs assumes lambda only abstracts over one argument at a time.
--- Hopper allows lambdas which abstract over a list of arguments.
--- Possible adaptions:
--- - Change ast in a prestep to conform to awsbs
--- - Change ti of ELambda to work with the entire list
--- - Change ti of ELambda to work only with the head of the list then
---   solve the rest of the list recursively (recreate the node without head)
--- Current solution is the last of the three
-ti env (ELambda [] e)     = ti env e
-ti env (ELambda (p:ps) e) =
-  do tv <- newTyVar "'t"
-     let TypeEnv env' = remove env p
-     env'' <- case p of
-       PVar name ->
-         return $ TypeEnv (env' `Map.union` Map.singleton name (Scheme [] tv))
-       PCon name ->
-         return $ TypeEnv (env' `Map.union` Map.singleton name (Scheme [] tv))
-       PLit _    -> throwE "Cannot abstract over literal"
-       PWild     -> throwE "Cannot abstract over wild"
-     (s1,t1) <- ti env'' (ELambda ps e) -- under construction
-     return (s1, TTFun (apply s1 tv) t1)
-ti env exp@(EApp e1 e2) =
-  do tv <- newTyVar "a"
-     (s1,t1) <- ti env e1
-     (s2,t2) <- ti (apply s1 env) e2
-     s3 <- mgu (apply s2 t1) (TTFun t2 tv)
-     return (s3 `composeSubst` s2 `composeSubst` s1, apply s3 tv)
-  `catchE`
-  \e -> throwE $ e ++ "\n in " ++ show exp
--- ELet is described in awsbs when it is time to implement ELet
+--make imports into map
+--extract values with type declarations,
+--put their types in the map;
+--get scc's of the rest; typecheck them
+--get scc's of the ones with typedecs, check if
+--equal to decs
 
--- typeInference is the main entry point of the typ inferencer.
-typeInference :: TypeEnv -> Expression -> TI TType
-typeInference env e = do
-  (s, t) <- ti env e
-  return (apply s t)
+--typecheck scc:
+--make a variable for each expression;
+--mapM typecheckExpr (flattenSCC scc)
 
--- Pretty printer
+type Constraint = M.Map TyVarName TypeAST
+type TCMonad a = R.ReaderT (M.Map Name TypeAST) 
+    (StateT (Int,Constraint) (Either String)) a
+runTCMonad :: TCMonad a -> 
+              (M.Map Name TypeAST) -> (Int,Constraint) -> 
+              Either String a
+runTCMonad m r s = do (v,s') <- runStateT (R.runReaderT m r) s
+                      return v
+--f = (f :: t ... f :: t ... g :: a)
+--if g has type signature, use that
+--lit: T, {}
+--f x: unify f with (a -> b), x with b
 
-instance Show TType where
-  showsPrec _ t = shows (prType t)
-    where
-      prType :: TType -> PP.Doc
-      prType (TTVar name)  = PP.text name
-      prType TTInt         = PP.text "Int"
-      prType TTBool        = PP.text "Bool"
-      prType (TTFun t1 t2) = prParenType t1 PP.<+> PP.text "->" PP.<+> prType t2
-      prParenType :: TType -> PP.Doc 
-      prParenType t' = case t' of
-        TTFun _ _ -> PP.parens (prType t')
-        _         -> prType t'
+--r => variables in receive r
+--have upper type. New variables
+--have new type
 
-instance Show Scheme where
-  showsPrec _ s = shows (prScheme s)
-    where
-      prScheme :: Scheme -> PP.Doc
-      prScheme (Scheme vars t) =
-        PP.text "forall"
-        PP.<+> PP.hcat (PP.punctuate PP.comma (map PP.text vars))
-        PP.<> PP.text "." PP.<+> PP.text (show t)
+--cyclical types not ok
 
+--unifies instantiated types, no forall
+unify :: TypeAST -> TypeAST -> TCMonad ()
+unify (VarT x) (VarT y) | x == y = return ()
+unify (VarT x) t = checkNoCycles x t
+unify t (VarT x) = checkNoCycles x t
+unify (AppT a b) (AppT c d) = unify a c >> unify b d
+unify (ConT n1) (ConT n2) | n1 == n2 = return ()
+unify t1 t2 = lift $ lift $ Left $ 
+              concat["Cannot unify: (",show t1,")(",show t2,")"]
+        
+checkNoCycles :: TyVarName -> TypeAST -> TCMonad ()      
+checkNoCycles tvn newType = do
+  (i,map) <- get
+  case M.lookup tvn map of
+    Nothing -> 
+        do let state = (i,M.insert tvn newType map)
+           lift $ put state
+           tryToFindCycle tvn tvn
+           lift $ put state
+           
+    Just t ->
+        unify t newType
+  where tryToFindCycle from at =  
+            do (_,con) <- get
+               case M.lookup at con of
+                 Nothing -> return () --visited it already alt. not bound
+                 Just t -> let names = tyVarNamesOf t
+                           in if t == VarT from then return () else
+                                  if S.member from names
+                                  then do p <- get
+                                          lift $ lift $ Left $ "Found cycle: "
+                                             ++ show (from,at,t,p)
+                                  else do modify $ id *** M.delete at 
+                                          mapM_ (tryToFindCycle from) $ 
+                                            S.elems names 
+  
+newVarNames :: TypeAST -> TCMonad TypeAST
+newVarNames t = do (i,con) <- get
+                   put (i,M.empty)
+                   t' <- newVarNames' t
+                   modify $ id *** const con
+                   return t'
+newVarNames' :: TypeAST -> TCMonad TypeAST  
+newVarNames' (VarT x) = do (i,vs) <- get
+                           case M.lookup x vs of
+                             Just t -> return t
+                             _ -> let t = tyVar $ "t"++show i
+                                  in do put (i+1,M.insert x t vs)
+                                        return t
+newVarNames' c@(ConT _) = return c
+newVarNames' (AppT a b) = do a' <- newVarNames' a
+                             b' <- newVarNames' b
+                             return $ AppT a' b'
+
+newTyVar :: TCMonad TypeAST
+newTyVar = do (i,_) <- get
+              modify $ (+1) *** id
+              return $ tyVar $ "t"++show i
+
+--assumes they share no type variable names
+isInstanceOf :: TypeAST -> TypeAST -> Bool
+t1 `isInstanceOf` t2 = let readf :: TCMonad () -> 
+                                    StateT (Int,Constraint) (Either String) ()
+                           readf = flip R.runReaderT M.empty 
+                           statef = flip execStateT (0,M.empty) 
+                       in case statef $ readf (unify t1 t2)of
+                         Left _ -> False
+                         Right (_,con) -> F.all (\tvn -> not $ M.member tvn con)
+                                          (tyVarNamesOf t2) 
+tyVarNamesOf (VarT v) = S.singleton v
+tyVarNamesOf (AppT a b) = S.union (tyVarNamesOf a) $ tyVarNamesOf b
+tyVarNamesOf _ = S.empty
+
+name = Name Nothing 
+
+complain = lift . lift . Left
+
+--DEBUGGING ||
+--          \/
+fullTypeTest :: TCMonad TypeAST
+fullTypeTest = do let t0 = tyVar "t0"
+                      t1 = tyVar "t1"
+                      t2 = tyVar "t2"
+                  put (3,M.fromList [(Name Nothing "t0",t1),
+                                     (Name Nothing "t1",prim"Atom"),
+                                     (Name Nothing "t2",t0)])
+                  getFullType' S.empty t1
+
+example = --let id = LamAST [VarPat $ name "x"] (Named $ name "x") in 
+                     [--(name "id",id,Nothing),
+                       --(name "atom",AppAST (Named $ name "id")
+                           --      (LitAST (AtomL "atom")),Just $ prim "Atom"),
+                      def "loop" (LamAST [VarPat $ name "x"] 
+                                   (AppAST (Named $ name "loop")
+                                           (Named $ name "x")))
+                     --,def "loop2" (Named $ name "loop2")
+                     ] 
+    where def str ast = (name str,ast,Nothing)
+shrunkEx = runTCMonad (tcExpr (LamAST [VarPat $ name "x"] 
+                               (AppAST (Named $ name "loop")
+                                (Named $ name "x"))))
+           (M.singleton (name "loop") (tyVar "t0")) (1,M.empty)
+           
+--cycle: 
+--t2 : 
+--t0 = (t2 -> t3)
+--t1 = t2
+
+--loop = t0
+--x = t1
+
+--t0 = (a -> b)
+
+unifyLoopTest = do [t0,t1,t2,t3] <- sequence $ replicate 4 newTyVar
+                   unify t0 (arrowtype t2 t3)
+                   unify t1 t2
+                   mapM (getFullType' S.empty) [t0,t1,t2,t3]
+
+
+arrowtype a b = AppT (prim"->") a `AppT` b
+
+
+ 
