@@ -16,8 +16,33 @@ import Data.List (partition,union)
 --NOTE: I assume String == Prim.String,
 --Atom == Prim.Atom, (->) == Prim.(->) etc.
 --Change depending on hopper module structure.
+--Tuple-cons: Prim.*
+--Tuplr-nil: Prim.()??
 
-typeCheckModule :: RenamedModule -> TCModule
+typecheckModule :: RenamedModule -> Either String TCModule
+typecheckModule rnm = do 
+  _ <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
+  return $ TCModule 
+             (Name (Just $ init $ modId rnm)$last$modId rnm)
+             (exports rnm)
+             (map constructorDef (cons rnm) ++
+              map (\(n,ast,mtype)->(n,ast))(defs rnm))
+      where
+        constructorDef (n,t) = (n,argsToValue n $ arity t)
+        --TODO make n fully qualified!
+        argsToValue n 0 = nameToAtom n
+        argsToValue n ar = LamAST 
+                           (map VarPat vs)
+                           $ TupleAST $
+                           nameToAtom n:
+                           map Named vs
+                               where
+                                 vs = [name $ "x"++show n |
+                                       n <- [1..ar]]
+        nameToAtom = LitAST . AtomL . show
+        arity (AppT (AppT (ConT(Name(Just["Prim"])"->")) _) t) = 
+            1 + arity t
+        arity _ = 0
 --TODO typecheck also returns modified expression
 typecheck :: [(Name,TypeAST)] -> --imports, constructors
              [(Name,AST,Maybe TypeAST)] -> --defs
@@ -45,7 +70,11 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                   where
                                     getVals [] _ = []
                                     getVals (n:ns) map = 
-                                        (n,fromJust $ M.lookup n map):
+                                        (n,case M.lookup n map of
+                                             Nothing -> error $ 
+                                                        "Unexpected Nothing "++
+                                                        "in TC.typecheckDefs"
+                                             Just x -> x):
                                         getVals ns map
                                     checkTypes [] = return ()
                                     checkTypes ((n,ast,t):nastts) = do
@@ -112,10 +141,13 @@ typecheckDef (tv,ast) = do t <- tcExpr ast
 tcExpr :: AST -> TCMonad TypeAST
 tcExpr (LitAST lit) = return $ litType lit
 tcExpr (Named n) = do map <- R.ask
-                      case fromJust $ M.lookup n map of
-                       ForallT t -> do t' <- newVarNames t
-                                       return t'
-                       t -> return t
+                      case M.lookup n map of
+                       Just (ForallT t) -> do t' <- newVarNames t
+                                              return t'
+                       Just t -> return t
+                       Nothing -> error $
+                                  "Unexpected Nothing in tcExpr "++
+                                  "when looking up " ++ show n
 tcExpr (AppAST f x) = do a <- newTyVar
                          b <- newTyVar
                          let a_arrow_b = prim "->" `AppT` a `AppT` b
@@ -134,12 +166,31 @@ tcExpr (LamAST (p:ps) body) = do
                                            b <- tcExpr (LamAST ps body)
                                            return (AppT (prim"->") a
                                                    `AppT` b)
+tcExpr (IfAST i t e) = do ti <- tcExpr i
+                          unify ti (prim"Bool")
+                          tt <- tcExpr t
+                          te <- tcExpr e
+                          unify tt te
+                          return tt
+tcExpr (TupleAST []) = return $ prim "()"
+tcExpr (TupleAST (x:tup)) = do tx <- tcExpr x
+                               ttup <- tcExpr $ TupleAST tup
+                               return $ prim"*" `AppT` tx `AppT` ttup
+tcExpr (CaseAST exp ((pat,res):clauses)) = do texp <- tcExpr exp
+                                              tpat <- tcPattern pat
+                                              tres <- tcExpr res
+                                              tps <- mapM tcPattern $
+                                                     map fst clauses
+                                              trs <- mapM tcExpr $
+                                                     map snd clauses
+                                              unify texp tpat
+                                              foldM_ unifyT tpat tps
+                                              foldM_ unifyT tres trs
+                                              return tres
+    where
+      unifyT t1 t2 = unify t1 t2 >> return t1
 tcExpr WildAST = newTyVar
---need to modify Reader type to Map Name (Locality,TypeAST)
---to tell diff between \r -> receive r -> ()
---and receive r -> ()?
---no, let renamer ensure \r -> receive r -> ()
---uses ConPat r
+--Todo receive uses different tcPattern function
 tcPattern :: PatAST -> TCMonad TypeAST
 tcPattern = tcExpr . patToExpr
 
@@ -150,6 +201,7 @@ patToExpr p = case p of
                 AppPat f x -> AppAST (patToExpr f) (patToExpr x)
                 ConPat n -> Named n
                 LitPat l -> LitAST l
+                TuplePat xs -> TupleAST $ map patToExpr xs
                   
 --make new type variable for each variable in pattern,
 --locally modify name->type environment.

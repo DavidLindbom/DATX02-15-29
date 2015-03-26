@@ -1,0 +1,14 @@
+module 'HelloString' ['__b'/0] attributes []
+'__loop'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                3
+        end
+'__plus'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                '__plus'/0
+        end
+end

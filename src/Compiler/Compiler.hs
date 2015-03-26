@@ -9,8 +9,11 @@ import Parser.AbsHopper
 import Parser.LayoutHopper
 import Utils.ErrM
 
+import Language.CoreErlang.Pretty (prettyPrint)
+
 import Renamer.Rename (rename)
 import TypeChecker.TC (typecheckModule)
+import CodeGenerator.CodeGen (codeGen)
 
 --Takes a given module (e.g. M1.M2.M3),
 --parses;
@@ -21,13 +24,15 @@ import TypeChecker.TC (typecheckModule)
 compile :: [String] -> IO ()
 compile mds = do s <- readFile $ (foldr1 (\m ms -> m ++ "/" ++ ms) mds)++".hpr"
                  case parseModule s of
-                   Bad s -> putStrLn $ "Compiler error: " ++ s
+                   Bad s -> putStrLn $ "Parser error: " ++ s
                    Ok absmodule -> let mod = (rename absmodule)
-                                   in case typecheck 
-                                          (cons mod)-- ++imports
-                                          (defs mod) of
+                                   in case typecheckModule mod
+                                      of
                                         Left message -> putStrLn $
-                                                        "TC error:" ++ s
-                                        Right _ -> error "TBD"
-parseModule s = pModule $ myLexer s
-                 
+                                                        "TC error:" ++ message
+                                        Right tcm -> writeFile 
+                                                     ((mds>>=(++"."))++"CORE")
+                                                     $ prettyPrint $
+                                                       codeGen tcm
+parseModule s = pModule $ myLLexer s
+                 where myLLexer = resolveLayout True . myLexer

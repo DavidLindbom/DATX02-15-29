@@ -3,7 +3,7 @@ module AST.AST where
 data TCModule = TCModule Name [Name] [(Name,AST)]
   deriving (Eq,Ord,Show,Read)
 data RenamedModule = RenamedModule{modId::ModuleId,
-                                   exps::[String],
+                                   exports::[Name],
                                    cons ::[(Name,TypeAST)],
                                    defs::[(Name,AST,Maybe TypeAST)]}
 --Module data: name, exports, definitions, types?

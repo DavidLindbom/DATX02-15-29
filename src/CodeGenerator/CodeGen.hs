@@ -2,6 +2,7 @@
 
 module CodeGenerator.CodeGen where
 import AST.AST
+import TypeChecker.TC
 
 import Language.CoreErlang.Syntax
 import qualified Control.Monad.Reader as R
@@ -14,13 +15,14 @@ AST.Module: Maybe Type, Name, AST
 Typechecked: (InterfaceFile,Name,[(Name,AST)])
 
 -}
-moduleASTToModule :: TCModule -> Module
-moduleASTToModule (TCModule s exports defs) = 
+codeGen :: TCModule -> Module
+codeGen (TCModule (Name _ s) exports defs) = 
     Module 
         (Atom s) 
-        (map __fun exports)
+        (map (__fun . (\(Name _ s) -> s)) exports)
         []
-        (map (\(s,ast) -> FunDef (Constr $ __fun s) $ Constr $ R.runReader 
+        (map (\((Name _ s),ast) -> FunDef (Constr $ __fun s) $ 
+                                   Constr $ R.runReader 
                           (astToCore ast) S.empty) defs)
 
 --cerl distinguishes between named functions and variables
@@ -29,7 +31,7 @@ moduleASTToModule (TCModule s exports defs) =
 --             variable
 --The reader value contains all names that are defined
 --in a let or lambda
-astToCore :: AST -> R.Reader (S.Set String) Exp
+astToCore :: AST -> R.Reader (S.Set Name) Exp
 --no variables have module ids!
 --how to handle Package.Module? TODO ask Johan
 --m1.m2.m3 => 'm1.m2.m3'
@@ -43,33 +45,66 @@ astToCore (Named (Name (Just mid) s)) = return $ modCall
       moduleAtom = atom $ foldr1 (\s atname -> s++"."++atname) mid
 --Two cases: variable or named value
 --TODO ask Johan what names are permitted for variables
-astToCore (Named (Name Nothing s)) = do isAVariable <- R.asks (S.member s)
-                                        return $ if isAVariable
-                                                 then if isPrefixName s
-                                                         then Var$'P':s
-                                                         else Var$'I':
-                                                              encodeInfix s
-                                                 else Fun $ __fun s
-    where
-      isPrefixName (c:s) = c == '_' || isAlpha c
-      --converts an infix variable name such as "+" to
-      --a representation Erlang is guaranteed to accept.
-      --Does this in a very simple fashion (by turning
-      --characters into their integer representation).
-      encodeInfix cs = foldr1 (\s str -> s ++ "_" ++ str) $ map (show.ord) cs
+astToCore (Named n@(Name _ s)) = do isAVariable <- R.asks (S.member n)
+                                    return $ if isAVariable
+                                             then Var $ handleVarName n 
+                                             else Fun $ __fun s
 astToCore (AppAST f x) = do fc <- astToCore f
                             xc <- astToCore x
                             return $ App (exps fc) [exps xc]
 astToCore (LitAST astLit) = return $ Lit $ astLitToCoreLit astLit
---
-astToCore (LamAST ps body) = do let varStrs = (map (\(VarPat (Name Nothing s))
-                                                    -> s) ps)
+astToCore (LamAST ps body) = do let varNames = map (\(VarPat n)-> n) ps
                                 bodyc <- R.local 
-                                         (inserts varStrs)$
+                                         (inserts varNames)$
                                          astToCore body
-                                return $ Lambda varStrs $ exps bodyc
-    where
-      inserts strs set = foldr (\str set -> S.insert str set) set strs
+                                return $ Lambda (map 
+                                                 (\(Name _ s)->s)
+                                                 varNames) $ exps bodyc
+astToCore (CaseAST x clauses) = do exp <- astToCore x
+                                   alts <- mapM (\(pat,res)->
+                                                 do 
+                                                   let cpat = patToCore pat
+                                                       vns = namesOccP pat
+                                                   cres <- R.local 
+                                                           (inserts vns) $
+                                                        astToCore res
+                                                   return $ Constr $ Alt
+                                                       (pats cpat)
+                                                       (Guard$
+                                                        exps$
+                                                        atom"true")
+                                                       (exps cres)) clauses
+                                   return $ Case (exps exp) alts
+astToCore (TupleAST asts) = do cores <- mapM astToCore asts
+                               return $ Tuple $ map exps cores
+astToCore ast = error $ "Nonexhaustive: " ++ show ast
+
+patToCore :: PatAST -> Pat
+patToCore (VarPat n) = PVar $ handleVarName n
+patToCore (LitPat l) = PLit $ astLitToCoreLit l
+patToCore (TuplePat ps) = PTuple $ map patToCore ps
+-- x:xs ==> [X|Xs]
+patToCore (AppPat 
+           (AppPat 
+            (ConPat (Name (Just["Prim"]) ":"))
+            x)
+           xs) = PList (LL [patToCore x] $ patToCore xs)
+
+inserts ns set = foldr (\n set -> S.insert n set) set ns
+
+handleVarName (Name Nothing s) = 
+    if isPrefixName s
+    then 'P':s
+    else 'I':
+         encodeInfix s         
+        where
+          isPrefixName (c:s) = c == '_' || isAlpha c
+        --converts an infix variable name such as "+" to
+        --a representation Erlang is guaranteed to accept.
+        --Does this in a very simple fashion (by turning
+        --characters into their integer representation).
+          encodeInfix cs = foldr1 (\s str -> s ++ "_" ++ str) $ 
+                           map (show.ord) cs
 astLitToCoreLit :: Lit -> Literal
 astLitToCoreLit (StringL s) = LString s
 astLitToCoreLit (IntegerL i) = LInt i

@@ -10,11 +10,11 @@ import Control.Arrow ((***))
 import qualified Data.Set as S
 
 rename :: A.Module -> RenamedModule
-rename (A.MModule idcon exports ds) = 
+rename (A.MModule idcon exps ds) = 
     RenamedModule{modId=case idconToName idcon of
                           Name (Just ms) s -> ms++[s]
                           Name Nothing s -> [s],
-                  exps=(map (\(A.MExport(A.IdVar s))->s) exports),
+                  exports=(map (\(A.MExport(A.IdVar s))->name s) exps),
                   cons=constructors,
                   defs=definitions}
     where (constructors,definitions) = renameDefs ds
