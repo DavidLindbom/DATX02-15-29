@@ -9,8 +9,6 @@ import AST.AST as AST
 import Utils.ErrM
 import Utils.PrettyPrint
 
-import Debug.Trace (trace)
-
 transform :: HPR.Module -> Err (AST.Module (Maybe Signature))
 transform (MModule (IdCon name) expo defs) = do
   let (adts,defs') = findADTs defs
@@ -225,7 +223,7 @@ mergeCase a b = case (a,b) of
 
   -- Convert two lambdas to case expression
   (AST.ELambda ps e, AST.ELambda ps' e') ->
-    trace "was here" $ if length ps == length ps'
+    if length ps == length ps'
       then do let as = makeArgs ps
               ts <- expressionFromArgs as
               let cs = AST.ECase ts [(AST.PTuple ps, e), (AST.PTuple ps', e')]
