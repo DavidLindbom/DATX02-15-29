@@ -1,14 +1,22 @@
 
-module HPR (f,loop) where
+module HPR (f) where
 
-f = 3
-{-
-const _ x = case x of
-      	       3 -> "ok"
-	       2 -> "bah, humbug!"
-const x _ = x
--}
+--f = 3
+-- {-
+--const _ x = case x of
+--      	       3 -> "ok"
+--	       2 -> "bah, humbug!"
+--const x _ = x
+-- -}
 
-loop = loop
+-- loop = loop
 
-g _ = 0
+-- g _ = 0
+-- -}
+
+--plus :: a -> a -> a
+--plus = apply "erlang" "+" 2
+
+g x y = y
+
+f = g 0 1

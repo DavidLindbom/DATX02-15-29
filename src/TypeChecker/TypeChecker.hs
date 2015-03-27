@@ -29,11 +29,11 @@ typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do 
-  --NOTE: I HARDCODED THE TYPE OF apply :: String -> String -> a -> b
+  --NOTE: I HARDCODED THE TYPE OF apply :: String -> String -> Integer -> a -> b
   --here.
   names'types <- typecheck ((Name Nothing "apply",
                              ForallT $ foldr1 arrowtype
-                                         [prim"String",prim"String",
+                                         [prim"String",prim"String",prim"Integer",
                                           tyVar "a",tyVar "b"])
                             :cons rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
@@ -96,14 +96,15 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                     checkTypes ((n,ast,t):nastts) = do
                                       put (0,M.empty) --start new session
                                       t' <- tcExpr ast
-                                      t'' <- getFullType' S.empty t'
-                                      if t == t'' 
+                                      --t'' <- getFullType' S.empty t'
+                                      unify t' t
+                                      {-if t == t'' 
                                        then return ()
                                        else do
                                          p <- get
                                          lift$lift$Left 
                                             ("Incorrect type signature: "
-                                             ++show (n,t,t',p))
+                                             ++show (n,t,t',p))-}
                                                 
                                                 
                                           
