@@ -1,101 +1,163 @@
-layout "=", "of";
-layout toplevel;
+--
+-- Layout
+-- ======
+-- Inserts "{" "}" around definition after the keywords below
+
+layout "=", "::", "of" ;
+layout toplevel        ;
+
+--
+-- Module
+-- ======
+--
 
 entrypoints Module;
+MMod. Module ::= "module" IdCon Exports "where" ";" [Def] ;
 
--- Module
-MModule. Module ::= "module" IdCon "(" [Export] ")" "where" ";" [Def];
-MExport. Export ::= IdVar;
+--
+-- Exports
+-- =======
+-- NEmpty allows leaving the () out
 
-separator Export ",";
+NEmpty. Exports ::=                  ;
+NExps.  Exports ::= "(" [Export] ")" ;
 
--- Signatures and functions 
-separator Def ";";
+NExp. Export ::= IdVar ;
+separator Export ","   ;
 
-DSig. Def ::= IdVar "::" [Type];
-DFun. Def ::= IdVar [Arg] "=" "{" Exp "}"; -- TODO: Add function parameters
-DDat. Def ::= "data" IdCon "=" "{" [Cons] "}";
+--
+-- Definitions
+-- ===========
+-- Moved out definitions to make them more flexible and reuseable
 
--- Constructors in data declarations
-FCon. Cons ::= IdCon [Par];
-separator nonempty Cons "|";
+DFun.  Def ::= Func ;
+DSig.  Def ::= Sign ;
+DAdt.  Def ::= Adt  ;
+separator Def ";"   ;
 
-GCon. Par ::= IdCon;
---GVar. Par ::= IdVar; -- TODO: Parameters to data decl
+--
+-- Functions
+-- =========
+--
 
-terminator Par "";
+FFun. Func ::= IdVar [Arg] "=" "{" Expr "}" ;
 
+--
 -- Arguments
-ACon.     Arg ::= IdCon; 
-AVar.     Arg ::= IdVar; 
-AWild.    Arg ::= "_";
-AString.  Arg ::= String;
-AChar.    Arg ::= Char;
-AInteger. Arg ::= Integer;
-ADouble.  Arg ::= Double;
-ATuple.   Arg ::= "(" [Barg] ")";
+-- =========
+-- If ArgTuple has one element, treat it as parenthethis
+-- Extra Arg in ArCon is to fix a reduce/reduce error
+-- Arg and Pat are the same now. Merge? 
 
-separator Arg "";
-terminator Arg "";
+AId.    Arg ::= Id                 ;  
+APrim.  Arg ::= Prim               ;
+AWild.  Arg ::= "_"                ;
+ATuple. Arg ::= "(" [ArgTuple] ")" ;
+terminator Arg ""                  ;
 
-BCon. Barg ::= IdCon [Arg];
-BArg. Barg ::= Arg;
+ArCon. ArgTuple ::= IdCon Arg [Arg] ; 
+ArArg. ArgTuple ::= Arg             ;
+separator ArgTuple ","              ;
 
-separator Barg ",";
-
--- Types
-TName. Type ::= IdCon; -- Todo: Add parameters here
-TVar.  Type ::= IdVar;
-TFun.  Type ::= "(" Type "->" [Type] ")";
-separator nonempty Type "->";
-
+--
 -- Expressions
+-- ===========
+-- Renamed from Exp to Expr to remove name clash with Prelude
 
-EVar.     Exp2 ::= IdVar;
-ECon.     Exp2 ::= IdCon;
-EOpr.     Exp2 ::= "(" IdOpr ")";
-EString.  Exp2 ::= String;
-EChar.    Exp2 ::= Char;
-EInteger. Exp2 ::= Integer;
-EDouble.  Exp2 ::= Double;
-EInfix.   Exp1 ::= Exp1 IdOpr Exp2; -- TODO: Add infix with backticks
-EApp.     Exp1 ::= Exp1 Exp2;
-ECase.    Exp1 ::= "case" Exp1 "of" "{" [Cla] "}";
-EIf.      Exp1 ::= "if" Exp1 "then" Exp2 "else" Exp2;
-ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
+EId.      Expr2 ::= Id                                   ;
+EPrim.    Expr2 ::= Prim                                 ;
+EOpr.     Expr2 ::= "(" IdOpr ")"                        ;
+EInfix.   Expr1 ::= Expr1 IdOpr Expr2                    ;
+EApp.     Expr1 ::= Expr1 Expr2                          ;
+ECase.    Expr1 ::= "case" Expr1 "of" "{" [Clause] "}"   ;
+EIf.      Expr1 ::= "if" Expr1 "then" Expr2 "else" Expr2 ;
+ELambda.  Expr  ::= "\\" [Pat] "->" Expr                 ;
+coercions Expr 2                                         ;
 
-coercions Exp 2;
-
--- Clauses
-
-CClause. Cla ::= Pat "->" Exp;
-
+CClause. Clause ::= Pat "->" Expr;
 separator nonempty Cla ";";
 
-
+--
 -- Patterns
-PCon.     Pat ::= IdCon; -- TODO: Tuples, parameters to constructors
-PVar.     Pat ::= IdVar;
-PWild.    Pat ::= "_";
-PString.  Pat ::= String;
-PChar.    Pat ::= Char;
-PInteger. Pat ::= Integer;
-PDouble.  Pat ::= Double;
-PTuple.   Pat ::= "(" [Qpat] ")";
+-- ========
+-- Extra Pat in PaCon is to fix a reduce/reduce error
+-- Arg and Pat are the same now. Merge? 
 
-terminator nonempty Pat "";
+PId.    Pat ::= Id                 ;
+PPrim.  Pat ::= Prim               ;
+PWild.  Pat ::= "_"                ;
+PTuple. Pat ::= "(" [PatTuple] ")" ;
+terminator nonempty Pat ""         ;
 
-QCon. Qpat ::= IdCon [Qpat];
-QPat. Qpat ::= Pat;
+PaCon. PatTuple ::= IdCon Pat [Pat] ;
+PaPat. PatTuple ::= Pat             ;
+separator PatTuple ","              ;
 
-separator Qpat ",";
+--
+-- Signatures
+-- ==========
+--
 
+SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
+
+--
+-- Types
+-- =====
+-- If TypeTuple has one element, treat it as parenthethis
+-- Replace TName and TVar with TId ::= Id ?
+
+TName.  Type ::= IdCon [Id]          ;
+TVar.   Type ::= IdVar [Id]          ;
+TTuple. Type ::= "(" [TypeTuple] ")" ;
+separator nonempty Type "->"         ;
+
+TyTuple. TypeTuple ::= [Type] ;
+separator TypeTuple ","       ;
+
+--
+-- ADT declarations
+-- ================
+-- 
+
+--TODO: Parenteser och tuples
+AAdt. Adt ::= "data" IdCon [AdtVar] "=" "{" [Cons] "}" ;
+
+AdVar. AdtVar ::= IdVar ;
+terminator AdtVar ""    ;
+
+AdCon. Cons ::= IdCon [Id]  ;
+separator nonempty Cons "|" ;
+
+--
+-- Identifiers and primitives
+-- ==========================
+-- To simplify lists without any separators
+-- maybe should do this for int, char, string ect...
+
+ICon. Id ::= IdCon ;
+IVar. Id ::= IdVar ;
+terminator Id ""   ;
+
+IInteger. Prim ::= Integer ;
+IDouble.  Prim ::= Double  ;
+IString.  Prim ::= String  ;
+IChar.    Prim ::= Char    ;
+
+--
 -- Tokens
-token IdVar (lower (digit | letter | '_' )* ); 
-token IdCon (upper (digit | letter)* );
-token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ );
+-- ======
+-- IdVar: identifier starting with a lower letter
+-- IdCon: starting with a upper letter
+-- IdOpr: operators
 
--- Comments
-comment "--";
-comment "{-" "-}";
+token IdVar (lower (digit | letter | '_' )* ) ; 
+token IdCon (upper (digit | letter)* )        ;
+token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ )    ;
 
+--
+-- Comments 
+-- ========
+-- Can't handle nested comments, bug in bnfc
+
+comment "--"      ;
+comment "{-" "-}" ;
