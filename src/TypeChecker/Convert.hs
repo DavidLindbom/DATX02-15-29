@@ -9,8 +9,9 @@ module TypeChecker.Convert where
 --I will assume there are no module prefixes.
 import qualified AST.Liam_TC_AST as L
 import qualified AST.AST as A
+import Data.Char (isUpper)
 
-moduleToRenamed :: A.Module (Maybe A.Type)-> L.RenamedModule
+moduleToRenamed :: A.Module (Maybe A.Signature)-> L.RenamedModule
 moduleToRenamed (A.Mod s is fs) = L.RenamedModule
                                        [s]
                                        (map idToName is)
@@ -24,10 +25,10 @@ moduleToRenamed (A.Mod s is fs) = L.RenamedModule
 idToName :: A.Identifier -> L.Name
 idToName s = L.Name Nothing s
 
-functionToName'AST'MType :: A.Function (Maybe A.Type) -> 
+functionToName'AST'MType :: A.Function (Maybe A.Signature) -> 
     (L.Name,L.AST,Maybe L.TypeAST)
-functionToName'AST'MType (A.Fun id mtype expression) = 
-    (idToName id,expToAST expression, fmap typeToTypeAST mtype)
+functionToName'AST'MType (A.Fun id msig expression) = 
+    (idToName id,expToAST expression, fmap (typeToTypeAST . head) msig)
 
 typeToTypeAST :: A.Type -> L.TypeAST
 typeToTypeAST (A.TName s ts) = foldl1 L.AppT $ (L.ConT $ idToName s):
@@ -49,6 +50,7 @@ expToAST (A.ECase exp clauses) = L.CaseAST (expToAST exp) $
                                  clauses
 
 patToPatAST :: A.Pattern -> L.PatAST
+patToPatAST (A.PVar id) = L.VarPat $ idToName id
 patToPatAST (A.PCon id) = L.ConPat $ idToName id
 patToPatAST (A.PLit lit) = L.LitPat $ aLitToLLit lit
 patToPatAST A.PWild = L.WildPat
@@ -64,10 +66,53 @@ aLitToLLit (A.LD d) = L.DoubleL d
 --And now in the other direction...
 --------------------------------------------------------------------------------
 
-tcModToModule :: L.TCModule -> A.Module A.Type
+--Are signatures just singleton lists?
+
+tcModToModule :: L.TCModule -> A.Module A.Signature
 tcModToModule (L.TCModule n ns ns'asts'types) = 
     A.Mod (nameToId n) (map nameToId ns) (map toFunction ns'asts'types)
-nameToId (Name _ s) = s
-toFunction (n,ast,typ) = A.Fun (nameToId n) (typeASTToType typ) (astToExp ast)
+nameToId (L.Name _ s) = s
+toFunction (n,ast,typ) = A.Fun (nameToId n) [typeASTToType typ] (astToExp ast)
 
-typeASTToType (L.AppT )
+--note: it should support partially applied (->)
+typeASTToType ((L.ConT (L.Name (Just["Prim"])"->")) `L.AppT` a `L.AppT` b) = 
+    A.TFun $ map typeASTToType $ a:args b
+     where 
+       args (L.ConT (L.Name (Just["Prim"])"->") `L.AppT` a `L.AppT` b) = 
+           a:args b
+       args t = [t]
+typeASTToType app@(L.AppT con t) = A.TName (nm con) (map typeASTToType $ 
+                                                    args app)
+    where
+      args (L.AppT con t) = args con ++ [t]
+      args t = [t]
+      nm (L.AppT con t) = nm con
+      nm (L.ConT (L.Name _ s)) = s
+typeASTToType (L.ConT (L.Name _ s)) = A.TName s []
+typeASTToType (L.VarT (L.Name _ s)) = A.TVar s
+typeASTToType (L.ForallT t) = typeASTToType t
+
+
+astToExp :: L.AST -> A.Expression
+astToExp (L.Named (L.Name _ (c:s))) 
+    | c == ':' || isUpper c = A.ECon (c:s)
+    | otherwise = A.EVar (c:s)
+astToExp (L.LitAST lit) = A.ELit $ lLitToALit lit
+astToExp (L.TupleAST exps) = A.ETuple $ map astToExp exps
+astToExp (L.LamAST ps body) = A.ELambda (map patASTToPat ps) (astToExp body)
+astToExp (L.AppAST f x) = A.EApp (astToExp f) (astToExp x)
+astToExp (L.CaseAST ast clauses) = A.ECase (astToExp ast) $ map
+                                   (\(pat,res)->(patASTToPat pat,astToExp res))
+                                   clauses
+
+patASTToPat :: L.PatAST -> A.Pattern
+patASTToPat (L.VarPat (L.Name _ s)) = A.PVar s
+patASTToPat (L.ConPat (L.Name _ s)) = A.PCon s
+patASTToPat (L.LitPat lit) = A.PLit $ lLitToALit lit
+patASTToPat L.WildPat = A.PWild
+patASTToPat (L.TuplePat ps) = A.PTuple $ map patASTToPat ps
+
+lLitToALit (L.StringL s) = A.LS s
+lLitToALit (L.CharL c) = A.LC c
+lLitToALit (L.IntegerL i) = A.LI i
+lLitToALit (L.DoubleL d) = A.LD d
