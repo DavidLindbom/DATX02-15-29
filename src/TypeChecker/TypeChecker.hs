@@ -19,15 +19,18 @@ import Data.List (partition,union)
 --Tuple-cons: Prim.*
 --Tuplr-nil: Prim.()??
 
-import TypeChecker.Convert (moduleToRenamed)
+import TypeChecker.Convert (moduleToRenamed,tcModToModule)
 import Utils.ErrM (Err(..))
+import qualified AST.AST as A
+typeCheck :: A.Module (Maybe A.Signature) -> Err (A.Module A.Signature)
 typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   Left s -> Bad s
                   Right tcmod -> Ok $ tcModToModule tcmod
                   
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do 
-  names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
+  let names'types = []
+  -- names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)

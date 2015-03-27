@@ -1,10 +1,8 @@
 
-module HPR (f,const,cool_cool) where
+module HPR (f) where
 
-f = 3
-const "String" x = case 2.0 of
+f = 3 
+const _ x = case 2.0 of
       	       3.0 -> "ok"
 	       2.0 -> "bah, humbug!"
-
-data M = M
-cool_cool = M
+const x y = x

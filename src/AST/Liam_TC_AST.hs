@@ -64,4 +64,3 @@ data Lit = StringL String
 --a -> Int = AppT (ConT (Name (Just ["Prim"]) "->")
 --           VarT (Name Nothing "a") `AppT` (Name Nothing "b")
 
-
