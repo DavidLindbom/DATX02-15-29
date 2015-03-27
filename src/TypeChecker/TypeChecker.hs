@@ -29,7 +29,13 @@ typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do 
-  names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
+  --NOTE: I HARDCODED THE TYPE OF apply :: String -> String -> a -> b
+  --here.
+  names'types <- typecheck ((Name Nothing "apply",
+                             ForallT $ foldr1 arrowtype
+                                         [prim"String",prim"String",
+                                          tyVar "a",tyVar "b"])
+                            :cons rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)

@@ -1,8 +1,14 @@
 
-module HPR (f) where
+module HPR (f,loop) where
 
-f = 3 
-const _ x = case 2.0 of
-      	       3.0 -> "ok"
-	       2.0 -> "bah, humbug!"
-const x y = x
+f = 3
+{-
+const _ x = case x of
+      	       3 -> "ok"
+	       2 -> "bah, humbug!"
+const x _ = x
+-}
+
+loop = loop
+
+g _ = 0

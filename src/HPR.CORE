@@ -1,17 +1,11 @@
-module 'HPR' ['f'/0, 'module_info'/0, 'module_info'/1]
+module 'HPR' ['f'/0, 'loop'/0, 'module_info'/0, 'module_info'/1]
     attributes []
-'const'/0 =
-    fun(_, _x) ->
-        case 2.0 of
-            3.0 when 'true' ->
-                "ok"
-            2.0 when 'true' ->
-                "bah, humbug!"
-            {_x, _y} when 'true' ->
-                _x
-        end
 'f'/0 =
     fun() -> 3
+'g'/0 =
+    fun(_) -> 0
+'loop'/0 =
+    fun() -> apply 'loop'/0()
 'module_info'/0 =
     fun() -> call 'erlang':'get_module_info' ('HPR')
 'module_info'/1 =
