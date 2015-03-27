@@ -26,93 +26,121 @@ transIdOpr x = case x of
 
 transModule :: Module -> Result
 transModule x = case x of
-  MModule idcon exports defs  -> failure x
+  MMod idcon exports defs  -> failure x
+
+
+transExports :: Exports -> Result
+transExports x = case x of
+  NEmpty  -> failure x
+  NExps exports  -> failure x
 
 
 transExport :: Export -> Result
 transExport x = case x of
-  MExport idvar  -> failure x
+  NExp idvar  -> failure x
 
 
 transDef :: Def -> Result
 transDef x = case x of
-  DSig idvar types  -> failure x
-  DFun idvar args exp  -> failure x
-  DDat idcon conss  -> failure x
+  DFun func  -> failure x
+  DSig sign  -> failure x
+  DAdt adt  -> failure x
 
 
-transCons :: Cons -> Result
-transCons x = case x of
-  FCon idcon pars  -> failure x
-
-
-transPar :: Par -> Result
-transPar x = case x of
-  GCon idcon  -> failure x
+transFunc :: Func -> Result
+transFunc x = case x of
+  FFun idvar args expr  -> failure x
 
 
 transArg :: Arg -> Result
 transArg x = case x of
-  ACon idcon  -> failure x
-  AVar idvar  -> failure x
+  AId id  -> failure x
+  APrim prim  -> failure x
   AWild  -> failure x
-  AString str  -> failure x
-  AChar c  -> failure x
-  AInteger n  -> failure x
-  ADouble d  -> failure x
-  ATuple bargs  -> failure x
+  ATuple argtuples  -> failure x
 
 
-transBarg :: Barg -> Result
-transBarg x = case x of
-  BCon idcon args  -> failure x
-  BArg arg  -> failure x
+transArgTuple :: ArgTuple -> Result
+transArgTuple x = case x of
+  ArCon idcon arg args  -> failure x
+  ArArg arg  -> failure x
 
 
-transType :: Type -> Result
-transType x = case x of
-  TName idcon  -> failure x
-  TVar idvar  -> failure x
-  TFun type' types  -> failure x
-
-
-transExp :: Exp -> Result
-transExp x = case x of
-  EVar idvar  -> failure x
-  ECon idcon  -> failure x
+transExpr :: Expr -> Result
+transExpr x = case x of
+  EId id  -> failure x
+  EPrim prim  -> failure x
   EOpr idopr  -> failure x
-  EString str  -> failure x
-  EChar c  -> failure x
-  EInteger n  -> failure x
-  EDouble d  -> failure x
-  EInfix exp1 idopr2 exp3  -> failure x
-  EApp exp1 exp2  -> failure x
-  ECase exp clas  -> failure x
-  EIf exp1 exp2 exp3  -> failure x
-  ELambda pats exp  -> failure x
+  EInfix expr1 idopr2 expr3  -> failure x
+  EApp expr1 expr2  -> failure x
+  ECase expr clas  -> failure x
+  EIf expr1 expr2 expr3  -> failure x
+  ELambda pats expr  -> failure x
 
 
 transCla :: Cla -> Result
 transCla x = case x of
-  CClause pat exp  -> failure x
+  CClause pat expr  -> failure x
 
 
 transPat :: Pat -> Result
 transPat x = case x of
-  PCon idcon  -> failure x
-  PVar idvar  -> failure x
+  PId id  -> failure x
+  PPrim prim  -> failure x
   PWild  -> failure x
-  PString str  -> failure x
-  PChar c  -> failure x
-  PInteger n  -> failure x
-  PDouble d  -> failure x
-  PTuple qpats  -> failure x
+  PTuple pattuples  -> failure x
 
 
-transQpat :: Qpat -> Result
-transQpat x = case x of
-  QCon idcon qpats  -> failure x
-  QPat pat  -> failure x
+transPatTuple :: PatTuple -> Result
+transPatTuple x = case x of
+  PaCon idcon pat pats  -> failure x
+  PaPat pat  -> failure x
+
+
+transSign :: Sign -> Result
+transSign x = case x of
+  SSig idvar types  -> failure x
+
+
+transType :: Type -> Result
+transType x = case x of
+  TName idcon ids  -> failure x
+  TVar idvar ids  -> failure x
+  TTuple typetuples  -> failure x
+
+
+transTypeTuple :: TypeTuple -> Result
+transTypeTuple x = case x of
+  TyTuple types  -> failure x
+
+
+transAdt :: Adt -> Result
+transAdt x = case x of
+  AAdt idcon adtvars conss  -> failure x
+
+
+transAdtVar :: AdtVar -> Result
+transAdtVar x = case x of
+  AdVar idvar  -> failure x
+
+
+transCons :: Cons -> Result
+transCons x = case x of
+  CCon idcon ids  -> failure x
+
+
+transId :: Id -> Result
+transId x = case x of
+  ICon idcon  -> failure x
+  IVar idvar  -> failure x
+
+
+transPrim :: Prim -> Result
+transPrim x = case x of
+  IInteger n  -> failure x
+  IDouble d  -> failure x
+  IString str  -> failure x
+  IChar c  -> failure x
 
 
 

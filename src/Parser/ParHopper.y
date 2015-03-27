@@ -36,10 +36,10 @@ import Utils.ErrM
   '|' { PT _ (TS _ 19) }
   '}' { PT _ (TS _ 20) }
 
-L_quoted { PT _ (TL $$) }
-L_charac { PT _ (TC $$) }
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
+L_quoted { PT _ (TL $$) }
+L_charac { PT _ (TC $$) }
 L_IdVar { PT _ (T_IdVar $$) }
 L_IdCon { PT _ (T_IdCon $$) }
 L_IdOpr { PT _ (T_IdOpr $$) }
@@ -47,20 +47,25 @@ L_IdOpr { PT _ (T_IdOpr $$) }
 
 %%
 
-String  :: { String }  : L_quoted {  $1 }
-Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
 Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
 Double  :: { Double }  : L_doubl  { (read ( $1)) :: Double }
+String  :: { String }  : L_quoted {  $1 }
+Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
 IdVar    :: { IdVar} : L_IdVar { IdVar ($1)}
 IdCon    :: { IdCon} : L_IdCon { IdCon ($1)}
 IdOpr    :: { IdOpr} : L_IdOpr { IdOpr ($1)}
 
 Module :: { Module }
-Module : 'module' IdCon '(' ListExport ')' 'where' ';' ListDef { MModule $2 $4 $8 } 
+Module : 'module' IdCon Exports 'where' ';' ListDef { MMod $2 $3 $6 } 
+
+
+Exports :: { Exports }
+Exports : {- empty -} { NEmpty } 
+  | '(' ListExport ')' { NExps $2 }
 
 
 Export :: { Export }
-Export : IdVar { MExport $1 } 
+Export : IdVar { NExp $1 } 
 
 
 ListExport :: { [Export] }
@@ -69,102 +74,67 @@ ListExport : {- empty -} { [] }
   | Export ',' ListExport { (:) $1 $3 }
 
 
+Def :: { Def }
+Def : Func { DFun $1 } 
+  | Sign { DSig $1 }
+  | Adt { DAdt $1 }
+
+
 ListDef :: { [Def] }
 ListDef : {- empty -} { [] } 
   | Def { (:[]) $1 }
   | Def ';' ListDef { (:) $1 $3 }
 
 
-Def :: { Def }
-Def : IdVar '::' ListType { DSig $1 $3 } 
-  | IdVar ListArg '=' '{' Exp '}' { DFun $1 $2 $5 }
-  | 'data' IdCon '=' '{' ListCons '}' { DDat $2 $5 }
-
-
-Cons :: { Cons }
-Cons : IdCon ListPar { FCon $1 (reverse $2) } 
-
-
-ListCons :: { [Cons] }
-ListCons : Cons { (:[]) $1 } 
-  | Cons '|' ListCons { (:) $1 $3 }
-
-
-Par :: { Par }
-Par : IdCon { GCon $1 } 
-
-
-ListPar :: { [Par] }
-ListPar : {- empty -} { [] } 
-  | ListPar Par { flip (:) $1 $2 }
+Func :: { Func }
+Func : IdVar ListArg '=' '{' Expr '}' { FFun $1 (reverse $2) $5 } 
 
 
 Arg :: { Arg }
-Arg : IdCon { ACon $1 } 
-  | IdVar { AVar $1 }
+Arg : Id { AId $1 } 
+  | Prim { APrim $1 }
   | '_' { AWild }
-  | String { AString $1 }
-  | Char { AChar $1 }
-  | Integer { AInteger $1 }
-  | Double { ADouble $1 }
-  | '(' ListBarg ')' { ATuple $2 }
+  | '(' ListArgTuple ')' { ATuple $2 }
 
 
 ListArg :: { [Arg] }
 ListArg : {- empty -} { [] } 
-  | Arg ListArg { (:) $1 $2 }
-  | {- empty -} { [] }
-  | Arg ListArg { (:) $1 $2 }
+  | ListArg Arg { flip (:) $1 $2 }
 
 
-Barg :: { Barg }
-Barg : IdCon ListArg { BCon $1 $2 } 
-  | Arg { BArg $1 }
+ArgTuple :: { ArgTuple }
+ArgTuple : IdCon Arg ListArg { ArCon $1 $2 (reverse $3) } 
+  | Arg { ArArg $1 }
 
 
-ListBarg :: { [Barg] }
-ListBarg : {- empty -} { [] } 
-  | Barg { (:[]) $1 }
-  | Barg ',' ListBarg { (:) $1 $3 }
+ListArgTuple :: { [ArgTuple] }
+ListArgTuple : {- empty -} { [] } 
+  | ArgTuple { (:[]) $1 }
+  | ArgTuple ',' ListArgTuple { (:) $1 $3 }
 
 
-Type :: { Type }
-Type : IdCon { TName $1 } 
-  | IdVar { TVar $1 }
-  | '(' Type '->' ListType ')' { TFun $2 $4 }
-
-
-ListType :: { [Type] }
-ListType : Type { (:[]) $1 } 
-  | Type '->' ListType { (:) $1 $3 }
-
-
-Exp2 :: { Exp }
-Exp2 : IdVar { EVar $1 } 
-  | IdCon { ECon $1 }
+Expr2 :: { Expr }
+Expr2 : Id { EId $1 } 
+  | Prim { EPrim $1 }
   | '(' IdOpr ')' { EOpr $2 }
-  | String { EString $1 }
-  | Char { EChar $1 }
-  | Integer { EInteger $1 }
-  | Double { EDouble $1 }
-  | '(' Exp ')' { $2 }
+  | '(' Expr ')' { $2 }
 
 
-Exp1 :: { Exp }
-Exp1 : Exp1 IdOpr Exp2 { EInfix $1 $2 $3 } 
-  | Exp1 Exp2 { EApp $1 $2 }
-  | 'case' Exp1 'of' '{' ListCla '}' { ECase $2 $5 }
-  | 'if' Exp1 'then' Exp2 'else' Exp2 { EIf $2 $4 $6 }
-  | Exp2 { $1 }
+Expr1 :: { Expr }
+Expr1 : Expr1 IdOpr Expr2 { EInfix $1 $2 $3 } 
+  | Expr1 Expr2 { EApp $1 $2 }
+  | 'case' Expr1 'of' '{' ListCla '}' { ECase $2 $5 }
+  | 'if' Expr1 'then' Expr2 'else' Expr2 { EIf $2 $4 $6 }
+  | Expr2 { $1 }
 
 
-Exp :: { Exp }
-Exp : '\\' ListPat '->' Exp { ELambda $2 $4 } 
-  | Exp1 { $1 }
+Expr :: { Expr }
+Expr : '\\' ListPat '->' Expr { ELambda $2 $4 } 
+  | Expr1 { $1 }
 
 
 Cla :: { Cla }
-Cla : Pat '->' Exp { CClause $1 $3 } 
+Cla : Pat '->' Expr { CClause $1 $3 } 
 
 
 ListCla :: { [Cla] }
@@ -173,14 +143,10 @@ ListCla : Cla { (:[]) $1 }
 
 
 Pat :: { Pat }
-Pat : IdCon { PCon $1 } 
-  | IdVar { PVar $1 }
+Pat : Id { PId $1 } 
+  | Prim { PPrim $1 }
   | '_' { PWild }
-  | String { PString $1 }
-  | Char { PChar $1 }
-  | Integer { PInteger $1 }
-  | Double { PDouble $1 }
-  | '(' ListQpat ')' { PTuple $2 }
+  | '(' ListPatTuple ')' { PTuple $2 }
 
 
 ListPat :: { [Pat] }
@@ -188,15 +154,79 @@ ListPat : Pat { (:[]) $1 }
   | Pat ListPat { (:) $1 $2 }
 
 
-Qpat :: { Qpat }
-Qpat : IdCon ListQpat { QCon $1 $2 } 
-  | Pat { QPat $1 }
+PatTuple :: { PatTuple }
+PatTuple : IdCon Pat ListPat { PaCon $1 $2 $3 } 
+  | Pat { PaPat $1 }
 
 
-ListQpat :: { [Qpat] }
-ListQpat : {- empty -} { [] } 
-  | Qpat { (:[]) $1 }
-  | Qpat ',' ListQpat { (:) $1 $3 }
+ListPatTuple :: { [PatTuple] }
+ListPatTuple : {- empty -} { [] } 
+  | PatTuple { (:[]) $1 }
+  | PatTuple ',' ListPatTuple { (:) $1 $3 }
+
+
+Sign :: { Sign }
+Sign : IdVar '::' '{' ListType '}' { SSig $1 $4 } 
+
+
+Type :: { Type }
+Type : IdCon ListId { TName $1 (reverse $2) } 
+  | IdVar ListId { TVar $1 (reverse $2) }
+  | '(' ListTypeTuple ')' { TTuple $2 }
+
+
+ListType :: { [Type] }
+ListType : Type { (:[]) $1 } 
+  | Type '->' ListType { (:) $1 $3 }
+
+
+TypeTuple :: { TypeTuple }
+TypeTuple : ListType { TyTuple $1 } 
+
+
+ListTypeTuple :: { [TypeTuple] }
+ListTypeTuple : {- empty -} { [] } 
+  | TypeTuple { (:[]) $1 }
+  | TypeTuple ',' ListTypeTuple { (:) $1 $3 }
+
+
+Adt :: { Adt }
+Adt : 'data' IdCon ListAdtVar '=' '{' ListCons '}' { AAdt $2 (reverse $3) $6 } 
+
+
+AdtVar :: { AdtVar }
+AdtVar : IdVar { AdVar $1 } 
+
+
+ListAdtVar :: { [AdtVar] }
+ListAdtVar : {- empty -} { [] } 
+  | ListAdtVar AdtVar { flip (:) $1 $2 }
+
+
+Cons :: { Cons }
+Cons : IdCon ListId { CCon $1 (reverse $2) } 
+
+
+ListCons :: { [Cons] }
+ListCons : Cons { (:[]) $1 } 
+  | Cons '|' ListCons { (:) $1 $3 }
+
+
+Id :: { Id }
+Id : IdCon { ICon $1 } 
+  | IdVar { IVar $1 }
+
+
+ListId :: { [Id] }
+ListId : {- empty -} { [] } 
+  | ListId Id { flip (:) $1 $2 }
+
+
+Prim :: { Prim }
+Prim : Integer { IInteger $1 } 
+  | Double { IDouble $1 }
+  | String { IString $1 }
+  | Char { IChar $1 }
 
 
 
