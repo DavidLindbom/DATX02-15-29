@@ -29,8 +29,7 @@ typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do 
-  let names'types = []
-  -- names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
+  names'types <- typecheck (cons rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)
