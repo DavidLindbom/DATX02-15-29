@@ -55,7 +55,17 @@ transformDefs defs = do
                       return $ AST.ELambda pat e'     
 
       case M.lookup i m of
-        Nothing           -> return $ M.insert i (Fun i Nothing e'') m
+        Nothing           -> do
+          -- If does pattern matching in args, generate case expression
+          e''' <- case e'' of
+            (AST.ELambda pat ex) | doesMatching pat -> do 
+              let args = makeArgs pat
+              ts <- expressionFromArgs args
+              let cs = AST.ECase ts [(PTuple pat, ex)]
+              return $ AST.ELambda args cs
+            _ -> return e''
+            
+          return $ M.insert i (Fun i Nothing e''') m
         Just (Fun _ t es) -> do
           cs <- mergeCase es e''
           return $ M.insert i (Fun i t cs) m
@@ -201,4 +211,7 @@ expressionFromArgs ps = do
         go e = Bad $ "That shouldn't be in expressionFromArgs: " ++ show e
 
 
-
+doesMatching :: [Pattern] -> Bool
+doesMatching = any matching
+  where matching (AST.PVar _) = False
+        matching _        = True
