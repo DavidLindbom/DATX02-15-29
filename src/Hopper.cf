@@ -18,12 +18,13 @@ MMod. Module ::= "module" IdCon Exports "where" ";" [Def] ;
 -- Exports
 -- =======
 -- NEmpty allows leaving the () out
+-- NExp now allows exporting constructors
 
 NEmpty. Exports ::=                  ;
 NExps.  Exports ::= "(" [Export] ")" ;
 
-NExp. Export ::= IdVar ;
-separator Export ","   ;
+NExp. Export ::= Id  ;
+separator Export "," ;
 
 --
 -- Definitions
@@ -45,24 +46,16 @@ FFun. Func ::= IdVar [Arg] "=" "{" Expr "}" ;
 --
 -- Arguments
 -- =========
--- If ArgTuple has one element, treat it as parenthethis
--- Extra Arg in ArCon is to fix a reduce/reduce error
--- Arg and Pat are the same now. Merge? 
+-- Is just a pattern but allows to be empty
 
-AId.    Arg ::= Id                 ;  
-APrim.  Arg ::= Prim               ;
-AWild.  Arg ::= "_"                ;
-ATuple. Arg ::= "(" [ArgTuple] ")" ;
-terminator Arg ""                  ;
-
-ArCon. ArgTuple ::= IdCon Arg [Arg] ; 
-ArArg. ArgTuple ::= Arg             ;
-separator ArgTuple ","              ;
+APat. Arg ::= Pat ;
+terminator Arg "" ;
 
 --
 -- Expressions
 -- ===========
 -- Renamed from Exp to Expr to remove name clash with Prelude
+-- Pattern in clauses now allows 'Just _' without parenthesis
 
 EId.      Expr2 ::= Id                                   ;
 EPrim.    Expr2 ::= Prim                                 ;
@@ -74,14 +67,16 @@ EIf.      Expr1 ::= "if" Expr1 "then" Expr2 "else" Expr2 ;
 ELambda.  Expr  ::= "\\" [Pat] "->" Expr                 ;
 coercions Expr 2                                         ;
 
-CClause. Clause ::= Pat "->" Expr;
-separator nonempty Cla ";";
+CClause. Clause ::= ClausePat "->" Expr;
+separator nonempty Clause ";";
+
+CCPPat. ClausePat ::= Pat         ;
+CCPCon. ClausePat ::= IdCon [Pat] ;
 
 --
 -- Patterns
 -- ========
--- Extra Pat in PaCon is to fix a reduce/reduce error
--- Arg and Pat are the same now. Merge? 
+--
 
 PId.    Pat ::= Id                 ;
 PPrim.  Pat ::= Prim               ;
@@ -89,9 +84,9 @@ PWild.  Pat ::= "_"                ;
 PTuple. Pat ::= "(" [PatTuple] ")" ;
 terminator nonempty Pat ""         ;
 
-PaCon. PatTuple ::= IdCon Pat [Pat] ;
-PaPat. PatTuple ::= Pat             ;
-separator PatTuple ","              ;
+PTCon. PatTuple ::= IdCon [Pat] ;
+PTPat. PatTuple ::= Pat         ;
+separator PatTuple ","          ;
 
 --
 -- Signatures
@@ -111,7 +106,7 @@ TVar.   Type ::= IdVar [Id]          ;
 TTuple. Type ::= "(" [TypeTuple] ")" ;
 separator nonempty Type "->"         ;
 
-TyTuple. TypeTuple ::= [Type] ;
+TTTuple. TypeTuple ::= [Type] ;
 separator TypeTuple ","       ;
 
 --
@@ -119,20 +114,26 @@ separator TypeTuple ","       ;
 -- ================
 -- 
 
---TODO: Parenteser och tuples
-AAdt. Adt ::= "data" IdCon [AdtVar] "=" "{" [Cons] "}" ;
+AAdt. Adt ::= "data" IdCon [AdtVar] "=" "{" [AdtCon] "}" ;
 
-AdVar. AdtVar ::= IdVar ;
+AVVar. AdtVar ::= IdVar ;
 terminator AdtVar ""    ;
 
-AdCon. Cons ::= IdCon [Id]  ;
-separator nonempty Cons "|" ;
+ACCon. AdtCon ::= IdCon [AdtArg] ;
+separator nonempty AdtCon "|"      ;
+
+AAId.    AdtArg ::= Id                    ;
+AATuple. AdtArg ::= "(" [AdtArgTuple] ")" ;
+terminator AdtArg ""                      ;
+
+AATCon. AdtArgTuple ::= IdCon AdtArg [AdtArg] ;
+AATArg. AdtArgTuple ::= AdtArg         ;
+separator nonempty  AdtArgTuple ","    ;
 
 --
 -- Identifiers and primitives
 -- ==========================
 -- To simplify lists without any separators
--- maybe should do this for int, char, string ect...
 
 ICon. Id ::= IdCon ;
 IVar. Id ::= IdVar ;
@@ -146,8 +147,8 @@ IChar.    Prim ::= Char    ;
 --
 -- Tokens
 -- ======
--- IdVar: identifier starting with a lower letter
--- IdCon: starting with a upper letter
+-- IdVar: identifiers, starting with a lower letter
+-- IdCon: constructors, starting with a upper letter
 -- IdOpr: operators
 
 token IdVar (lower (digit | letter | '_' )* ) ; 
@@ -161,3 +162,4 @@ token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ )    ;
 
 comment "--"      ;
 comment "{-" "-}" ;
+
