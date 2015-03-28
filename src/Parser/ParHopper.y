@@ -65,7 +65,7 @@ Exports : {- empty -} { NEmpty }
 
 
 Export :: { Export }
-Export : IdVar { NExp $1 } 
+Export : Id { NExp $1 } 
 
 
 ListExport :: { [Export] }
@@ -91,26 +91,12 @@ Func : IdVar ListArg '=' '{' Expr '}' { FFun $1 (reverse $2) $5 }
 
 
 Arg :: { Arg }
-Arg : Id { AId $1 } 
-  | Prim { APrim $1 }
-  | '_' { AWild }
-  | '(' ListArgTuple ')' { ATuple $2 }
+Arg : Pat { APat $1 } 
 
 
 ListArg :: { [Arg] }
 ListArg : {- empty -} { [] } 
   | ListArg Arg { flip (:) $1 $2 }
-
-
-ArgTuple :: { ArgTuple }
-ArgTuple : IdCon Arg ListArg { ArCon $1 $2 (reverse $3) } 
-  | Arg { ArArg $1 }
-
-
-ListArgTuple :: { [ArgTuple] }
-ListArgTuple : {- empty -} { [] } 
-  | ArgTuple { (:[]) $1 }
-  | ArgTuple ',' ListArgTuple { (:) $1 $3 }
 
 
 Expr2 :: { Expr }
@@ -123,7 +109,7 @@ Expr2 : Id { EId $1 }
 Expr1 :: { Expr }
 Expr1 : Expr1 IdOpr Expr2 { EInfix $1 $2 $3 } 
   | Expr1 Expr2 { EApp $1 $2 }
-  | 'case' Expr1 'of' '{' ListCla '}' { ECase $2 $5 }
+  | 'case' Expr1 'of' '{' ListClause '}' { ECase $2 $5 }
   | 'if' Expr1 'then' Expr2 'else' Expr2 { EIf $2 $4 $6 }
   | Expr2 { $1 }
 
@@ -133,13 +119,18 @@ Expr : '\\' ListPat '->' Expr { ELambda $2 $4 }
   | Expr1 { $1 }
 
 
-Cla :: { Cla }
-Cla : Pat '->' Expr { CClause $1 $3 } 
+Clause :: { Clause }
+Clause : ClausePat '->' Expr { CClause $1 $3 } 
 
 
-ListCla :: { [Cla] }
-ListCla : Cla { (:[]) $1 } 
-  | Cla ';' ListCla { (:) $1 $3 }
+ListClause :: { [Clause] }
+ListClause : Clause { (:[]) $1 } 
+  | Clause ';' ListClause { (:) $1 $3 }
+
+
+ClausePat :: { ClausePat }
+ClausePat : Pat { CCPPat $1 } 
+  | IdCon ListPat { CCPCon $1 $2 }
 
 
 Pat :: { Pat }
@@ -155,8 +146,8 @@ ListPat : Pat { (:[]) $1 }
 
 
 PatTuple :: { PatTuple }
-PatTuple : IdCon Pat ListPat { PaCon $1 $2 $3 } 
-  | Pat { PaPat $1 }
+PatTuple : IdCon ListPat { PTCon $1 $2 } 
+  | Pat { PTPat $1 }
 
 
 ListPatTuple :: { [PatTuple] }
@@ -181,7 +172,7 @@ ListType : Type { (:[]) $1 }
 
 
 TypeTuple :: { TypeTuple }
-TypeTuple : ListType { TyTuple $1 } 
+TypeTuple : ListType { TTTuple $1 } 
 
 
 ListTypeTuple :: { [TypeTuple] }
@@ -191,11 +182,11 @@ ListTypeTuple : {- empty -} { [] }
 
 
 Adt :: { Adt }
-Adt : 'data' IdCon ListAdtVar '=' '{' ListCons '}' { AAdt $2 (reverse $3) $6 } 
+Adt : 'data' IdCon ListAdtVar '=' '{' ListAdtCon '}' { AAdt $2 (reverse $3) $6 } 
 
 
 AdtVar :: { AdtVar }
-AdtVar : IdVar { AdVar $1 } 
+AdtVar : IdVar { AVVar $1 } 
 
 
 ListAdtVar :: { [AdtVar] }
@@ -203,13 +194,33 @@ ListAdtVar : {- empty -} { [] }
   | ListAdtVar AdtVar { flip (:) $1 $2 }
 
 
-Cons :: { Cons }
-Cons : IdCon ListId { CCon $1 (reverse $2) } 
+AdtCon :: { AdtCon }
+AdtCon : IdCon ListAdtArg { ACCon $1 (reverse $2) } 
 
 
-ListCons :: { [Cons] }
-ListCons : Cons { (:[]) $1 } 
-  | Cons '|' ListCons { (:) $1 $3 }
+ListAdtCon :: { [AdtCon] }
+ListAdtCon : AdtCon { (:[]) $1 } 
+  | AdtCon '|' ListAdtCon { (:) $1 $3 }
+
+
+AdtArg :: { AdtArg }
+AdtArg : Id { AAId $1 } 
+  | '(' ListAdtArgTuple ')' { AATuple $2 }
+
+
+ListAdtArg :: { [AdtArg] }
+ListAdtArg : {- empty -} { [] } 
+  | ListAdtArg AdtArg { flip (:) $1 $2 }
+
+
+AdtArgTuple :: { AdtArgTuple }
+AdtArgTuple : IdCon AdtArg ListAdtArg { AATCon $1 $2 (reverse $3) } 
+  | AdtArg { AATArg $1 }
+
+
+ListAdtArgTuple :: { [AdtArgTuple] }
+ListAdtArgTuple : AdtArgTuple { (:[]) $1 } 
+  | AdtArgTuple ',' ListAdtArgTuple { (:) $1 $3 }
 
 
 Id :: { Id }

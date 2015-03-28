@@ -105,7 +105,7 @@ instance Print Exports where
 
 instance Print Export where
   prt i e = case e of
-   NExp idvar -> prPrec i 0 (concatD [prt 0 idvar])
+   NExp id -> prPrec i 0 (concatD [prt 0 id])
 
   prtList es = case es of
    [] -> (concatD [])
@@ -130,24 +130,11 @@ instance Print Func where
 
 instance Print Arg where
   prt i e = case e of
-   AId id -> prPrec i 0 (concatD [prt 0 id])
-   APrim prim -> prPrec i 0 (concatD [prt 0 prim])
-   AWild  -> prPrec i 0 (concatD [doc (showString "_")])
-   ATuple argtuples -> prPrec i 0 (concatD [doc (showString "(") , prt 0 argtuples , doc (showString ")")])
+   APat pat -> prPrec i 0 (concatD [prt 0 pat])
 
   prtList es = case es of
    [] -> (concatD [])
    x:xs -> (concatD [prt 0 x , prt 0 xs])
-
-instance Print ArgTuple where
-  prt i e = case e of
-   ArCon idcon arg args -> prPrec i 0 (concatD [prt 0 idcon , prt 0 arg , prt 0 args])
-   ArArg arg -> prPrec i 0 (concatD [prt 0 arg])
-
-  prtList es = case es of
-   [] -> (concatD [])
-   [x] -> (concatD [prt 0 x])
-   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
 
 instance Print Expr where
   prt i e = case e of
@@ -156,18 +143,24 @@ instance Print Expr where
    EOpr idopr -> prPrec i 2 (concatD [doc (showString "(") , prt 0 idopr , doc (showString ")")])
    EInfix expr0 idopr expr -> prPrec i 1 (concatD [prt 1 expr0 , prt 0 idopr , prt 2 expr])
    EApp expr0 expr -> prPrec i 1 (concatD [prt 1 expr0 , prt 2 expr])
-   ECase expr clas -> prPrec i 1 (concatD [doc (showString "case") , prt 1 expr , doc (showString "of") , doc (showString "{") , prt 0 clas , doc (showString "}")])
+   ECase expr clauses -> prPrec i 1 (concatD [doc (showString "case") , prt 1 expr , doc (showString "of") , doc (showString "{") , prt 0 clauses , doc (showString "}")])
    EIf expr0 expr1 expr -> prPrec i 1 (concatD [doc (showString "if") , prt 1 expr0 , doc (showString "then") , prt 2 expr1 , doc (showString "else") , prt 2 expr])
    ELambda pats expr -> prPrec i 0 (concatD [doc (showString "\\") , prt 0 pats , doc (showString "->") , prt 0 expr])
 
 
-instance Print Cla where
+instance Print Clause where
   prt i e = case e of
-   CClause pat expr -> prPrec i 0 (concatD [prt 0 pat , doc (showString "->") , prt 0 expr])
+   CClause clausepat expr -> prPrec i 0 (concatD [prt 0 clausepat , doc (showString "->") , prt 0 expr])
 
   prtList es = case es of
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ";") , prt 0 xs])
+
+instance Print ClausePat where
+  prt i e = case e of
+   CCPPat pat -> prPrec i 0 (concatD [prt 0 pat])
+   CCPCon idcon pats -> prPrec i 0 (concatD [prt 0 idcon , prt 0 pats])
+
 
 instance Print Pat where
   prt i e = case e of
@@ -182,8 +175,8 @@ instance Print Pat where
 
 instance Print PatTuple where
   prt i e = case e of
-   PaCon idcon pat pats -> prPrec i 0 (concatD [prt 0 idcon , prt 0 pat , prt 0 pats])
-   PaPat pat -> prPrec i 0 (concatD [prt 0 pat])
+   PTCon idcon pats -> prPrec i 0 (concatD [prt 0 idcon , prt 0 pats])
+   PTPat pat -> prPrec i 0 (concatD [prt 0 pat])
 
   prtList es = case es of
    [] -> (concatD [])
@@ -207,7 +200,7 @@ instance Print Type where
 
 instance Print TypeTuple where
   prt i e = case e of
-   TyTuple types -> prPrec i 0 (concatD [prt 0 types])
+   TTTuple types -> prPrec i 0 (concatD [prt 0 types])
 
   prtList es = case es of
    [] -> (concatD [])
@@ -216,24 +209,42 @@ instance Print TypeTuple where
 
 instance Print Adt where
   prt i e = case e of
-   AAdt idcon adtvars conss -> prPrec i 0 (concatD [doc (showString "data") , prt 0 idcon , prt 0 adtvars , doc (showString "=") , doc (showString "{") , prt 0 conss , doc (showString "}")])
+   AAdt idcon adtvars adtcons -> prPrec i 0 (concatD [doc (showString "data") , prt 0 idcon , prt 0 adtvars , doc (showString "=") , doc (showString "{") , prt 0 adtcons , doc (showString "}")])
 
 
 instance Print AdtVar where
   prt i e = case e of
-   AdVar idvar -> prPrec i 0 (concatD [prt 0 idvar])
+   AVVar idvar -> prPrec i 0 (concatD [prt 0 idvar])
 
   prtList es = case es of
    [] -> (concatD [])
    x:xs -> (concatD [prt 0 x , prt 0 xs])
 
-instance Print Cons where
+instance Print AdtCon where
   prt i e = case e of
-   CCon idcon ids -> prPrec i 0 (concatD [prt 0 idcon , prt 0 ids])
+   ACCon idcon adtargs -> prPrec i 0 (concatD [prt 0 idcon , prt 0 adtargs])
 
   prtList es = case es of
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString "|") , prt 0 xs])
+
+instance Print AdtArg where
+  prt i e = case e of
+   AAId id -> prPrec i 0 (concatD [prt 0 id])
+   AATuple adtargtuples -> prPrec i 0 (concatD [doc (showString "(") , prt 0 adtargtuples , doc (showString ")")])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   x:xs -> (concatD [prt 0 x , prt 0 xs])
+
+instance Print AdtArgTuple where
+  prt i e = case e of
+   AATCon idcon adtarg adtargs -> prPrec i 0 (concatD [prt 0 idcon , prt 0 adtarg , prt 0 adtargs])
+   AATArg adtarg -> prPrec i 0 (concatD [prt 0 adtarg])
+
+  prtList es = case es of
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
 
 instance Print Id where
   prt i e = case e of

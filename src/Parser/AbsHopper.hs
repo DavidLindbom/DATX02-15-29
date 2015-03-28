@@ -20,7 +20,7 @@ data Exports =
   deriving (Eq,Ord,Show,Read)
 
 data Export =
-   NExp IdVar
+   NExp Id
   deriving (Eq,Ord,Show,Read)
 
 data Def =
@@ -34,15 +34,7 @@ data Func =
   deriving (Eq,Ord,Show,Read)
 
 data Arg =
-   AId Id
- | APrim Prim
- | AWild
- | ATuple [ArgTuple]
-  deriving (Eq,Ord,Show,Read)
-
-data ArgTuple =
-   ArCon IdCon Arg [Arg]
- | ArArg Arg
+   APat Pat
   deriving (Eq,Ord,Show,Read)
 
 data Expr =
@@ -51,13 +43,18 @@ data Expr =
  | EOpr IdOpr
  | EInfix Expr IdOpr Expr
  | EApp Expr Expr
- | ECase Expr [Cla]
+ | ECase Expr [Clause]
  | EIf Expr Expr Expr
  | ELambda [Pat] Expr
   deriving (Eq,Ord,Show,Read)
 
-data Cla =
-   CClause Pat Expr
+data Clause =
+   CClause ClausePat Expr
+  deriving (Eq,Ord,Show,Read)
+
+data ClausePat =
+   CCPPat Pat
+ | CCPCon IdCon [Pat]
   deriving (Eq,Ord,Show,Read)
 
 data Pat =
@@ -68,8 +65,8 @@ data Pat =
   deriving (Eq,Ord,Show,Read)
 
 data PatTuple =
-   PaCon IdCon Pat [Pat]
- | PaPat Pat
+   PTCon IdCon [Pat]
+ | PTPat Pat
   deriving (Eq,Ord,Show,Read)
 
 data Sign =
@@ -83,19 +80,29 @@ data Type =
   deriving (Eq,Ord,Show,Read)
 
 data TypeTuple =
-   TyTuple [Type]
+   TTTuple [Type]
   deriving (Eq,Ord,Show,Read)
 
 data Adt =
-   AAdt IdCon [AdtVar] [Cons]
+   AAdt IdCon [AdtVar] [AdtCon]
   deriving (Eq,Ord,Show,Read)
 
 data AdtVar =
-   AdVar IdVar
+   AVVar IdVar
   deriving (Eq,Ord,Show,Read)
 
-data Cons =
-   CCon IdCon [Id]
+data AdtCon =
+   ACCon IdCon [AdtArg]
+  deriving (Eq,Ord,Show,Read)
+
+data AdtArg =
+   AAId Id
+ | AATuple [AdtArgTuple]
+  deriving (Eq,Ord,Show,Read)
+
+data AdtArgTuple =
+   AATCon IdCon AdtArg [AdtArg]
+ | AATArg AdtArg
   deriving (Eq,Ord,Show,Read)
 
 data Id =
