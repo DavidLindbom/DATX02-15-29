@@ -3,6 +3,10 @@ module Test (a, A) where;
 t1 :: a1 -> b1
 t2 :: (a2 -> b2,c2)
 t3 :: (a3 -> b3) -> Either c3 Int
+t4 :: {  a1
+      -> a2
+      -> a3 
+      }
 
 f1 = 1
 f2 2 = 2
