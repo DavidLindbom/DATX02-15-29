@@ -1,22 +1,19 @@
 
-module HPR (f) where
+module HPR (plus,id) where
 
---f = 3
--- {-
---const _ x = case x of
---      	       3 -> "ok"
---	       2 -> "bah, humbug!"
---const x _ = x
--- -}
+f = 3
+const "String" x = case x of
+      	       3 -> "ok"
+	       2 -> "bah, humbug!"
+const x _ = x
 
--- loop = loop
+data M = M | N | O | P
+cool_cool = M
 
--- g _ = 0
--- -}
+plus x y = apply "erlang" "+" 2 x y
 
---plus :: a -> a -> a
---plus = apply "erlang" "+" 2
+id x = apply "HPR2" "id" 1 x
 
-g x y = y
-
-f = g 0 1
+letx = let 
+       	   x = 1
+       in x
