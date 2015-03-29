@@ -30,7 +30,8 @@ data Function a = Fun Identifier a Expression
 type Signature = [Type]
 
 data Type = TName String [Type]
-          | TVar  String
+          | TVar  String [Type]
+          | TTuple [Type]
           | TFun  [Type] -- For functions as arguments
   deriving (Eq,Ord,Show)
 

@@ -67,8 +67,8 @@ EIf.      Expr1 ::= "if" Expr1 "then" Expr2 "else" Expr2 ;
 ELambda.  Expr  ::= "\\" [Pat] "->" Expr                 ;
 coercions Expr 2                                         ;
 
-CClause. Clause ::= ClausePat "->" Expr;
-separator nonempty Clause ";";
+CClause. Clause ::= ClausePat "->" Expr ;
+separator nonempty Clause ";"           ;
 
 CCPPat. ClausePat ::= Pat         ;
 CCPCon. ClausePat ::= IdCon [Pat] ;
@@ -120,15 +120,15 @@ AVVar. AdtVar ::= IdVar ;
 terminator AdtVar ""    ;
 
 ACCon. AdtCon ::= IdCon [AdtArg] ;
-separator nonempty AdtCon "|"      ;
+separator nonempty AdtCon "|"    ;
 
 AAId.    AdtArg ::= Id                    ;
 AATuple. AdtArg ::= "(" [AdtArgTuple] ")" ;
 terminator AdtArg ""                      ;
 
 AATCon. AdtArgTuple ::= IdCon AdtArg [AdtArg] ;
-AATArg. AdtArgTuple ::= AdtArg         ;
-separator nonempty  AdtArgTuple ","    ;
+AATArg. AdtArgTuple ::= AdtArg      ;
+separator nonempty  AdtArgTuple "," ;
 
 --
 -- Identifiers and primitives
