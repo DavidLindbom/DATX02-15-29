@@ -7,7 +7,7 @@ import Utils.ErrM
 --  module to a module of the same structure, where expressions
 --  are transformed to fit the codegenerator
 transform2 :: Module Signature -> Err (Module Signature)
-transform2 (Mod mId es funs) = Ok $ Mod mId es $ map transformFun funs
+transform2 (Mod mId es funs datas) = Ok $ Mod mId es (map transformFun funs) datas
  
 -- |The 'transformFun' function transforms a Signature annotated
 --  function to a function of the same structure, where expressions

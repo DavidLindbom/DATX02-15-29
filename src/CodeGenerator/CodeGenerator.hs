@@ -26,7 +26,7 @@ import AST.AST as HPR
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Signature -> CES.Module
-compileModule m@(Mod mId exports defs) = CES.Module (Atom mId) es as ds
+compileModule m@(Mod mId exports defs datas) = CES.Module (Atom mId) es as ds
   where as = []
         ds = map compileFun defs ++ generateModuleInfo mId
         es = compileExports exports m
@@ -153,15 +153,15 @@ typeToArity t = toInteger $ length t - 1
 -- |The 'getTypeSig' function gets the Signature
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Signature -> Signature
-getTypeSig fId (Mod _ _ []) = error $ "Could not find function when looking for signature: " ++ fId
-getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs))
+getTypeSig fId (Mod _ _ [] _) = error $ "Could not find function when looking for signature: " ++ fId
+getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs) datas)
   | fId == funId = typeSig
-  | otherwise    = getTypeSig fId (Mod mId es defs)
+  | otherwise    = getTypeSig fId (Mod mId es defs datas)
 
 -- |The 'gitSignatures' function gets the function
 --  signatures from the give module
 getSignatures :: HPR.Module Signature -> [(Identifier, Integer)]
-getSignatures (Mod _ _ defs) = map (\(HPR.Fun i sig _) -> (i, toInteger (length sig - 1))) defs
+getSignatures (Mod _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, toInteger (length sig - 1))) defs
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
