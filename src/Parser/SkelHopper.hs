@@ -60,6 +60,13 @@ transArg x = case x of
   AChar c  -> failure x
   AInteger n  -> failure x
   ADouble d  -> failure x
+  ATuple bargs  -> failure x
+
+
+transBarg :: Barg -> Result
+transBarg x = case x of
+  BCon idcon args  -> failure x
+  BArg arg  -> failure x
 
 
 transType :: Type -> Result
@@ -99,6 +106,13 @@ transPat x = case x of
   PChar c  -> failure x
   PInteger n  -> failure x
   PDouble d  -> failure x
+  PTuple qpats  -> failure x
+
+
+transQpat :: Qpat -> Result
+transQpat x = case x of
+  QCon idcon qpats  -> failure x
+  QPat pat  -> failure x
 
 
 

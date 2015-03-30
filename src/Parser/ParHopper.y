@@ -77,7 +77,7 @@ ListDef : {- empty -} { [] }
 
 Def :: { Def }
 Def : IdVar '::' ListType { DSig $1 $3 } 
-  | IdVar ListArg '=' '{' Exp '}' { DFun $1 (reverse $2) $5 }
+  | IdVar ListArg '=' '{' Exp '}' { DFun $1 $2 $5 }
   | 'data' IdCon '=' '{' ListCons '}' { DDat $2 $5 }
 
 
@@ -107,11 +107,25 @@ Arg : IdCon { ACon $1 }
   | Char { AChar $1 }
   | Integer { AInteger $1 }
   | Double { ADouble $1 }
+  | '(' ListBarg ')' { ATuple $2 }
 
 
 ListArg :: { [Arg] }
 ListArg : {- empty -} { [] } 
-  | ListArg Arg { flip (:) $1 $2 }
+  | Arg ListArg { (:) $1 $2 }
+  | {- empty -} { [] }
+  | Arg ListArg { (:) $1 $2 }
+
+
+Barg :: { Barg }
+Barg : IdCon ListArg { BCon $1 $2 } 
+  | Arg { BArg $1 }
+
+
+ListBarg :: { [Barg] }
+ListBarg : {- empty -} { [] } 
+  | Barg { (:[]) $1 }
+  | Barg ',' ListBarg { (:) $1 $3 }
 
 
 Type :: { Type }
@@ -166,11 +180,23 @@ Pat : IdCon { PCon $1 }
   | Char { PChar $1 }
   | Integer { PInteger $1 }
   | Double { PDouble $1 }
+  | '(' ListQpat ')' { PTuple $2 }
 
 
 ListPat :: { [Pat] }
 ListPat : Pat { (:[]) $1 } 
   | Pat ListPat { (:) $1 $2 }
+
+
+Qpat :: { Qpat }
+Qpat : IdCon ListQpat { QCon $1 $2 } 
+  | Pat { QPat $1 }
+
+
+ListQpat :: { [Qpat] }
+ListQpat : {- empty -} { [] } 
+  | Qpat { (:[]) $1 }
+  | Qpat ',' ListQpat { (:) $1 $3 }
 
 
 

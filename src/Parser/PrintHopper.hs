@@ -5,7 +5,7 @@ module Parser.PrintHopper where
 
 import Parser.AbsHopper
 import Data.Char
-import Prelude hiding (exp)
+
 
 -- the top-level printing method
 printTree :: Print a => a -> String
@@ -142,10 +142,23 @@ instance Print Arg where
    AChar c -> prPrec i 0 (concatD [prt 0 c])
    AInteger n -> prPrec i 0 (concatD [prt 0 n])
    ADouble d -> prPrec i 0 (concatD [prt 0 d])
+   ATuple bargs -> prPrec i 0 (concatD [doc (showString "(") , prt 0 bargs , doc (showString ")")])
 
   prtList es = case es of
    [] -> (concatD [])
+   [] -> (concatD [])
    x:xs -> (concatD [prt 0 x , prt 0 xs])
+   x:xs -> (concatD [prt 0 x , prt 0 xs])
+
+instance Print Barg where
+  prt i e = case e of
+   BCon idcon args -> prPrec i 0 (concatD [prt 0 idcon , prt 0 args])
+   BArg arg -> prPrec i 0 (concatD [prt 0 arg])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
 
 instance Print Type where
   prt i e = case e of
@@ -190,9 +203,20 @@ instance Print Pat where
    PChar c -> prPrec i 0 (concatD [prt 0 c])
    PInteger n -> prPrec i 0 (concatD [prt 0 n])
    PDouble d -> prPrec i 0 (concatD [prt 0 d])
+   PTuple qpats -> prPrec i 0 (concatD [doc (showString "(") , prt 0 qpats , doc (showString ")")])
 
   prtList es = case es of
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , prt 0 xs])
+
+instance Print Qpat where
+  prt i e = case e of
+   QCon idcon qpats -> prPrec i 0 (concatD [prt 0 idcon , prt 0 qpats])
+   QPat pat -> prPrec i 0 (concatD [prt 0 pat])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
 
 

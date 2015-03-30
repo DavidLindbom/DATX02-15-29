@@ -33,9 +33,15 @@ AString.  Arg ::= String;
 AChar.    Arg ::= Char;
 AInteger. Arg ::= Integer;
 ADouble.  Arg ::= Double;
+ATuple.   Arg ::= "(" [Barg] ")";
 
-
+separator Arg "";
 terminator Arg "";
+
+BCon. Barg ::= IdCon [Arg];
+BArg. Barg ::= Arg;
+
+separator Barg ",";
 
 -- Types
 TName. Type ::= IdCon; -- Todo: Add parameters here
@@ -68,15 +74,21 @@ separator nonempty Cla ";";
 
 
 -- Patterns
-PCon.     Pat ::= IdCon;
+PCon.     Pat ::= IdCon; -- TODO: Tuples, parameters to constructors
 PVar.     Pat ::= IdVar;
 PWild.    Pat ::= "_";
 PString.  Pat ::= String;
 PChar.    Pat ::= Char;
 PInteger. Pat ::= Integer;
 PDouble.  Pat ::= Double;
+PTuple.   Pat ::= "(" [Qpat] ")";
 
 terminator nonempty Pat "";
+
+QCon. Qpat ::= IdCon [Qpat];
+QPat. Qpat ::= Pat;
+
+separator Qpat ",";
 
 -- Tokens
 token IdVar (lower (digit | letter | '_' )* ); 
