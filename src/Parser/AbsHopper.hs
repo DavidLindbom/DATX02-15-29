@@ -11,81 +11,109 @@ newtype IdVar = IdVar String deriving (Eq,Ord,Show,Read)
 newtype IdCon = IdCon String deriving (Eq,Ord,Show,Read)
 newtype IdOpr = IdOpr String deriving (Eq,Ord,Show,Read)
 data Module =
-   MModule IdCon [Export] [Def]
+   MMod IdCon Exports [Def]
+  deriving (Eq,Ord,Show,Read)
+
+data Exports =
+   NEmpty
+ | NExps [Export]
   deriving (Eq,Ord,Show,Read)
 
 data Export =
-   MExport IdVar
+   NExp Id
   deriving (Eq,Ord,Show,Read)
 
 data Def =
-   DSig IdVar [Type]
- | DFun IdVar [Arg] Exp
- | DDat IdCon [Cons]
+   DFun Func
+ | DSig Sign
+ | DAdt Adt
   deriving (Eq,Ord,Show,Read)
 
-data Cons =
-   FCon IdCon [Par]
-  deriving (Eq,Ord,Show,Read)
-
-data Par =
-   GCon IdCon
+data Func =
+   FFun IdVar [Arg] Expr
   deriving (Eq,Ord,Show,Read)
 
 data Arg =
-   ACon IdCon
- | AVar IdVar
- | AWild
- | AString String
- | AChar Char
- | AInteger Integer
- | ADouble Double
- | ATuple [Barg]
+   APat Pat
   deriving (Eq,Ord,Show,Read)
 
-data Barg =
-   BCon IdCon [Arg]
- | BArg Arg
-  deriving (Eq,Ord,Show,Read)
-
-data Type =
-   TName IdCon
- | TVar IdVar
- | TFun Type [Type]
-  deriving (Eq,Ord,Show,Read)
-
-data Exp =
-   EVar IdVar
- | ECon IdCon
+data Expr =
+   EId Id
+ | EPrim Prim
  | EOpr IdOpr
- | EString String
- | EChar Char
- | EInteger Integer
- | EDouble Double
- | EInfix Exp IdOpr Exp
- | EApp Exp Exp
- | ECase Exp [Cla]
- | EIf Exp Exp Exp
- | ELambda [Pat] Exp
+ | EInfix Expr IdOpr Expr
+ | EApp Expr Expr
+ | ECase Expr [Clause]
+ | EIf Expr Expr Expr
+ | ELambda [Pat] Expr
   deriving (Eq,Ord,Show,Read)
 
-data Cla =
-   CClause Pat Exp
+data Clause =
+   CClause ClausePat Expr
+  deriving (Eq,Ord,Show,Read)
+
+data ClausePat =
+   CCPPat Pat
+ | CCPCon IdCon [Pat]
   deriving (Eq,Ord,Show,Read)
 
 data Pat =
-   PCon IdCon
- | PVar IdVar
+   PId Id
+ | PPrim Prim
  | PWild
- | PString String
- | PChar Char
- | PInteger Integer
- | PDouble Double
- | PTuple [Qpat]
+ | PTuple [PatTuple]
   deriving (Eq,Ord,Show,Read)
 
-data Qpat =
-   QCon IdCon [Qpat]
- | QPat Pat
+data PatTuple =
+   PTCon IdCon [Pat]
+ | PTPat Pat
+  deriving (Eq,Ord,Show,Read)
+
+data Sign =
+   SSig IdVar [Type]
+  deriving (Eq,Ord,Show,Read)
+
+data Type =
+   TName IdCon [Id]
+ | TVar IdVar [Id]
+ | TTuple [TypeTuple]
+  deriving (Eq,Ord,Show,Read)
+
+data TypeTuple =
+   TTTuple [Type]
+  deriving (Eq,Ord,Show,Read)
+
+data Adt =
+   AAdt IdCon [AdtVar] [AdtCon]
+  deriving (Eq,Ord,Show,Read)
+
+data AdtVar =
+   AVVar IdVar
+  deriving (Eq,Ord,Show,Read)
+
+data AdtCon =
+   ACCon IdCon [AdtArg]
+  deriving (Eq,Ord,Show,Read)
+
+data AdtArg =
+   AAId Id
+ | AATuple [AdtArgTuple]
+  deriving (Eq,Ord,Show,Read)
+
+data AdtArgTuple =
+   AATCon IdCon AdtArg [AdtArg]
+ | AATArg AdtArg
+  deriving (Eq,Ord,Show,Read)
+
+data Id =
+   ICon IdCon
+ | IVar IdVar
+  deriving (Eq,Ord,Show,Read)
+
+data Prim =
+   IInteger Integer
+ | IDouble Double
+ | IString String
+ | IChar Char
   deriving (Eq,Ord,Show,Read)
 
