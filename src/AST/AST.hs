@@ -11,7 +11,7 @@
 module AST.AST where
 import Data.Map as M
 
-data Module a = Mod String [Identifier] [Function a] (Map Identifier Signature)
+data Module a = Mod String [Identifier] [Function a] (Map Identifier Type)
   deriving (Eq,Ord,Show)
 
 type Identifier  = String
@@ -24,15 +24,13 @@ data Literal = LS String
              -- | LL []
   deriving (Eq,Ord,Show)
 
-data Function a = Fun Identifier a Expression
+data Function a = Fun Identifier Identifier a Expression
   deriving (Eq,Ord,Show) -- Function arguments is desugared to lambdas
 
-type Signature = [Type]
-
-data Type = TName String [Type]
-          | TVar  String [Type]
-          | TTuple [Type]
-          | TFun  [Type] -- For functions as arguments
+data Type = TForAll Type
+          | TVar String String
+          | TCon String String
+          | TApp Type Type
   deriving (Eq,Ord,Show)
 
 data Pattern = PVar Identifier
