@@ -6,7 +6,7 @@ import Test.Framework.Providers.HUnit
 
 import Parser.LayoutHopper (resolveLayout)
 import Parser.ParHopper (myLexer, pModule) 
-import Parser.ErrM
+import Utils.ErrM
 
 --import RenameTests
 import CodeGenTests

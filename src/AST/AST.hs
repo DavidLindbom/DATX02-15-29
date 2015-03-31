@@ -9,8 +9,9 @@
 -- to add its own data structure
 
 module AST.AST where
+import Data.Map as M
 
-data Module a = Mod String [Identifier] [Function a]
+data Module a = Mod String [Identifier] [Function a] (Map Identifier Signature)
   deriving (Eq,Ord,Show)
 
 type Identifier  = String
@@ -29,12 +30,13 @@ data Function a = Fun Identifier a Expression
 type Signature = [Type]
 
 data Type = TName String [Type]
-          | TVar  String
+          | TVar  String [Type]
+          | TTuple [Type]
           | TFun  [Type] -- For functions as arguments
   deriving (Eq,Ord,Show)
 
 data Pattern = PVar Identifier
-             | PCon Constructor
+             | PCon Constructor [Pattern]
              | PLit Literal
              | PWild
              | PTuple [Pattern]
@@ -47,9 +49,10 @@ data Expression = EVar Identifier -- TODO: Add EVal for fully applied functions 
                 | ETuple [Expression]
                 | ELambda [Pattern] Expression
                 | EApp Expression Expression
+                | EVal Identifier [Expression]
                -- | EWhere [Function a]
                 | ECase Expression [(Pattern, Expression)] 
-               -- | ECall Identifier Identifier [Expression]
+                | ECall Identifier Identifier Expression
                -- | ELet Pattern Expression Expression
   deriving (Eq,Ord,Show)
  

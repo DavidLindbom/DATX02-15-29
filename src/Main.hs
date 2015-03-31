@@ -14,6 +14,7 @@ import Utils.ErrM
 
 import Renamer.Renamer (transform)
 import TypeChecker.TypeChecker (typeCheck)
+import Renamer.PreCodeGen (transform2)
 import CodeGenerator.CodeGenerator
 import Utils.BeamWriter
 
@@ -74,8 +75,11 @@ main' args = do
         writeFile (f'++".typed.hs") ("import AST.AST\ntyped="++show typed)
         write $ "Wrote typed ast to " ++ f' ++ ".typed.hs"
 
+      -- Pre code generation renaming
+      let renamedE = typedE >>= transform2
+
       -- Code generation
-      let coreE = typedE >>= compileModuleString 
+      let coreE = renamedE >>= compileModuleString 
 
       whenFlag Core coreE $ \core -> do
         writeFile (f'++".core") core

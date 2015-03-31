@@ -1,79 +1,165 @@
-layout "=", "of";
-layout toplevel;
+--
+-- Layout
+-- ======
+-- Inserts "{" "}" around definition after the keywords below
+
+layout "=", "::", "of" ;
+layout toplevel        ;
+
+--
+-- Module
+-- ======
+--
 
 entrypoints Module;
+MMod. Module ::= "module" IdCon Exports "where" ";" [Def] ;
 
--- Module
-MModule. Module ::= "module" IdCon "(" [Export] ")" "where" ";" [Def];
-MExport. Export ::= IdVar;
+--
+-- Exports
+-- =======
+-- NEmpty allows leaving the () out
+-- NExp now allows exporting constructors
 
-separator Export ",";
+NEmpty. Exports ::=                  ;
+NExps.  Exports ::= "(" [Export] ")" ;
 
--- Signatures and functions 
-separator Def ";";
+NExp. Export ::= Id  ;
+separator Export "," ;
 
-DSig. Def ::= IdVar "::" [Type];
-DFun. Def ::= IdVar [Arg] "=" "{" Exp "}"; -- TODO: Add function parameters
+--
+-- Definitions
+-- ===========
+-- Moved out definitions to make them more flexible and reuseable
 
+DFun.  Def ::= Func ;
+DSig.  Def ::= Sign ;
+DAdt.  Def ::= Adt  ;
+separator Def ";"   ;
+
+--
+-- Functions
+-- =========
+--
+
+FFun. Func ::= IdVar [Arg] "=" "{" Expr "}" ;
+
+--
 -- Arguments
-ACon.     Arg ::= IdCon; 
-AVar.     Arg ::= IdVar; 
-AWild.    Arg ::= "_";
-AString.  Arg ::= String;
-AChar.    Arg ::= Char;
-AInteger. Arg ::= Integer;
-ADouble.  Arg ::= Double;
+-- =========
+-- Is just a pattern but allows to be empty
 
+APat. Arg ::= Pat ;
+terminator Arg "" ;
 
-terminator Arg "";
-
--- Types
-TName. Type ::= IdCon; -- Todo: Add parameters here
-TVar.  Type ::= IdVar;
-TFun.  Type ::= "(" Type "->" [Type] ")";
-separator nonempty Type "->";
-
+--
 -- Expressions
+-- ===========
+-- Renamed from Exp to Expr to remove name clash with Prelude
+-- Pattern in clauses now allows 'Just _' without parenthesis
 
-EVar.     Exp2 ::= IdVar;
-ECon.     Exp2 ::= IdCon;
-EOpr.     Exp2 ::= "(" IdOpr ")";
-EString.  Exp2 ::= String;
-EChar.    Exp2 ::= Char;
-EInteger. Exp2 ::= Integer;
-EDouble.  Exp2 ::= Double;
-EInfix.   Exp1 ::= Exp1 IdOpr Exp2; -- TODO: Add infix with backticks
-EApp.     Exp1 ::= Exp1 Exp2;
-ECase.    Exp1 ::= "case" Exp1 "of" "{" [Cla] "}";
-EIf.      Exp1 ::= "if" Exp1 "then" Exp2 "else" Exp2;
-ELambda.  Exp  ::= "\\" [Pat] "->" Exp;
+EId.      Expr2 ::= Id                                   ;
+EPrim.    Expr2 ::= Prim                                 ;
+EOpr.     Expr2 ::= "(" IdOpr ")"                        ;
+EInfix.   Expr1 ::= Expr1 IdOpr Expr2                    ;
+EApp.     Expr1 ::= Expr1 Expr2                          ;
+ECase.    Expr1 ::= "case" Expr1 "of" "{" [Clause] "}"   ;
+EIf.      Expr1 ::= "if" Expr1 "then" Expr2 "else" Expr2 ;
+ELambda.  Expr  ::= "\\" [Pat] "->" Expr                 ;
+coercions Expr 2                                         ;
 
-coercions Exp 2;
+CClause. Clause ::= ClausePat "->" Expr ;
+separator nonempty Clause ";"           ;
 
--- Clauses
+CCPPat. ClausePat ::= Pat         ;
+CCPCon. ClausePat ::= IdCon [Pat] ;
 
-CClause. Cla ::= Pat "->" Exp;
-
-separator nonempty Cla ";";
-
-
+--
 -- Patterns
-PCon.     Pat ::= IdCon;
-PVar.     Pat ::= IdVar;
-PWild.    Pat ::= "_";
-PString.  Pat ::= String;
-PChar.    Pat ::= Char;
-PInteger. Pat ::= Integer;
-PDouble.  Pat ::= Double;
+-- ========
+--
 
-terminator nonempty Pat "";
+PId.    Pat ::= Id                 ;
+PPrim.  Pat ::= Prim               ;
+PWild.  Pat ::= "_"                ;
+PTuple. Pat ::= "(" [PatTuple] ")" ;
+terminator nonempty Pat ""         ;
 
+PTCon. PatTuple ::= IdCon [Pat] ;
+PTPat. PatTuple ::= Pat         ;
+separator PatTuple ","          ;
+
+--
+-- Signatures
+-- ==========
+--
+
+SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
+
+--
+-- Types
+-- =====
+-- If TypeTuple has one element, treat it as parenthethis
+-- Replace TName and TVar with TId ::= Id ?
+
+TName.  Type ::= IdCon [Id]          ;
+TVar.   Type ::= IdVar [Id]          ;
+TTuple. Type ::= "(" [TypeTuple] ")" ;
+separator nonempty Type "->"         ;
+
+TTTuple. TypeTuple ::= [Type] ;
+separator TypeTuple ","       ;
+
+--
+-- ADT declarations
+-- ================
+-- 
+
+AAdt. Adt ::= "data" IdCon [AdtVar] "=" "{" [AdtCon] "}" ;
+
+AVVar. AdtVar ::= IdVar ;
+terminator AdtVar ""    ;
+
+ACCon. AdtCon ::= IdCon [AdtArg] ;
+separator nonempty AdtCon "|"    ;
+
+AAId.    AdtArg ::= Id                    ;
+AATuple. AdtArg ::= "(" [AdtArgTuple] ")" ;
+terminator AdtArg ""                      ;
+
+AATCon. AdtArgTuple ::= IdCon AdtArg [AdtArg] ;
+AATArg. AdtArgTuple ::= AdtArg      ;
+separator nonempty  AdtArgTuple "," ;
+
+--
+-- Identifiers and primitives
+-- ==========================
+-- To simplify lists without any separators
+
+ICon. Id ::= IdCon ;
+IVar. Id ::= IdVar ;
+terminator Id ""   ;
+
+IInteger. Prim ::= Integer ;
+IDouble.  Prim ::= Double  ;
+IString.  Prim ::= String  ;
+IChar.    Prim ::= Char    ;
+
+--
 -- Tokens
-token IdVar (lower (digit | letter | '_' )* ); 
-token IdCon (upper (digit | letter)* );
-token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ );
+-- ======
+-- IdVar: identifiers, starting with a lower letter
+-- IdCon: constructors, starting with a upper letter
+-- IdOpr: operators
 
--- Comments
-comment "--";
-comment "{-" "-}";
+token IdVar (lower (digit | letter | '_' )* ) ; 
+token IdCon (upper (digit | letter)* )        ;
+token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ )    ;
+
+--
+-- Comments 
+-- ========
+-- Can't handle nested comments, bug in bnfc
+
+comment "--"      ;
+comment "{-" "-}" ;
 

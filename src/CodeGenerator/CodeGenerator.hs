@@ -26,10 +26,10 @@ import AST.AST as HPR
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Signature -> CES.Module
-compileModule cMod@(Mod mId exports defs) = CES.Module (Atom mId) es as ds
+compileModule m@(Mod mId exports defs datas) = CES.Module (Atom mId) es as ds
   where as = []
-        es = compileExports exports cMod
         ds = map compileFun defs ++ generateModuleInfo mId
+        es = compileExports exports m
 
 -- |The 'compileModuleString' function compiles a hoppper
 --  to a Core Erlang code string
@@ -54,41 +54,32 @@ compileExport m eId = CES.Function (Atom eId, getArity eId m)
 --  to a CoreErlang.FunDef
 compileFun :: HPR.Function Signature -> FunDef
 compileFun (HPR.Fun fId t e) = 
-  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e' s))
-  where (e', s) = case e of -- binds lambda pats to scope, if lambda
-                    (ELambda pats _) -> (e, pats)
-                    _                -> (ELambda [] e, [])
+  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e'))
+  where e' = case e of
+               (ELambda _ _) -> e
+               _             -> (ELambda [] e)
 
 -- |The 'compileExp' function compiles an AST
 --  to a CoreErlang.Exp
 --  Named and AppAst are implemented with parameterless functions in mind
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
-compileExp :: Expression -> [Pattern] -> CES.Exp
-compileExp (EVar nId) s = 
-  if isIdBound ('_':nId) s || isIdBound nId s
-     then Var $ compileLambdaPat (HPR.PVar nId)
-     else App (Exp (Constr (CES.Fun (Function (Atom nId, 0))))) [] -- MIGHT NOT ALWAYS BE A FUNCTION, THINK ABOUT HOW TO DEAL WITH THIS
-compileExp (ECon c)         _ = error $ "Got expression constructor: " ++ c
-compileExp (ELit l)         _ = Lit $ compileLiteral l
-compileExp (ETuple es)      s = Tuple $ map (\e -> Exp (Constr (compileExp e s))) es
-compileExp (ELambda pats e) s = Lambda (map compileLambdaPat pats) 
-                                         (Exp (Constr (compileExp e (pats++s))))
-compileExp (EApp e1 e2)     s = App (Exp (Constr (CES.Fun (CES.Function (Atom nId, arity))))) args
-  where arity        = toInteger $ length args
-        args         = compileAppArgs e2 s
-        (EVar nId)   = e1
-compileExp (ECase e cases)  s = Case (Exp (Constr (compileExp e s))) (compileCases cases)
-
--- |The 'compileAppArgs' function compiles a chain
---  of AST's in the form of AppAST to a list of expressions
-compileAppArgs :: Expression -> [Pattern] -> [Exps]
-compileAppArgs e@(EApp (EVar _) _) s = [Exp (Constr (compileExp e s))]
-compileAppArgs (EApp e1 e2)        s = ann e1 ++ ann e2
-  where ann x = case x of
-                  EApp{} -> compileAppArgs x s
-                  _      -> [Exp (Constr (compileExp x s))]
-compileAppArgs e s = [Exp (Constr (compileExp e s))]
+compileExp :: Expression -> CES.Exp
+compileExp (EVar nId)        = Var $ compileLambdaPat (HPR.PVar nId)
+compileExp (ECon c)          = Lit $ LAtom $ Atom c
+compileExp (ELit l)          = Lit $ compileLiteral l
+compileExp (ETuple es)       = Tuple $ map (\e -> Exp (Constr (compileExp e))) es
+compileExp (ELambda pats e)  = Lambda (map compileLambdaPat pats) (Exp (Constr (compileExp e)))
+compileExp e@(EApp _ _)      = error $ "Unexpected EApp in code gen: " ++ show e
+compileExp (EVal i args)     = App f a
+  where f = Exp (Constr (CES.Fun (Function (Atom i, toInteger (length args)))))
+        a = map (\e -> Exp (Constr (compileExp e))) args
+compileExp (ECase e cases)   = Case (Exp (Constr (compileExp e))) (compileCases cases)
+compileExp (ECall mId fId e) = ModCall (m, fun) (map f as)
+  where m           = Exp (Constr (Lit (LAtom (Atom mId))))
+        fun         = Exp (Constr (Lit (LAtom (Atom fId))))
+        (ETuple as) = e
+        f x = Exp (Constr (compileExp x))
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
@@ -114,8 +105,7 @@ compileCases [] = []
 compileCases ((p, e):rest) = Constr (Alt pats guard exps ) : compileCases rest
   where pats  = Pat $ compileCasePat p
         guard = Guard (Exp (Constr (Lit (LAtom (Atom "true"))))) -- Change when guards are implemented
-        exps  = Exp (Constr (compileExp e bVars)) -- TODO add virables in pats to scope
-        bVars = getCasePatterns p
+        exps  = Exp (Constr (compileExp e))
 
 -- |The 'getCasePatterns' function converts a pattern
 --  to a list of patterns. This means a tuple will be
@@ -128,7 +118,7 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
 compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
-compileCasePat (HPR.PCon c)    = error $ "Constructors not implemented: " ++ show c
+compileCasePat (HPR.PCon c)      = CES.PLit $ LAtom $ Atom c
 compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
@@ -141,7 +131,7 @@ compileLiteral (LC c) = LChar c
 compileLiteral (LI i) = LInt i
 compileLiteral (LD d) = LFloat d -- No double constructor in CoreErlang
 
--- |The 'isIdBound' checks if the given id is
+-- |The 'isIdBound' function checks if the given id is
 --  bound in the given scope
 isIdBound :: String -> [Pattern] -> Bool
 isIdBound _ [] = False
@@ -160,13 +150,18 @@ getArity fId m = typeToArity $ getTypeSig fId m
 typeToArity :: Signature -> Integer
 typeToArity t = toInteger $ length t - 1
 
--- |The 'getTypeSig' function gets the SignatureAST signature
+-- |The 'getTypeSig' function gets the Signature
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Signature -> Signature
-getTypeSig fId (Mod _ _ []) = error $ "Could not find function when looking for signature: " ++ fId
-getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs))
+getTypeSig fId (Mod _ _ [] _) = error $ "Could not find function when looking for signature: " ++ fId
+getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs) datas)
   | fId == funId = typeSig
-  | otherwise    = getTypeSig fId (Mod mId es defs)
+  | otherwise    = getTypeSig fId (Mod mId es defs datas)
+
+-- |The 'gitSignatures' function gets the function
+--  signatures from the give module
+getSignatures :: HPR.Module Signature -> [(Identifier, Integer)]
+getSignatures (Mod _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, toInteger (length sig - 1))) defs
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
