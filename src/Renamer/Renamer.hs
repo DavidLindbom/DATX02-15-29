@@ -7,17 +7,16 @@ import Data.Monoid
 import Parser.AbsHopper as HPR
 import AST.AST as AST
 import Utils.ErrM
-import Utils.PrettyPrint
 import Utils.BIF
 
-transform :: HPR.Module -> Err (AST.Module (Maybe Signature))
+transform :: HPR.Module -> Err (AST.Module (Maybe AST.Type))
 transform (MMod (IdCon name) exports defs) = do
-  let (adts,defs') = findADTs defs
-  defs'' <- transformDefs defs'
+  let (adts,defs') = findADTs name defs
+  defs'' <- transformDefs name defs'
   mapM_ checkLonelySignatures defs''
-  exports'  <- transformExports exports
+  exports'  <- transformExports name exports
   exports'' <- case exports' of
-                 [] -> let e1 = map (\(Fun n _ _) -> n) defs''
+                 [] -> let e1 = map (\(Fun _ n _ _) -> n) defs''
                            e2 = M.keys adts
                        in return (e1++e2)
                  _  -> Ok exports'
@@ -29,27 +28,27 @@ transform (MMod (IdCon name) exports defs) = do
 -- All transform* functions is a transform from the parse tree to AST
 --
 
-transformExports :: Exports -> Err [Identifier]
-transformExports NEmpty      = Ok [] 
-transformExports (NExps ids) = Ok $ map go ids
-  where go (NExp i) = fromId i
+transformExports :: Modulename -> Exports -> Err [Identifier]
+transformExports _    NEmpty      = Ok [] 
+transformExports name (NExps ids) = Ok $ map go ids
+  where go (NExp i) = name ++ "." ++ fromId i
 
-transformDefs :: [Def] -> Err [Function (Maybe Signature)]
-transformDefs defs = do
+transformDefs :: Modulename -> [Def] -> Err [Function (Maybe AST.Type)]
+transformDefs name defs = do
   funs <- foldM go M.empty defs 
   return $ M.elems funs
   where
-    go :: M.Map Identifier (Function (Maybe Signature)) -> Def
-       -> Err (M.Map Identifier (Function (Maybe Signature)))
+    go :: M.Map Identifier (Function (Maybe AST.Type)) -> Def
+       -> Err (M.Map Identifier (Function (Maybe AST.Type)))
    
     go m (DSig (SSig (IdVar i) t)) = case M.lookup i m of
         -- There is no function
         Nothing -> 
-          return $ M.insert i (Fun i (Just $ transformTypes t) eundefined) m
+          return $ M.insert i (Fun name i (Just $ transformTypes name t) eundefined) m
         
         -- There is a function, but no signature
-        Just (Fun _ Nothing e) -> 
-          return $ M.insert i (Fun i (Just $ transformTypes t) e) m
+        Just (Fun _ _ Nothing e) -> 
+          return $ M.insert i (Fun name i (Just $ transformTypes name t) e) m
         
         -- There is a function and a signature
         _ -> fail $ "Multiple signatures for '" ++ i ++ "'"
@@ -74,34 +73,20 @@ transformDefs defs = do
               return $ AST.ELambda args cs
             _ -> return e''
             
-          return $ M.insert i (Fun i Nothing e''') m
-        Just (Fun _ t es) -> do
+          return $ M.insert i (Fun name i Nothing e''') m
+        Just (Fun _ _ t es) -> do
           cs <- mergeCase es e''
-          return $ M.insert i (Fun i t cs) m
+          return $ M.insert i (Fun name i t cs) m
 
     go _ (DAdt (AAdt (IdCon s) _ _)) = fail $ 
       "Bug! Found data declaration '" ++ s ++ "' in transformDefs"
 
-transformTypes :: [HPR.Type] -> [AST.Type]
-transformTypes ts = map go ts
-  where
-    go :: HPR.Type -> AST.Type
-    go (HPR.TName (IdCon a) ids) = AST.TName a (map go1 ids)
-    go (HPR.TVar  (IdVar a) ids) = AST.TVar  a (map go1 ids)
-    go (HPR.TTuple ts) = case transformTypeTuple ts of
-                           [x] -> x
-                           xs  -> AST.TTuple xs
-    
-    go1 :: HPR.Id -> AST.Type
-    go1 (ICon (IdCon i)) = AST.TName i []
-    go1 (IVar (IdVar i)) = AST.TVar  i []
+-- TOTAL REWRITE NEEDED
+transformTypes :: Modulename -> [HPR.Type] -> AST.Type
+transformTypes name ts = undefined
 
-transformTypeTuple :: [HPR.TypeTuple] -> [AST.Type]
-transformTypeTuple = map go
-  where go :: HPR.TypeTuple -> AST.Type
-        go (HPR.TTTuple tt) = case transformTypes tt of
-                                [x] -> x
-                                xs  -> AST.TFun xs
+transformTypeTuple :: Modulename -> HPR.TypeTuple -> AST.Type
+transformTypeTuple name ts = undefined 
 
 transformExpr :: HPR.Expr -> Err AST.Expression
 transformExpr e = case e of
@@ -115,6 +100,7 @@ transformExpr e = case e of
     HPR.IChar c    -> LC c
     HPR.IString s  -> LS s
 
+  -- To look after BIFs, this is converted and run again
   HPR.EInfix a (IdOpr op) b -> transformExpr $ HPR.EApp
                                             (HPR.EApp
                                               (HPR.EId 
@@ -200,17 +186,17 @@ fromId (ICon (IdCon s)) = s
 fromId (IVar (IdVar s)) = s
 
 -- | Find ADT declarations and take them out to an own map
-findADTs :: [HPR.Def] -> (M.Map Identifier Signature, [HPR.Def])
-findADTs defs = foldr go (M.empty,[]) defs -- reverse? 
+findADTs :: Modulename -> [HPR.Def] -> (M.Map Identifier AST.Type, [HPR.Def])
+findADTs name defs = foldr go (M.empty,[]) defs -- reverse? 
   where 
     go :: HPR.Def 
-       -> (M.Map Identifier Signature,[HPR.Def]) 
-       -> (M.Map Identifier Signature,[HPR.Def])
+       -> (M.Map Identifier AST.Type,[HPR.Def]) 
+       -> (M.Map Identifier AST.Type,[HPR.Def])
 
     -- Put ADT in map
     go d (m,ds) = case d of 
       DAdt (AAdt (IdCon t) vars cons) -> 
-        let m' = M.fromList $ map (dataToSignature t vars) cons
+        let m' = M.fromList $ map (dataToSignature name t vars) cons
         in (m <> m', ds)
       
       -- Otherwise skip
@@ -218,51 +204,31 @@ findADTs defs = foldr go (M.empty,[]) defs -- reverse?
 
 
 -- | Convert a data constructor to signature
---   The first argument is the last part of the signature
-dataToSignature :: Constructor -> [AdtVar] -> AdtCon -> (Constructor, Signature)
-dataToSignature ty vars cons = case cons of
-  ACCon (IdCon c) args -> (c, map go2 args ++ [AST.TName ty (map go1 vars)])
-  where 
-    go1 :: HPR.AdtVar -> AST.Type
-    go1 (AVVar (IdVar i)) = AST.TVar i []
-
-    go2 :: HPR.AdtArg -> AST.Type
-    go2 (AAId (ICon (IdCon i))) = AST.TName i []
-    go2 (AAId (IVar (IdVar i))) = AST.TVar  i []
-    go2 (AATuple [t])           = go3 t
-    go2 (AATuple ts)            = AST.TTuple $ map go3 ts
-    
-    go3 :: HPR.AdtArgTuple -> AST.Type
-    go3 (AATCon (IdCon i) a as) = AST.TName i $ map go2 (a:as)
-    go3 (AATArg arg)            = go2 arg
+--   The second argument is the last part of the signature
+dataToSignature :: Modulename -> Constructor -> [AdtVar] 
+                -> AdtCon -> (Constructor, AST.Type)
+dataToSignature name ty vars cons = undefined
 
 -- | A temporary expression representing a function without an expression yet
 eundefined :: Expression
 eundefined = AST.EVar "undefined" 
 
 -- | Check that there are no signatures without function definitions
-checkLonelySignatures :: Function (Maybe Signature) -> Err ()
-checkLonelySignatures (Fun i (Just s) e) = case e == eundefined of
-  True -> Bad $ "Lonley signature '" ++ i ++ " :: " ++ showSignature s ++ "'" 
+checkLonelySignatures :: Function (Maybe AST.Type) -> Err ()
+checkLonelySignatures (Fun name i (Just s) e) = case e == eundefined of
+  True -> Bad $ "Lonley signature '" ++ name ++ "." ++ i 
+                ++ " :: " ++ show s ++ "'" 
   _    -> Ok ()
 checkLonelySignatures _ = Ok ()
 
--- | Check that there is a definition for all exported functions
-checkExports :: [Identifier] -> [Function a] -> Err ()
-checkExports ids fs = sequence_ $ map exists ids
-  where exists i = if any (\(Fun f _ _) -> f == i) fs
-                  then Ok ()
-                  else Bad $ "Undefined export '" ++ i ++ "'"
-
 -- | Convert two pattern matching functions to a case expression
--- TODO: How should the signatures be handled here?
 mergeCase :: Expression -> Expression -> Err Expression
 mergeCase a b = case (a,b) of
 
   -- Replace eundefined with expression
   (c,d) | c == eundefined -> Ok d
 
-  -- Add new clause to case 
+  -- Add new clause to case, bugfix checks if first argument is generated 
   (AST.ELambda ps@(AST.PVar ('_':_):_) (AST.ECase e cs), (AST.ELambda ps' e')) ->
     if length ps == length ps'
       then Ok $ AST.ELambda ps (AST.ECase e (cs++[(AST.PTuple ps', e')]))
@@ -284,10 +250,9 @@ mergeCase a b = case (a,b) of
   (c,d) -> Bad $ "Expression '" ++ show c ++ "' over-shadows '"
               ++ show d ++ "' in pattern matching"
 
-
+-- | Generate arguments for lambdas 
 makeArgs :: [Pattern] -> [Pattern]
 makeArgs = zipWith (\n _ -> AST.PVar $ "_arg" ++ show n) ([1..] :: [Integer])
-
 
 -- | Convert PTuple to ETuple
 -- TODO: Make this code safe
