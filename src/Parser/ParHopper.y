@@ -4,7 +4,7 @@
 module Parser.ParHopper where
 import Parser.AbsHopper
 import Parser.LexHopper
-import Utils.ErrM
+import Parser.ErrM
 
 }
 
@@ -162,7 +162,7 @@ Sign : IdVar '::' '{' ListType '}' { SSig $1 $4 }
 
 Type :: { Type }
 Type : IdCon ListId { TName $1 (reverse $2) } 
-  | IdVar ListId { TVar $1 (reverse $2) }
+  | IdVar { TVar $1 }
   | '(' ListTypeTuple ')' { TTuple $2 }
 
 

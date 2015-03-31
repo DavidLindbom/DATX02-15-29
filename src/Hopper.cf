@@ -102,7 +102,7 @@ SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
 -- Replace TName and TVar with TId ::= Id ?
 
 TName.  Type ::= IdCon [Id]          ;
-TVar.   Type ::= IdVar [Id]          ;
+TVar.   Type ::= IdVar               ;
 TTuple. Type ::= "(" [TypeTuple] ")" ;
 separator nonempty Type "->"         ;
 

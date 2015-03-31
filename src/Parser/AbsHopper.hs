@@ -75,7 +75,7 @@ data Sign =
 
 data Type =
    TName IdCon [Id]
- | TVar IdVar [Id]
+ | TVar IdVar
  | TTuple [TypeTuple]
   deriving (Eq,Ord,Show,Read)
 
