@@ -1,0 +1,3 @@
+module DependencyChecker.DependencyChecker (dependencyCheck) where
+
+import DependencyChecker.Internal.DependencyChecker
