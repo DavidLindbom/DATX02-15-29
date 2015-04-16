@@ -83,10 +83,29 @@ transformDefs name defs = do
 
 -- TOTAL REWRITE NEEDED
 transformTypes :: Modulename -> [HPR.Type] -> AST.Type
-transformTypes name ts = undefined
+transformTypes name (t:ts) = foldr go (go' t) ts
+  where
+    go :: HPR.Type -> AST.Type -> AST.Type
+    go a b = AST.TCon "Prim.->" `AST.TApp` b `AST.TApp` go' a
 
-transformTypeTuple :: Modulename -> HPR.TypeTuple -> AST.Type
-transformTypeTuple name ts = undefined 
+    go' :: HPR.Type -> AST.Type
+    go' (HPR.TName (IdCon c) ids)     = foldr go'' (AST.TCon $ prim c) ids
+    go' (HPR.TVar (IdVar v))          = AST.TVar v
+    go' (HPR.TTuple ((TTTuple t):ts)) = foldr go''' (transformTypes name t) ts
+
+    go'' :: HPR.Id -> AST.Type -> AST.Type
+    go'' (ICon (IdCon c)) b = b `AST.TApp` (AST.TCon $ prim c)
+    go'' (IVar (IdVar v)) b = b `AST.TApp` AST.TVar v
+
+    go''' :: HPR.TypeTuple -> AST.Type -> AST.Type
+    go''' (TTTuple ts) b = b `AST.TApp` (transformTypes name ts)
+
+    -- Prefix primitive types with Prim module instead of current module
+    prim "Int"    = "Prim.Int"
+    prim "Double" = "Prim.Double"
+    prim "Char"   = "Prim.Char"
+    prim "String" = "Prim.String"
+    prim s        = name ++ "." ++ s
 
 transformExpr :: HPR.Expr -> Err AST.Expression
 transformExpr e = case e of
