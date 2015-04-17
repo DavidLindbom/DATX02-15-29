@@ -83,10 +83,10 @@ transformDefs name defs = do
 
 -- TOTAL REWRITE NEEDED
 transformTypes :: Modulename -> [HPR.Type] -> AST.Type
-transformTypes name (t:ts) = foldr go (go' t) ts
+transformTypes name (t:ts) = foldl go (go' t) ts
   where
-    go :: HPR.Type -> AST.Type -> AST.Type
-    go a b = AST.TCon "Prim.->" `AST.TApp` b `AST.TApp` go' a
+    go :: AST.Type -> HPR.Type -> AST.Type
+    go a b = AST.TCon "Prim.->" `AST.TApp` a `AST.TApp` go' b
 
     go' :: HPR.Type -> AST.Type
     go' (HPR.TName (IdCon c) ids)     = foldr go'' (AST.TCon $ prim c) ids
@@ -105,7 +105,8 @@ transformTypes name (t:ts) = foldr go (go' t) ts
     prim "Double" = "Prim.Double"
     prim "Char"   = "Prim.Char"
     prim "String" = "Prim.String"
-    prim s        = name ++ "." ++ s
+    prim s | elem '.' s = s
+           | otherwise  = name ++ "." ++ s
 
 transformExpr :: HPR.Expr -> Err AST.Expression
 transformExpr e = case e of
