@@ -81,12 +81,12 @@ transformDefs name defs = do
     go _ (DAdt (AAdt (IdCon s) _ _)) = fail $ 
       "Bug! Found data declaration '" ++ s ++ "' in transformDefs"
 
--- TOTAL REWRITE NEEDED
 transformTypes :: Modulename -> [HPR.Type] -> AST.Type
-transformTypes name (t:ts) = foldl go (go' t) ts
+transformTypes name ts' = let (t:ts) = reverse ts'
+                          in foldl go (go' t) ts
   where
     go :: AST.Type -> HPR.Type -> AST.Type
-    go a b = AST.TCon "Prim.->" `AST.TApp` a `AST.TApp` go' b
+    go a b = AST.TCon "Prim.->" `AST.TApp` go' b `AST.TApp` a
 
     go' :: HPR.Type -> AST.Type
     go' (HPR.TName (IdCon c) ids)     = foldr go'' (AST.TCon $ prim c) ids
@@ -105,8 +105,7 @@ transformTypes name (t:ts) = foldl go (go' t) ts
     prim "Double" = "Prim.Double"
     prim "Char"   = "Prim.Char"
     prim "String" = "Prim.String"
-    prim s | elem '.' s = s
-           | otherwise  = name ++ "." ++ s
+    prim s        = name ++ "." ++ s
 
 transformExpr :: HPR.Expr -> Err AST.Expression
 transformExpr e = case e of
