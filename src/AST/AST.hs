@@ -12,10 +12,10 @@ module AST.AST where
 import Data.Map
 
 data Module a = Mod Modulename 
-                    [Identifier]  -- Exports
-                    [Constructor] -- Imports
-                    [Function a]  -- Definitions
-                    (Map Identifier Type) -- ADTs (and imported?)
+                    [Identifier] -- Exports
+                    [Identifier] -- Imports
+                    [Function a] -- Definitions
+                    (Map Identifier Type) -- ADTs
   deriving (Eq,Ord,Show)
 
 type Identifier  = String
