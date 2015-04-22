@@ -78,13 +78,18 @@ data Sign =
   deriving (Eq,Ord,Show,Read)
 
 data Type =
-   TName IdCon [Id]
+   TName IdCon [TypeArg]
  | TVar IdVar
  | TTuple [TypeTuple]
   deriving (Eq,Ord,Show,Read)
 
 data TypeTuple =
    TTTuple [Type]
+  deriving (Eq,Ord,Show,Read)
+
+data TypeArg =
+   TTAId Id
+ | TTATuple [TypeTuple]
   deriving (Eq,Ord,Show,Read)
 
 data Adt =

@@ -199,7 +199,7 @@ instance Print Sign where
 
 instance Print Type where
   prt i e = case e of
-   TName idcon ids -> prPrec i 0 (concatD [prt 0 idcon , prt 0 ids])
+   TName idcon typeargs -> prPrec i 0 (concatD [prt 0 idcon , prt 0 typeargs])
    TVar idvar -> prPrec i 0 (concatD [prt 0 idvar])
    TTuple typetuples -> prPrec i 0 (concatD [doc (showString "(") , prt 0 typetuples , doc (showString ")")])
 
@@ -215,6 +215,15 @@ instance Print TypeTuple where
    [] -> (concatD [])
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+
+instance Print TypeArg where
+  prt i e = case e of
+   TTAId id -> prPrec i 0 (concatD [prt 0 id])
+   TTATuple typetuples -> prPrec i 0 (concatD [doc (showString "(") , prt 0 typetuples , doc (showString ")")])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   x:xs -> (concatD [prt 0 x , prt 0 xs])
 
 instance Print Adt where
   prt i e = case e of

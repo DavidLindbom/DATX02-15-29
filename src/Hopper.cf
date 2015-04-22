@@ -109,13 +109,17 @@ SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
 -- If TypeTuple has one element, treat it as parenthethis
 -- Replace TName and TVar with TId ::= Id ?
 
-TName.  Type ::= IdCon [Id]          ;
+TName.  Type ::= IdCon [TypeArg]     ;
 TVar.   Type ::= IdVar               ;
 TTuple. Type ::= "(" [TypeTuple] ")" ;
 separator nonempty Type "->"         ;
 
 TTTuple. TypeTuple ::= [Type] ;
 separator TypeTuple ","       ;
+
+TTAId.    TypeArg ::= Id                  ;
+TTATuple. TypeArg ::= "(" [TypeTuple] ")" ;
+terminator TypeArg ""                     ;
 
 --
 -- ADT declarations

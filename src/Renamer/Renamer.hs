@@ -102,9 +102,10 @@ transformTypes name ts' = let (t:ts) = reverse ts'
     go' (HPR.TVar (IdVar v))          = AST.TVar v
     go' (HPR.TTuple ((TTTuple t):ts)) = foldr go''' (transformTypes name t) ts
 
-    go'' :: HPR.Id -> AST.Type -> AST.Type
-    go'' (ICon (IdCon c)) b = b `AST.TApp` (AST.TCon $ prim c)
-    go'' (IVar (IdVar v)) b = b `AST.TApp` AST.TVar v
+    go'' :: HPR.TypeArg -> AST.Type -> AST.Type
+    go'' (TTAId (ICon (IdCon c)))    b = b `AST.TApp` (AST.TCon $ prim c)
+    go'' (TTAId (IVar (IdVar v)))    b = b `AST.TApp` AST.TVar v
+    go'' (TTATuple ((TTTuple t):ts)) b = b `AST.TApp` foldr go''' (transformTypes name t) ts
 
     go''' :: HPR.TypeTuple -> AST.Type -> AST.Type
     go''' (TTTuple ts) b = b `AST.TApp` (transformTypes name ts)
@@ -240,7 +241,26 @@ findADTs name defs = foldr go (M.empty,[]) defs -- reverse?
 --   The second argument is the last part of the signature
 dataToSignature :: Modulename -> Constructor -> [AdtVar] 
                 -> AdtCon -> (Constructor, AST.Type)
-dataToSignature name ty vars cons = undefined
+dataToSignature name ty tyvars adtcon = (prefix name con, types)
+  where
+    (ACCon (IdCon con) conargs) = adtcon
+    types = transformTypes name $ map go' conargs 
+                               ++ [TName (IdCon ty) (map go tyvars)]
+
+    go :: AdtVar -> TypeArg
+    go (AVVar i) = TTAId $ IVar i
+
+    go' :: AdtArg -> HPR.Type
+    go' (AAId (ICon i)) = HPR.TName i []
+    go' (AAId (IVar i)) = HPR.TVar i
+    go' (AATuple tup)   = HPR.TTuple $ map go'' tup
+
+    go'' :: AdtArgTuple -> TypeTuple
+    go'' (AATCon i a as) = TTTuple [HPR.TName i (map go''' (a:as))]
+
+    go''' :: AdtArg -> TypeArg
+    go''' (AAId i)      = TTAId i
+    go''' (AATuple aat) = TTATuple $ map go'' aat
 
 -- | A temporary expression representing a function without an expression yet
 eundefined :: Expression

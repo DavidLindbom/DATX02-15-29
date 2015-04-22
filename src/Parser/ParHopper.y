@@ -172,7 +172,7 @@ Sign : IdVar '::' '{' ListType '}' { SSig $1 $4 }
 
 
 Type :: { Type }
-Type : IdCon ListId { TName $1 (reverse $2) } 
+Type : IdCon ListTypeArg { TName $1 (reverse $2) } 
   | IdVar { TVar $1 }
   | '(' ListTypeTuple ')' { TTuple $2 }
 
@@ -190,6 +190,16 @@ ListTypeTuple :: { [TypeTuple] }
 ListTypeTuple : {- empty -} { [] } 
   | TypeTuple { (:[]) $1 }
   | TypeTuple ',' ListTypeTuple { (:) $1 $3 }
+
+
+TypeArg :: { TypeArg }
+TypeArg : Id { TTAId $1 } 
+  | '(' ListTypeTuple ')' { TTATuple $2 }
+
+
+ListTypeArg :: { [TypeArg] }
+ListTypeArg : {- empty -} { [] } 
+  | ListTypeArg TypeArg { flip (:) $1 $2 }
 
 
 Adt :: { Adt }
