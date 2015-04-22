@@ -10,7 +10,7 @@ import Utils.ErrM
 import Utils.BIF
 
 transform :: HPR.Module -> Err (AST.Module (Maybe AST.Type))
-transform (MMod (IdCon name) exports defs) = do
+transform (MMod (IdCon name) exports imports defs) = do
   let (adts,defs') = findADTs name defs
   defs'' <- transformDefs name defs'
   mapM_ checkLonelySignatures defs''
@@ -20,9 +20,10 @@ transform (MMod (IdCon name) exports defs) = do
                            e2 = M.keys adts
                        in return (e1++e2)
                  _  -> Ok exports'
+  imports' <- transformImports imports
   -- TODO: Should be moved to after dependency resolver
   --checkExports expo' defs''
-  return $ Mod name exports'' defs'' adts
+  return $ Mod name exports'' imports' defs'' adts
 
 --
 -- All transform* functions is a transform from the parse tree to AST
@@ -32,6 +33,10 @@ transformExports :: Modulename -> Exports -> Err [Identifier]
 transformExports _    NEmpty      = Ok [] 
 transformExports name (NExps ids) = Ok $ map go ids
   where go (NExp i) = name ++ "." ++ fromId i
+
+transformImports :: [Import] -> Err [Identifier]
+transformImports ids = Ok $ map go ids
+  where go (IImport (IdCon i)) = i
 
 transformDefs :: Modulename -> [Def] -> Err [Function (Maybe AST.Type)]
 transformDefs name defs = do
