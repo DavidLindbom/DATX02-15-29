@@ -1,4 +1,4 @@
-module DependencyChecker.Internal.DependencyChecker where
+module DependencyChecker.Internal.DependencyChecker (dependencyCheck) where
 
 {-
 insikter från workshop
@@ -40,15 +40,37 @@ insikter
 -}
 
 import Control.Monad.Trans.State
-import Data.Map
+import qualified Data.Map as Map
+import Data.Graph
 
 
-type Env = Map FilePath [FilePath]
+type Env = Map.Map FilePath [FilePath]
 
 type CheckM a = StateT Env IO a
 
-depcheck :: FilePath -> IO [FilePath]
-depcheck = undefined
+emptyEnv :: Env
+emptyEnv = Map.empty
+
+-- | Recursively check module dependencies and generate a topologically
+-- sorted compilation order, such that all dependencies of a module are
+-- compiled before that module.
+dependencyCheck :: FilePath -> IO [FilePath]
+dependencyCheck file = do
+  themap <- execStateT (reccheck file) emptyEnv
+  let graph = map (\(k,v) -> (k, k, v)) $ Map.assocs themap
+  let topsorted = stronglyConnComp graph
+  compileOrder <- acyclicOrder topsorted
+  return compileOrder
+
+-- | Extract the module filepaths from the SCC datatype, meanwhile asserting
+-- that no cyclical dependencies are present.
+acyclicOrder :: (Show a) => [SCC a] -> IO [a]
+acyclicOrder =
+  mapM cycleCheck
+  where
+    cycleCheck (AcyclicSCC x) = return x
+    cycleCheck (CyclicSCC xs) = fail $ "Cyclic dependencies found: " ++
+                                       show xs
 
 reccheck :: FilePath -> CheckM ()
 reccheck = undefined
