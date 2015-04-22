@@ -11,7 +11,7 @@
 module AST.AST where
 import Data.Map
 
-data Module a = Mod Modulename [Identifier] [Function a] (Map Identifier Type)
+data Module a = Mod Modulename [Identifier] [Identifier] [Function a] (Map Identifier Type)
   deriving (Eq,Ord,Show)
 
 type Identifier  = String
