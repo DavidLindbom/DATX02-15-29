@@ -67,7 +67,7 @@ compileFun (HPR.Fun fId t e) =
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
 compileExp :: Expression -> CES.Exp
-compileExp (EVar nId)         = Var $ compileLambdaPat (HPR.PVar nId)
+compileExp (EVar nId)         = Var $ nId
 compileExp (ELit l)           = Lit $ compileLiteral l
 compileExp (ETuple es)        = Tuple $ map (\e -> Exp (Constr (compileExp e))) es
 compileExp l@(ELambda pats e) = compileLambda l
@@ -80,25 +80,23 @@ compileExp (ECall mId fId e)  = ModCall (m, fun) (map f as)
         f x = Exp (Constr (compileExp x))
 compileExp e                  = error $ "Illegal expression: " ++ show e
 
-compileLambda :: Expression -> CES.Exp
-compileLambda (ELambda pats e) = undefined --TODO IMPLEMENT
-compileLambda e                = error $ "Not a lambda: " ++ show e
-
--- |The 'compileLambdaPat' function converts a
---  PatAST to a CoreErlang.Var
+-- |The 'compileLambda' function converts a
+--  hopper lambda expression to a core erlang lambda.
 --
---  We need to think about how to deal with tuples in lambdas.
---  In hopper, the lambda patterns may be variables, wildcards or
---  tuples of variables. In core erlang the lambda patterns is just
---  a list of variables. In this case, a tuple would be translated
---  to a single variable, which is then matched in a generated case
---  clause within the lambda expression.
-compileLambdaPat :: Pattern -> Var
-compileLambdaPat PWild           = "_"
-compileLambdaPat (HPR.PTuple ps) = error $ "Tuple not implemented yet, got: " ++ show ps
-compileLambdaPat (HPR.PLit l)    = error $ "Unallowed literal in lambda pattern: " ++ show l 
-compileLambdaPat (HPR.PVar v)    = '_':v
-compileLambdaPat (PCon c pts)    = error $ "Constructors not implemented: " ++ show c
+-- The main issue here is that the core erlang lambdas only
+-- have a list of variables as the pattern. Whenever the hopper
+-- pattern contains something else, it should replace it with a
+-- fresh variable and wrap the expression with a case clause
+compileLambda :: Expression -> CES.Exp
+compileLambda (ELambda pats e) = Lambda vars (Exp (Constr exp))
+  where exp = Case caseExps caseAlts
+        caseAlts = [Constr $ Alt casePats (Guard (Exps (Constr []))) (Exp (Constr $ compileExp e))]
+        casePats = Pats $ map compileCasePat pats
+        caseExps = Exps (Constr [Constr (Var x) | x <- vars])
+        vars = newVars (length pats)
+        newVars 0 = ["X@0"]
+        newVars x = ("X@" ++ show x) : newVars (x-1)
+compileLambda e                = error $ "Not a lambda: " ++ show e
 
 -- |The 'compileCases' function converts a list of
 --  cases to a list of annotated alts as seen in
@@ -120,12 +118,12 @@ getCasePatterns p               = [p]
 -- |The 'compileCasePat' function compiles a hopper pattern
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
-compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
-compileCasePat (HPR.PCon c pts)  = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : map compileCasePat pts
+compileCasePat (HPR.PVar i)     = CES.PVar i
+compileCasePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : map compileCasePat pts
   where c' = case c of
                ':':xs -> xs
                x:xs   -> toLower x : xs
-compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
+compileCasePat PWild             = CES.PVar "_" 
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
 
