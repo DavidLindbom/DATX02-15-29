@@ -9,6 +9,7 @@ import Control.Monad
 import Parser.PrintHopper (printTree)
 import Parser.ParHopper
 import Parser.LayoutHopper
+import Parser.Parser
 
 import Utils.ErrM
 
@@ -115,8 +116,6 @@ main' args = do
                    else return ()
     
     dropHPR = reverse . drop 4 . reverse
-
-    parse = pModule . resolveLayout True . myLexer
 
     whenFlag' opt flag a f = 
       when (flag `elem` opt) $ case a of
