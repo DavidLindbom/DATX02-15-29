@@ -25,7 +25,7 @@ data Literal = LS String
              -- | LL []
   deriving (Eq,Ord,Show)
 
-data Function a = Fun Modulename Identifier a Expression
+data Function a = Fun Identifier a Expression
   deriving (Eq,Ord,Show)
 
 data Type = TForAll Type

@@ -16,7 +16,7 @@ transform (MMod (IdCon name) exports defs) = do
   mapM_ checkLonelySignatures defs''
   exports'  <- transformExports name exports
   exports'' <- case exports' of
-                 [] -> let e1 = map (\(Fun _ n _ _) -> n) defs''
+                 [] -> let e1 = map (\(Fun n _ _) -> n) defs''
                            e2 = M.keys adts
                        in return (e1++e2)
                  _  -> Ok exports'
@@ -31,7 +31,7 @@ transform (MMod (IdCon name) exports defs) = do
 transformExports :: Modulename -> Exports -> Err [Identifier]
 transformExports _    NEmpty      = Ok [] 
 transformExports name (NExps ids) = Ok $ map go ids
-  where go (NExp i) = name ++ "." ++ fromId i
+  where go (NExp i) = prefix name (fromId i)
 
 transformDefs :: Modulename -> [Def] -> Err [Function (Maybe AST.Type)]
 transformDefs name defs = do
@@ -44,22 +44,26 @@ transformDefs name defs = do
     go m (DSig (SSig (IdVar i) t)) = case M.lookup i m of
         -- There is no function
         Nothing -> 
-          return $ M.insert i (Fun name i (Just $ transformTypes name t) eundefined) m
+          return $ M.insert i (Fun (prefix name i) 
+                                   (Just $ transformTypes name t) 
+                                   eundefined) m
         
         -- There is a function, but no signature
-        Just (Fun _ _ Nothing e) -> 
-          return $ M.insert i (Fun name i (Just $ transformTypes name t) e) m
+        Just (Fun _ Nothing e) -> 
+          return $ M.insert i (Fun (prefix name i) 
+                                   (Just $ transformTypes name t) 
+                                   e) m
         
         -- There is a function and a signature
         _ -> fail $ "Multiple signatures for '" ++ i ++ "'"
     
     go m (DFun (FFun (IdVar i) as e)) = do
-      e' <- transformExpr e
+      e' <- transformExpr name e
 
       -- Add lambda if arguments
       e'' <- if null as
               then return e'
-              else do pat <- mapM transformArg as
+              else do pat <- mapM (transformArg name) as
                       return $ AST.ELambda pat e'     
 
       case M.lookup i m of
@@ -73,10 +77,10 @@ transformDefs name defs = do
               return $ AST.ELambda args cs
             _ -> return e''
             
-          return $ M.insert i (Fun name i Nothing e''') m
-        Just (Fun _ _ t es) -> do
+          return $ M.insert i (Fun (prefix name i) Nothing e''') m
+        Just (Fun _ t es) -> do
           cs <- mergeCase es e''
-          return $ M.insert i (Fun name i t cs) m
+          return $ M.insert i (Fun (prefix name i) t cs) m
 
     go _ (DAdt (AAdt (IdCon s) _ _)) = fail $ 
       "Bug! Found data declaration '" ++ s ++ "' in transformDefs"
@@ -107,11 +111,11 @@ transformTypes name ts' = let (t:ts) = reverse ts'
     prim "String" = "Prim.String"
     prim s        = name ++ "." ++ s
 
-transformExpr :: HPR.Expr -> Err AST.Expression
-transformExpr e = case e of
+transformExpr :: Modulename -> HPR.Expr -> Err AST.Expression
+transformExpr name e = case e of
   HPR.EId i -> Ok $ case i of
-    HPR.ICon (IdCon i') -> AST.EVar i'
-    HPR.IVar (IdVar i') -> AST.ECon i'
+    HPR.ICon (IdCon i') -> AST.ECon $ prefix name i'
+    HPR.IVar (IdVar i') -> AST.EVar $ prefix name i'
   
   HPR.EPrim p -> Ok $ AST.ELit $ case p of
     HPR.IInteger i -> LI i
@@ -120,7 +124,7 @@ transformExpr e = case e of
     HPR.IString s  -> LS s
 
   -- To look after BIFs, this is converted and run again
-  HPR.EInfix a (IdOpr op) b -> transformExpr $ HPR.EApp
+  HPR.EInfix a (IdOpr op) b -> transformExpr name $ HPR.EApp
                                             (HPR.EApp
                                               (HPR.EId 
                                                 (HPR.IVar 
@@ -128,39 +132,39 @@ transformExpr e = case e of
                                               a)
                                             b
 
-  HPR.EApp a b       -> do a' <- transformExpr a
-                           b' <- transformExpr b
+  HPR.EApp a b       -> do a' <- transformExpr name a
+                           b' <- transformExpr name b
                            case a' of
                             AST.EVar i -> case lookupBIF i of
                               Just (m,f,_) -> Ok $ ECall m f b'
                               _            -> Ok $ AST.EApp a' b'
                             _          -> Ok $ AST.EApp a' b'
 
-  HPR.EOpr (IdOpr i) -> Ok $ AST.EVar i
+  HPR.EOpr (IdOpr i) -> Ok $ AST.EVar $ prefix name i
   
-  HPR.ECase a c      -> do e' <- transformExpr a
-                           c' <- mapM transformClause c
+  HPR.ECase a c      -> do e' <- transformExpr name a
+                           c' <- mapM (transformClause name) c
                            Ok $ AST.ECase e' c'
   
-  HPR.EIf a b c      -> do a' <- transformExpr a
-                           b' <- transformExpr b
-                           c' <- transformExpr c
+  HPR.EIf a b c      -> do a' <- transformExpr name a
+                           b' <- transformExpr name b
+                           c' <- transformExpr name c
                            Ok $ AST.ECase a' [(AST.PCon "True"  [], b')
                                              ,(AST.PCon "False" [], c')]
 
-  HPR.ELambda ps a   -> do a'  <- transformExpr a 
-                           ps' <- mapM transformPat ps 
+  HPR.ELambda ps a   -> do a'  <- transformExpr name a 
+                           ps' <- mapM (transformPat name) ps 
                            Ok $ AST.ELambda ps' a' 
                            
   where app (Bad m) _      = Bad m
         app _      (Bad m) = Bad m 
         app (Ok a) (Ok b)  = Ok $ AST.EApp a b
 
-transformPat :: HPR.Pat -> Err AST.Pattern
-transformPat p = case p of
+transformPat :: Modulename -> HPR.Pat -> Err AST.Pattern
+transformPat name p = case p of
   HPR.PId i -> Ok $ case i of
-    HPR.ICon (IdCon i') -> AST.PCon i' []
-    HPR.IVar (IdVar i') -> AST.PVar i'
+    HPR.ICon (IdCon i') -> AST.PCon (prefix name i') []
+    HPR.IVar (IdVar i') -> AST.PVar (prefix name i')
 
   HPR.PPrim p -> Ok $ AST.PLit $ case p of
     HPR.IInteger i -> LI i
@@ -170,34 +174,39 @@ transformPat p = case p of
 
   HPR.PWild          -> Ok $ AST.PWild
 
-  HPR.PTuple [p]     -> transformPatTuple p
-  HPR.PTuple ps      -> do ps' <- mapM transformPatTuple ps
+  HPR.PTuple [p]     -> transformPatTuple name p
+  HPR.PTuple ps      -> do ps' <- mapM (transformPatTuple name) ps
                            Ok $ AST.PTuple ps'
 
-transformPatTuple :: HPR.PatTuple -> Err AST.Pattern
-transformPatTuple a = case a of
-  HPR.PTCon (IdCon s) qs -> do qs' <- mapM transformPat qs
-                               Ok $ AST.PCon s qs'
-  HPR.PTPat p            -> transformPat p
+transformPatTuple :: Modulename -> HPR.PatTuple -> Err AST.Pattern
+transformPatTuple name a = case a of
+  HPR.PTCon (IdCon s) qs -> do qs' <- mapM (transformPat name) qs
+                               Ok $ AST.PCon (prefix name s) qs'
+  HPR.PTPat p            -> transformPat name p
 
-transformArg :: HPR.Arg -> Err AST.Pattern
-transformArg (APat p) = transformPat p
+transformArg :: Modulename -> HPR.Arg -> Err AST.Pattern
+transformArg name (APat p) = transformPat name p
 
-transformClause :: HPR.Clause -> Err (AST.Pattern, AST.Expression)
-transformClause (CClause pat e) = case pat of
-  CCPPat p -> do p' <- transformPat p
-                 e' <- transformExpr e
+transformClause :: Modulename -> HPR.Clause -> Err (AST.Pattern, AST.Expression)
+transformClause name (CClause pat e) = case pat of
+  CCPPat p -> do p' <- transformPat name p
+                 e' <- transformExpr name e
                  Ok (p',e')
 
-  CCPCon (IdCon i) p -> do p' <- mapM transformPat p
-                           let p'' = AST.PCon i p'
-                           e' <- transformExpr e
+  CCPCon (IdCon i) p -> do p' <- mapM (transformPat name) p
+                           let p'' = AST.PCon (prefix name i) p'
+                           e' <- transformExpr name e
                            Ok (p'',e')
 
 
 --
 -- Helper functions
 --
+
+prefix :: Modulename -> Identifier -> Identifier
+prefix _ "True"  = "True"
+prefix _ "False" = "False"
+prefix m i       = m ++ "." ++ i
 
 -- | Take out the identifier from an Id
 fromId :: Id -> Identifier
@@ -234,9 +243,8 @@ eundefined = AST.EVar "undefined"
 
 -- | Check that there are no signatures without function definitions
 checkLonelySignatures :: Function (Maybe AST.Type) -> Err ()
-checkLonelySignatures (Fun name i (Just s) e) = case e == eundefined of
-  True -> Bad $ "Lonley signature '" ++ name ++ "." ++ i 
-                ++ " :: " ++ show s ++ "'" 
+checkLonelySignatures (Fun i (Just s) e) = case e == eundefined of
+  True -> Bad $ "Lonley signature '" ++ i ++ " :: " ++ show s ++ "'" 
   _    -> Ok ()
 checkLonelySignatures _ = Ok ()
 
