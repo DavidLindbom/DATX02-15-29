@@ -20,7 +20,7 @@ transform (MMod (IdCon name) exports imports defs) = do
                            e2 = M.keys adts
                        in return (e1++e2)
                  _  -> Ok exports'
-  let imports' = map (\(IImport (IdCon i)) -> i) imports
+  imports' <- transformImports imports
   -- TODO: Should be moved to after dependency resolver
   --checkExports expo' defs''
   return $ Mod name exports'' imports' defs'' adts
@@ -33,6 +33,10 @@ transformExports :: Modulename -> Exports -> Err [Identifier]
 transformExports _    NEmpty      = Ok [] 
 transformExports name (NExps ids) = Ok $ map go ids
   where go (NExp i) = prefix name (fromId i)
+
+transformImports :: [Import] -> Err [Identifier]
+transformImports ids = Ok $ map go ids
+  where go (IImport (IdCon i)) = i
 
 transformDefs :: Modulename -> [Def] -> Err [Function (Maybe AST.Type)]
 transformDefs name defs = do
