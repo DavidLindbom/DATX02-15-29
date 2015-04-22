@@ -23,6 +23,8 @@ import Language.CoreErlang.Pretty
 import Utils.ErrM
 import AST.AST as HPR
 
+import Data.Char
+
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Type -> CES.Module
@@ -65,21 +67,22 @@ compileFun (HPR.Fun fId t e) =
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
 compileExp :: Expression -> CES.Exp
-compileExp (EVar nId)        = Var $ compileLambdaPat (HPR.PVar nId)
-compileExp (ECon c)          = Lit $ LAtom $ Atom c
-compileExp (ELit l)          = Lit $ compileLiteral l
-compileExp (ETuple es)       = Tuple $ map (\e -> Exp (Constr (compileExp e))) es
-compileExp (ELambda pats e)  = Lambda (map compileLambdaPat pats) (Exp (Constr (compileExp e)))
-compileExp e@(EApp _ _)      = error $ "Unexpected EApp in code gen: " ++ show e
-compileExp (EVal i args)     = App f a
-  where f = Exp (Constr (CES.Fun (Function (Atom i, toInteger (length args)))))
-        a = map (\e -> Exp (Constr (compileExp e))) args
-compileExp (ECase e cases)   = Case (Exp (Constr (compileExp e))) (compileCases cases)
-compileExp (ECall mId fId e) = ModCall (m, fun) (map f as)
+compileExp (EVar nId)         = Var $ compileLambdaPat (HPR.PVar nId)
+compileExp (ELit l)           = Lit $ compileLiteral l
+compileExp (ETuple es)        = Tuple $ map (\e -> Exp (Constr (compileExp e))) es
+compileExp l@(ELambda pats e) = compileLambda l
+compileExp (EApp e1 e2)       = undefined --TODO IMPLEMENT
+compileExp (ECase e cases)    = Case (Exp (Constr (compileExp e))) (compileCases cases)
+compileExp (ECall mId fId e)  = ModCall (m, fun) (map f as)
   where m           = Exp (Constr (Lit (LAtom (Atom mId))))
         fun         = Exp (Constr (Lit (LAtom (Atom fId))))
         (ETuple as) = e
         f x = Exp (Constr (compileExp x))
+compileExp e                  = error $ "Illegal expression: " ++ show e
+
+compileLambda :: Expression -> CES.Exp
+compileLambda (ELambda pats e) = undefined --TODO IMPLEMENT
+compileLambda e                = error $ "Not a lambda: " ++ show e
 
 -- |The 'compileLambdaPat' function converts a
 --  PatAST to a CoreErlang.Var
@@ -118,7 +121,10 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
 compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
-compileCasePat (HPR.PCon c pts)  = CES.PTuple $ (CES.PLit $ LAtom $ Atom c) : map compileCasePat pts
+compileCasePat (HPR.PCon c pts)  = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : map compileCasePat pts
+  where c' = case c of
+               ':':xs -> xs
+               x:xs   -> toLower x : xs
 compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
