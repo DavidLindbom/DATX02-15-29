@@ -38,4 +38,20 @@ insikter
   och importer, till en början den vanliga parsern vilket gör att dep-check
   kommer kunna ge parser-fel
 -}
-dependencyCheck = undefined
+
+import Control.Monad.Trans.State
+import Data.Map
+
+
+type Env = Map FilePath [FilePath]
+
+type CheckM a = StateT Env IO a
+
+depcheck :: FilePath -> IO [FilePath]
+depcheck = undefined
+
+reccheck :: FilePath -> CheckM ()
+reccheck = undefined
+
+check :: FilePath -> CheckM [FilePath]
+check = undefined
