@@ -30,7 +30,7 @@ data Function a = Fun Modulename Identifier a Expression
 
 data Type = TForAll Type
           | TVar Identifier
-          | TCon Identifier -- Includes the module name
+          | TCon Constructor -- Includes the module name
           | TApp Type Type
   deriving (Eq,Ord,Show)
 

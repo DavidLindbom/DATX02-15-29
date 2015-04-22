@@ -4,7 +4,7 @@
 module Parser.ParHopper where
 import Parser.AbsHopper
 import Parser.LexHopper
-import Parser.ErrM
+import Utils.ErrM
 
 }
 
@@ -28,13 +28,14 @@ import Parser.ErrM
   'data' { PT _ (TS _ 11) }
   'else' { PT _ (TS _ 12) }
   'if' { PT _ (TS _ 13) }
-  'module' { PT _ (TS _ 14) }
-  'of' { PT _ (TS _ 15) }
-  'then' { PT _ (TS _ 16) }
-  'where' { PT _ (TS _ 17) }
-  '{' { PT _ (TS _ 18) }
-  '|' { PT _ (TS _ 19) }
-  '}' { PT _ (TS _ 20) }
+  'import' { PT _ (TS _ 14) }
+  'module' { PT _ (TS _ 15) }
+  'of' { PT _ (TS _ 16) }
+  'then' { PT _ (TS _ 17) }
+  'where' { PT _ (TS _ 18) }
+  '{' { PT _ (TS _ 19) }
+  '|' { PT _ (TS _ 20) }
+  '}' { PT _ (TS _ 21) }
 
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
@@ -56,7 +57,7 @@ IdCon    :: { IdCon} : L_IdCon { IdCon ($1)}
 IdOpr    :: { IdOpr} : L_IdOpr { IdOpr ($1)}
 
 Module :: { Module }
-Module : 'module' IdCon Exports 'where' ';' ListDef { MMod $2 $3 $6 } 
+Module : 'module' IdCon Exports 'where' ';' ListImport ListDef { MMod $2 $3 $6 $7 } 
 
 
 Exports :: { Exports }
@@ -72,6 +73,16 @@ ListExport :: { [Export] }
 ListExport : {- empty -} { [] } 
   | Export { (:[]) $1 }
   | Export ',' ListExport { (:) $1 $3 }
+
+
+Import :: { Import }
+Import : 'import' IdCon { IImport $2 } 
+
+
+ListImport :: { [Import] }
+ListImport : {- empty -} { [] } 
+  | Import { (:[]) $1 }
+  | Import ';' ListImport { (:) $1 $3 }
 
 
 Def :: { Def }
