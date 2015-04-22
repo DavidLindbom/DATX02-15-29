@@ -11,7 +11,7 @@ newtype IdVar = IdVar String deriving (Eq,Ord,Show,Read)
 newtype IdCon = IdCon String deriving (Eq,Ord,Show,Read)
 newtype IdOpr = IdOpr String deriving (Eq,Ord,Show,Read)
 data Module =
-   MMod IdCon Exports [Def]
+   MMod IdCon Exports [Import] [Def]
   deriving (Eq,Ord,Show,Read)
 
 data Exports =
@@ -21,6 +21,10 @@ data Exports =
 
 data Export =
    NExp Id
+  deriving (Eq,Ord,Show,Read)
+
+data Import =
+   IImport IdCon
   deriving (Eq,Ord,Show,Read)
 
 data Def =

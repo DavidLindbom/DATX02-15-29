@@ -12,7 +12,7 @@ layout toplevel        ;
 --
 
 entrypoints Module;
-MMod. Module ::= "module" IdCon Exports "where" ";" [Def] ;
+MMod. Module ::= "module" IdCon Exports "where" ";" [Import] [Def] ;
 
 --
 -- Exports
@@ -25,6 +25,14 @@ NExps.  Exports ::= "(" [Export] ")" ;
 
 NExp. Export ::= Id  ;
 separator Export "," ;
+
+--
+-- Imports
+-- =======
+--
+
+IImport. Import ::= "import" IdCon ;
+separator Import ";" ;
 
 --
 -- Definitions

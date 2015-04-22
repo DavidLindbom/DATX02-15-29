@@ -94,7 +94,7 @@ instance Print IdOpr where
 
 instance Print Module where
   prt i e = case e of
-   MMod idcon exports defs -> prPrec i 0 (concatD [doc (showString "module") , prt 0 idcon , prt 0 exports , doc (showString "where") , doc (showString ";") , prt 0 defs])
+   MMod idcon exports imports defs -> prPrec i 0 (concatD [doc (showString "module") , prt 0 idcon , prt 0 exports , doc (showString "where") , doc (showString ";") , prt 0 imports , prt 0 defs])
 
 
 instance Print Exports where
@@ -111,6 +111,15 @@ instance Print Export where
    [] -> (concatD [])
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+
+instance Print Import where
+  prt i e = case e of
+   IImport idcon -> prPrec i 0 (concatD [doc (showString "import") , prt 0 idcon])
+
+  prtList es = case es of
+   [] -> (concatD [])
+   [x] -> (concatD [prt 0 x])
+   x:xs -> (concatD [prt 0 x , doc (showString ";") , prt 0 xs])
 
 instance Print Def where
   prt i e = case e of
