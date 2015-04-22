@@ -43,7 +43,7 @@ import Control.Monad.Trans.State
 import qualified Data.Map as Map
 import Data.Graph
 
-import AST.AST (Module (..))
+import AST.AST (Module (..), Identifier, Modulename)
 import Parser.Parser
 import Renamer.Renamer (transform)
 import Utils.ErrM
@@ -63,8 +63,7 @@ dependencyCheck file = do
   themap <- execStateT (reccheck file) emptyEnv
   let graph = map (\(k,v) -> (k, k, v)) $ Map.assocs themap
   let topsorted = stronglyConnComp graph
-  compileOrder <- acyclicOrder topsorted
-  return compileOrder
+  acyclicOrder topsorted
 
 -- | Extract the module filepaths from the SCC datatype, meanwhile asserting
 -- that no cyclical dependencies are present.
@@ -76,9 +75,16 @@ acyclicOrder =
     cycleCheck (CyclicSCC xs) = fail $ "Cyclic dependencies found: " ++
                                        show xs
 
+-- | Recursively call check on imported statements.
+-- Base cases are the empty list and file paths already processed.
 reccheck :: FilePath -> CheckM ()
-reccheck = undefined
-
+reccheck fp = do
+  notProcessed <- gets (Map.notMember fp)
+  when notProcessed process
+  where
+    process = do
+      fps <- check fp
+      mapM reccheck fps
 
 -- | Check a unit of compilation.
 -- Checks if file exists and if module name is correct relative to file path.
@@ -90,6 +96,25 @@ check fp = do
   f <- readFile fp
   case parse f of
     Ok mod  -> case transform mod of
-      Ok (Mod _ _ imps _ _) -> undefined
+      Ok (Mod name _ imps _ _) ->
+        if verifies fp name
+          then do
+            let fps = map toFilePath imps
+            modify (Map.insert fp fps)
+            return imps
+          else fail $ "Bad module name '" ++ name ++ "' expected '"
+               ++ toModuleName fp
       Bad msg -> fail msg
     Bad msg -> fail msg
+
+-- | Verifies module name matches file path
+verifies :: FilePath -> String -> Bool
+verifier fp name = undefined
+
+-- | Convert a module name to a file path
+toFilePath :: String -> FilePath
+toFilePath = replace "." "/"
+
+-- | Convert a file path to a module name
+toModuleName :: FilePath -> String
+toModuleName = replace "/" "."
