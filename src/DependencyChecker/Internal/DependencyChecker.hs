@@ -43,6 +43,10 @@ import Control.Monad.Trans.State
 import qualified Data.Map as Map
 import Data.Graph
 
+import AST.AST (Module (..))
+import Parser.Parser
+import Renamer.Renamer (transform)
+import Utils.ErrM
 
 type Env = Map.Map FilePath [FilePath]
 
@@ -75,5 +79,17 @@ acyclicOrder =
 reccheck :: FilePath -> CheckM ()
 reccheck = undefined
 
+
+-- | Check a unit of compilation.
+-- Checks if file exists and if module name is correct relative to file path.
+-- Puts the module file path and the list of imported modules in the
+-- environment.
+-- Returns the list of imported modules in the module.
 check :: FilePath -> CheckM [FilePath]
-check = undefined
+check fp = do
+  f <- readFile fp
+  case parse f of
+    Ok mod  -> case transform mod of
+      Ok (Mod _ _ imps _ _) -> undefined
+      Bad msg -> fail msg
+    Bad msg -> fail msg
