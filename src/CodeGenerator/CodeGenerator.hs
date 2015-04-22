@@ -25,7 +25,7 @@ import AST.AST as HPR
 
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
-compileModule :: HPR.Module Signature -> CES.Module
+compileModule :: HPR.Module Type -> CES.Module
 compileModule m@(Mod mId exports defs datas) = CES.Module (Atom mId) es as ds
   where as = []
         ds = map compileFun defs ++ generateModuleInfo mId
@@ -33,13 +33,13 @@ compileModule m@(Mod mId exports defs datas) = CES.Module (Atom mId) es as ds
 
 -- |The 'compileModuleString' function compiles a hoppper
 --  to a Core Erlang code string
-compileModuleString :: HPR.Module Signature -> Err String
+compileModuleString :: HPR.Module Type -> Err String
 compileModuleString m = Ok $ prettyPrint cesModule
   where cesModule = compileModule m
 
 -- |The 'compileExports' function compiles a list of Identifier
 --  to a list of CoreErlang.Syntax.Function
-compileExports :: [Identifier] -> HPR.Module Signature -> [CES.Function]
+compileExports :: [Identifier] -> HPR.Module Type -> [CES.Function]
 compileExports es m = map (compileExport m) es ++ [mi0,mi1]
   where mi0  = CES.Function (name,0)
         mi1  = CES.Function (name,1)
@@ -47,12 +47,12 @@ compileExports es m = map (compileExport m) es ++ [mi0,mi1]
 
 -- |The 'compileExport' function compiles an Identifier
 --  to a CoreErlang.Syntax.Function
-compileExport :: HPR.Module Signature -> Identifier -> CES.Function
+compileExport :: HPR.Module Type -> Identifier -> CES.Function
 compileExport m eId = CES.Function (Atom eId, getArity eId m)
 
 -- |The 'compileFun' function compiles a hopper Function
 --  to a CoreErlang.FunDef
-compileFun :: HPR.Function Signature -> FunDef
+compileFun :: HPR.Function Type -> FunDef
 compileFun (HPR.Fun fId t e) = 
   CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (compileExp e'))
   where e' = case e of
@@ -95,7 +95,7 @@ compileLambdaPat PWild           = "_"
 compileLambdaPat (HPR.PTuple ps) = error $ "Tuple not implemented yet, got: " ++ show ps
 compileLambdaPat (HPR.PLit l)    = error $ "Unallowed literal in lambda pattern: " ++ show l 
 compileLambdaPat (HPR.PVar v)    = '_':v
-compileLambdaPat (PCon c)        = error $ "Constructors not implemented: " ++ show c
+compileLambdaPat (PCon c pts)    = error $ "Constructors not implemented: " ++ show c
 
 -- |The 'compileCases' function converts a list of
 --  cases to a list of annotated alts as seen in
@@ -118,7 +118,7 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compileCasePat :: Pattern -> Pat
 compileCasePat p@(HPR.PVar _)    = CES.PVar $ compileLambdaPat p
-compileCasePat (HPR.PCon c)      = CES.PLit $ LAtom $ Atom c
+compileCasePat (HPR.PCon c pts)  = CES.PTuple $ (CES.PLit $ LAtom $ Atom c) : map compileCasePat pts
 compileCasePat p@PWild           = CES.PVar $ compileLambdaPat p
 compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
@@ -142,17 +142,17 @@ isIdBound i (_:pats) = isIdBound i pats
 
 -- |The 'getArity' function gets the arity of the function
 --  with the given id in the given ModuleAST
-getArity :: String -> HPR.Module Signature -> Integer
+getArity :: String -> HPR.Module Type -> Integer
 getArity fId m = typeToArity $ getTypeSig fId m
 
 -- |The 'typeToArity' returns the corresponding arity
 --  of the given Signature. Nothing will just return 0
-typeToArity :: Signature -> Integer
-typeToArity t = toInteger $ length t - 1
+typeToArity :: Type -> Integer
+typeToArity _ = 1 -- TODO NOT CORRECT AT ALL
 
 -- |The 'getTypeSig' function gets the Signature
 --  of the function with the given id in the given ModuleAST
-getTypeSig :: String -> HPR.Module Signature -> Signature
+getTypeSig :: String -> HPR.Module Type -> Type
 getTypeSig fId (Mod _ _ [] _) = error $ "Could not find function when looking for signature: " ++ fId
 getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs) datas)
   | fId == funId = typeSig
@@ -160,8 +160,8 @@ getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs) datas)
 
 -- |The 'gitSignatures' function gets the function
 --  signatures from the give module
-getSignatures :: HPR.Module Signature -> [(Identifier, Integer)]
-getSignatures (Mod _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, toInteger (length sig - 1))) defs
+getSignatures :: HPR.Module Type -> [(Identifier, Integer)]
+getSignatures (Mod _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, 1)) defs
 
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
