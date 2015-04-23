@@ -6,6 +6,8 @@ import System.Exit
 
 import Control.Monad
 
+import DependencyChecker.DependencyChecker (dependencyCheck)
+
 import Parser.PrintHopper (printTree)
 import Parser.ParHopper
 import Parser.LayoutHopper
@@ -42,60 +44,11 @@ main' :: [String] -> IO ()
 main' args = do
   (opts, files) <- argparse args
   
-  -- Verbose aware writer
-  let write = write' opts
-
-  -- Opens Err if flag is set
-  let whenFlag = whenFlag' opts
-
   case files of
     [] -> putStr (usageInfo header options ++ footer) 
-    fs -> (flip mapM_) fs $ \f -> do
-      let f' = dropHPR f
-      
-      code <- readFile f
-      
-      -- Parse
-      let treeE = parse code
-
-      whenFlag Parse treeE $ \tree -> do
-        writeFile (f'++".parse.hpr") (printTree tree)
-        write $ "Wrote parse file to " ++ f' ++ ".parse.hpr"
-
-      -- Convert to AST
-      let astE = treeE >>= transform
-
-      whenFlag AST astE $ \ast -> do
-        writeFile (f'++".ast.hs") ("import AST.AST\nast="++show ast)
-        write $ "Wrote ast to " ++ f' ++ ".ast.hs"
-
-      -- Typechecker
-      let typedE = astE >>= typeCheck
-
-      whenFlag TypeCheck typedE $ \typed -> do
-        writeFile (f'++".typed.hs") ("import AST.AST\ntyped="++show typed)
-        write $ "Wrote typed ast to " ++ f' ++ ".typed.hs"
-
-      -- Pre code generation renaming
-      let renamedE = typedE >>= transform2
-
-      -- Code generation
-      let coreE = renamedE >>= compileModuleString 
-
-      whenFlag Core coreE $ \core -> do
-        writeFile (f'++".core") core
-        write $ "Wrote core file to " ++ f' ++ ".core"
-
-      -- erlc compilation
-      when (NoBeam `notElem` opts) $ do
-        case coreE of
-          Bad e -> putStrLn e >> exitFailure
-          Ok  c -> do
-            write $ "Running erlc on " ++ f' ++ ".core"
-            writeBeam f' c (Core `elem` opts)
-
+    fs -> forM_ fs (compile opts)
   write "Done!"
-  where 
+  where
     argparse argv = case (getOpt Permute options argv) of
                       (o,n,[] ) -> return (o,n)
                       (_,_,err) -> do
@@ -110,7 +63,65 @@ main' args = do
                        , "Created by: Chalmers University Bachelor Project DATX2-15-29"
                        , "2015 All rights reserved"
                        ]
-    
+
+-- | Compile a module along with all its dependencies.
+compile :: [Flag] -> FilePath -> IO ()
+compile opts f = do
+  fs <- dependencyCheck f
+  forM_ fs (compileFile opts)
+
+-- | Compile a single file.
+compileFile :: [Flag] -> FilePath -> IO ()
+compileFile opts f = do
+  -- Verbose aware writer
+  let write = write' opts
+
+  -- Opens Err if flag is set
+  let whenFlag = whenFlag' opts
+
+  let f' = dropHPR f
+  
+  code <- readFile f
+  
+  -- Parse
+  let treeE = parse code
+
+  whenFlag Parse treeE $ \tree -> do
+    writeFile (f'++".parse.hpr") (printTree tree)
+    write $ "Wrote parse file to " ++ f' ++ ".parse.hpr"
+
+  -- Convert to AST
+  let astE = treeE >>= transform
+
+  whenFlag AST astE $ \ast -> do
+    writeFile (f'++".ast.hs") ("import AST.AST\nast="++show ast)
+    write $ "Wrote ast to " ++ f' ++ ".ast.hs"
+
+  -- Typechecker
+  let typedE = astE >>= typeCheck
+
+  whenFlag TypeCheck typedE $ \typed -> do
+    writeFile (f'++".typed.hs") ("import AST.AST\ntyped="++show typed)
+    write $ "Wrote typed ast to " ++ f' ++ ".typed.hs"
+
+  -- Pre code generation renaming
+  let renamedE = typedE >>= transform2
+
+  -- Code generation
+  let coreE = renamedE >>= compileModuleString 
+
+  whenFlag Core coreE $ \core -> do
+    writeFile (f'++".core") core
+    write $ "Wrote core file to " ++ f' ++ ".core"
+
+  -- erlc compilation
+  when (NoBeam `notElem` opts) $ do
+    case coreE of
+      Bad e -> putStrLn e >> exitFailure
+      Ok  c -> do
+        write $ "Running erlc on " ++ f' ++ ".core"
+        writeBeam f' c (Core `elem` opts)
+  where
     write' opt a = if Verbose `elem` opt
                    then putStrLn a
                    else return ()
@@ -121,3 +132,4 @@ main' args = do
       when (flag `elem` opt) $ case a of
         Bad e -> putStrLn e >> exitFailure 
         Ok  t -> f t 
+
