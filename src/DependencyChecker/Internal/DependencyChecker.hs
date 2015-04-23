@@ -1,4 +1,4 @@
-module DependencyChecker.Internal.DependencyChecker (dependencyCheck) where
+module DependencyChecker.Internal.DependencyChecker where
 
 {-
 insikter från workshop
@@ -44,8 +44,10 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import qualified Data.Map as Map
 import Data.Graph
+import System.Directory
+import System.FilePath
 
-import AST.AST (Module (..))
+import AST.AST (Module (..), Modulename)
 import Parser.Parser
 import Renamer.Renamer (transform)
 import Utils.ErrM
@@ -61,11 +63,15 @@ emptyEnv = Map.empty
 -- sorted compilation order, such that all dependencies of a module are
 -- compiled before that module.
 dependencyCheck :: FilePath -> IO [FilePath]
-dependencyCheck file = do
-  themap <- execStateT (reccheck file) emptyEnv
-  let graph = map (\(k,v) -> (k, k, v)) $ Map.assocs themap
-  let topsorted = stronglyConnComp graph
-  acyclicOrder topsorted
+dependencyCheck fp =
+  if not $ isValid fp
+    then fail $ "Bad file path " ++ fp
+    else do
+      fp' <- makeAbsolute fp
+      themap <- execStateT (reccheck fp') emptyEnv
+      let graph = map (\(k, v) -> (k, k, v)) $ Map.assocs themap
+      let topsorted = stronglyConnComp graph
+      acyclicOrder topsorted
 
 -- | Extract the module filepaths from the SCC datatype, meanwhile asserting
 -- that no cyclical dependencies are present.
@@ -95,31 +101,44 @@ reccheck fp = do
 -- Returns the list of imported modules in the module.
 check :: FilePath -> CheckM [FilePath]
 check fp = do
-  f <- liftIO $ readFile fp
+  fp' <- liftIO $ makeAbsolute fp
+  f <- liftIO $ readFile fp'
   case parse f of
     Ok m  -> case transform m of
-      Ok (Mod name _ imps _ _) ->
-        if True
+      Ok (Mod name _ imps _ _) -> do
+        let mfp = toFilePath name
+        mfp' <- liftIO $ makeAbsolute mfp
+        if fp' == mfp'
           then do
             let fps = map toFilePath imps
-            modify (Map.insert fp fps)
+            fps' <- liftIO $ mapM makeAbsolute fps
+            modify (Map.insert fp' fps')
             return imps
-          else fail $ "Bad module name '" ++ name ++ "' expected '"
-               ++ toModuleName fp
+          else fail $ "Bad module name '" ++ name ++ "' in path '"
+               ++ fp'
       Bad msg -> fail msg
     Bad msg -> fail msg
 
 -- | Verifies module name matches file path
-verifies :: FilePath -> String -> Bool
+verifies :: FilePath -> Modulename -> Bool
 verifies fp name = fp == toFilePath name
 
--- | Convert a module name to a file path
-toFilePath :: String -> FilePath
-toFilePath fps = replace '.' '/' fps ++ ".hop"
+-- | Takes a file path and makes it absolute relative the working directory
+-- if it isn't already absolute
+makeAbsolute :: FilePath -> IO FilePath
+makeAbsolute fp =
+  if isAbsolute fp
+  then return fp
+  else do
+    dir <- getCurrentDirectory
+    return $ dir </> fp
 
--- | Convert a file path to a module name
-toModuleName :: FilePath -> String
-toModuleName  = replace '/' '.'
+-- | Convert a module name to a file path
+toFilePath :: Modulename -> FilePath
+toFilePath fps = replace '.' pathSeparator fps <.> hopExt
+
+hopExt :: String
+hopExt = "hop"
 
 -- | Replace each occurence of the first argument with the second in the list.
 replace :: Eq a => a -> a -> [a] -> [a]
