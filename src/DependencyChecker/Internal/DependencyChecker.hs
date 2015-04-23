@@ -39,11 +39,13 @@ insikter
   kommer kunna ge parser-fel
 -}
 
+import Control.Monad
+import Control.Monad.IO.Class
 import Control.Monad.Trans.State
 import qualified Data.Map as Map
 import Data.Graph
 
-import AST.AST (Module (..), Identifier, Modulename)
+import AST.AST (Module (..))
 import Parser.Parser
 import Renamer.Renamer (transform)
 import Utils.ErrM
@@ -84,7 +86,7 @@ reccheck fp = do
   where
     process = do
       fps <- check fp
-      mapM reccheck fps
+      mapM_ reccheck fps
 
 -- | Check a unit of compilation.
 -- Checks if file exists and if module name is correct relative to file path.
@@ -93,11 +95,11 @@ reccheck fp = do
 -- Returns the list of imported modules in the module.
 check :: FilePath -> CheckM [FilePath]
 check fp = do
-  f <- readFile fp
+  f <- liftIO $ readFile fp
   case parse f of
-    Ok mod  -> case transform mod of
+    Ok m  -> case transform m of
       Ok (Mod name _ imps _ _) ->
-        if verifies fp name
+        if True
           then do
             let fps = map toFilePath imps
             modify (Map.insert fp fps)
@@ -109,12 +111,16 @@ check fp = do
 
 -- | Verifies module name matches file path
 verifies :: FilePath -> String -> Bool
-verifier fp name = undefined
+verifies fp name = fp == toFilePath name
 
 -- | Convert a module name to a file path
 toFilePath :: String -> FilePath
-toFilePath = replace "." "/"
+toFilePath fps = replace '.' '/' fps ++ ".hop"
 
 -- | Convert a file path to a module name
 toModuleName :: FilePath -> String
-toModuleName = replace "/" "."
+toModuleName  = replace '/' '.'
+
+-- | Replace each occurence of the first argument with the second in the list.
+replace :: Eq a => a -> a -> [a] -> [a]
+replace x y = map (\z -> if z == x then y else z)
