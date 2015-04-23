@@ -38,6 +38,10 @@ transformImports :: [Import] -> Err [Identifier]
 transformImports ids = Ok $ map go ids
   where go (IImport (IdCon i)) = i
 
+transformImports :: [Import] -> Err [Identifier]
+transformImports ids = Ok $ map go ids
+  where go (IImport (IdCon i)) = i
+
 transformDefs :: Modulename -> [Def] -> Err [Function (Maybe AST.Type)]
 transformDefs name defs = do
   funs <- foldM go M.empty defs 

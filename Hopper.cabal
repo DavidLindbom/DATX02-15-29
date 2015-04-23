@@ -19,6 +19,7 @@ executable hopper
                        base >=4.5 && <4.8,
                        process,
                        directory,
+                       filepath,
                        array >=0.4,
                        pretty >=1.1.1.0,
                        mtl >=2.2.1,
@@ -39,6 +40,28 @@ test-suite test-hopper
                        base >=4.5 && <4.8, 
                        process,
                        directory,
+                       filepath,
+                       pretty >=1.1.1.0,
+                       mtl >=2.2.1,
+                       transformers >=0.4.2.0,
+                       array >=0.4, containers,
+                       HUnit,
+                       test-framework,
+                       test-framework-hunit
+    default-language:  Haskell2010
+
+test-suite DependencyChecker
+    type:              exitcode-stdio-1.0
+    build-tools:       alex, happy
+    other-modules:     Parser.LexHopper,
+                       Parser.ParHopper
+    main-is:           DependencyChecker.hs
+    hs-source-dirs:    tests, src
+    build-depends:     CoreErlang,
+                       base >=4.5 && <4.8, 
+                       process,
+                       directory,
+                       filepath,
                        pretty >=1.1.1.0,
                        mtl >=2.2.1,
                        transformers >=0.4.2.0,
