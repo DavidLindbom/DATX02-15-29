@@ -1,4 +1,4 @@
-module Utils.PathTools (makeAbsolute, toFilePath) where
+module Utils.PathTools where
 
 import System.Directory
 import System.FilePath
