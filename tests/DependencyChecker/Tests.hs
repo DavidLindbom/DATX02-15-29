@@ -31,10 +31,16 @@ dependencyCheckerTests =
 
 checkNoImports :: Assertion
 checkNoImports = do
-  assertFail "Test not implemented"
   fp' <- makeAbsolute fp
   putStrLn fp'
   themap <- execStateT (check fp') emptyEnv
-  return ()
+  assertBool "Size of map not one" $ Map.size themap == 1
   where
-    fp = "tests" </> "DependencyChecker" </> "Good" </> "NoImports" <.> hopExt
+    fp = good "NoImports"
+
+
+good :: String -> FilePath
+good m = "Good" </> m <.> hopExt
+
+bad :: String -> FilePath
+bad m = "Bad" </> m <.> hopExt
