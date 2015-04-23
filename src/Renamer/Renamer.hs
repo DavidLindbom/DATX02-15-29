@@ -10,7 +10,8 @@ import Utils.ErrM
 import Utils.BIF
 
 transform :: HPR.Module -> Err (AST.Module (Maybe AST.Type))
-transform (MMod (IdCon name) exports imports defs) = do
+transform (MMod modulename exports imports defs) = do
+  let name = fromIdCon modulename
   let (adts,defs') = findADTs name defs
   defs'' <- transformDefs name defs'
   mapM_ checkLonelySignatures defs''
@@ -32,15 +33,11 @@ transform (MMod (IdCon name) exports imports defs) = do
 transformExports :: Modulename -> Exports -> Err [Identifier]
 transformExports _    NEmpty      = Ok [] 
 transformExports name (NExps ids) = Ok $ map go ids
-  where go (NExp i) = prefix name (fromId i)
+  where go (NExp i) = prefix name i
 
 transformImports :: [Import] -> Err [Identifier]
 transformImports ids = Ok $ map go ids
-  where go (IImport (IdCon i)) = i
-
-transformImports :: [Import] -> Err [Identifier]
-transformImports ids = Ok $ map go ids
-  where go (IImport (IdCon i)) = i
+  where go (IImport i) = fromIdCon i
 
 transformDefs :: Modulename -> [Def] -> Err [Function (Maybe AST.Type)]
 transformDefs name defs = do
@@ -50,23 +47,25 @@ transformDefs name defs = do
     go :: M.Map Identifier (Function (Maybe AST.Type)) -> Def
        -> Err (M.Map Identifier (Function (Maybe AST.Type)))
    
-    go m (DSig (SSig (IdVar i) t)) = case M.lookup i m of
+    go m (DSig (SSig i' t)) = let i = fromIdVar i'
+                              in case M.lookup i m of
         -- There is no function
         Nothing -> 
-          return $ M.insert i (Fun (prefix name i) 
+          return $ M.insert i (Fun (prefix name i') 
                                    (Just $ transformTypes name t) 
                                    eundefined) m
         
         -- There is a function, but no signature
         Just (Fun _ Nothing e) -> 
-          return $ M.insert i (Fun (prefix name i) 
+          return $ M.insert i (Fun (prefix name i') 
                                    (Just $ transformTypes name t) 
                                    e) m
         
         -- There is a function and a signature
         _ -> fail $ "Multiple signatures for '" ++ i ++ "'"
     
-    go m (DFun (FFun (IdVar i) as e)) = do
+    go m (DFun (FFun i' as e)) = do
+      let TIdVar i = i'
       e' <- transformExpr name e
 
       -- Add lambda if arguments
@@ -79,19 +78,19 @@ transformDefs name defs = do
         Nothing           -> do
           -- If does pattern matching in args, generate case expression
           e''' <- case e'' of
-            (AST.ELambda pat ex) | doesMatching pat -> do 
+            (AST.ELambda pat ex) | doesMatching pat -> do 
               let args = makeArgs pat
               ts <- expressionFromArgs args
               let cs = AST.ECase ts [(AST.PTuple pat, ex)]
-              return $ AST.ELambda args cs
+              return $ AST.ELambda args cs
             _ -> return e''
             
-          return $ M.insert i (Fun (prefix name i) Nothing e''') m
+          return $ M.insert i (Fun (prefix name i') Nothing e''') m
         Just (Fun _ t es) -> do
           cs <- mergeCase es e''
-          return $ M.insert i (Fun (prefix name i) t cs) m
+          return $ M.insert i (Fun (prefix name i') t cs) m
 
-    go _ (DAdt (AAdt (IdCon s) _ _)) = fail $ 
+    go _ (DAdt (AAdt (TIdCon s) _ _)) = fail $ 
       "Bug! Found data declaration '" ++ s ++ "' in transformDefs"
 
 transformTypes :: Modulename -> [HPR.Type] -> AST.Type
@@ -102,13 +101,14 @@ transformTypes name ts' = let (t:ts) = reverse ts'
     go a b = AST.TCon "Prim.->" `AST.TApp` go' b `AST.TApp` a
 
     go' :: HPR.Type -> AST.Type
-    go' (HPR.TName (IdCon c) ids)     = foldr go'' (AST.TCon $ prim c) ids
-    go' (HPR.TVar (IdVar v))          = AST.TVar v
+    go' (HPR.TName c ids)     = foldr go'' (AST.TCon . prim . fromIdCon $ c) ids
+    go' (HPR.TVar (TIdVar v)) = AST.TVar v
     go' (HPR.TTuple ((TTTuple t):ts)) = foldr go''' (transformTypes name t) ts
 
     go'' :: HPR.TypeArg -> AST.Type -> AST.Type
-    go'' (TTAId (ICon (IdCon c)))    b = b `AST.TApp` (AST.TCon $ prim c)
-    go'' (TTAId (IVar (IdVar v)))    b = b `AST.TApp` AST.TVar v
+    go'' (TTAId (ICon (IdConNQ (TIdCon c)))) b = b `AST.TApp` (AST.TCon $ prim c)
+    go'' (TTAId (ICon (IdConQ (TQIdCon c)))) b = b `AST.TApp` (AST.TCon c)
+    go'' (TTAId (IVar v))            b = b `AST.TApp` (AST.TVar . fromIdVar $ v)
     go'' (TTATuple ((TTTuple t):ts)) b = b `AST.TApp` foldr go''' (transformTypes name t) ts
 
     go''' :: HPR.TypeTuple -> AST.Type -> AST.Type
@@ -124,8 +124,8 @@ transformTypes name ts' = let (t:ts) = reverse ts'
 transformExpr :: Modulename -> HPR.Expr -> Err AST.Expression
 transformExpr name e = case e of
   HPR.EId i -> Ok $ case i of
-    HPR.ICon (IdCon i') -> AST.ECon $ prefix name i'
-    HPR.IVar (IdVar i') -> AST.EVar $ prefix name i'
+    HPR.ICon i' -> AST.ECon $ prefix name i'
+    HPR.IVar i' -> AST.EVar $ prefix name i'
   
   HPR.EPrim p -> Ok $ AST.ELit $ case p of
     HPR.IInteger i -> LI i
@@ -138,7 +138,8 @@ transformExpr name e = case e of
                                             (HPR.EApp
                                               (HPR.EId 
                                                 (HPR.IVar 
-                                                  (IdVar op)))
+                                                  (IdVarNQ
+                                                    (TIdVar op))))
                                               a)
                                             b
 
@@ -150,11 +151,11 @@ transformExpr name e = case e of
                               _            -> Ok $ AST.EApp a' b'
                             _          -> Ok $ AST.EApp a' b'
 
-  HPR.EOpr (IdOpr i) -> Ok $ AST.EVar $ prefix name i
+  HPR.EOpr i         -> Ok $ AST.EVar $ prefix name i
   
   HPR.ECase a c      -> do e' <- transformExpr name a
                            c' <- mapM (transformClause name) c
-                           Ok $ AST.ECase e' c'
+                           Ok $ AST.ECase e' c'
   
   HPR.EIf a b c      -> do a' <- transformExpr name a
                            b' <- transformExpr name b
@@ -172,9 +173,8 @@ transformExpr name e = case e of
 
 transformPat :: Modulename -> HPR.Pat -> Err AST.Pattern
 transformPat name p = case p of
-  HPR.PId i -> Ok $ case i of
-    HPR.ICon (IdCon i') -> AST.PCon (prefix name i') []
-    HPR.IVar (IdVar i') -> AST.PVar (prefix name i')
+  HPR.PCon i  -> Ok $ AST.PCon (prefix name i) []
+  HPR.PVar i  -> Ok $ AST.PVar (prefix name i)
 
   HPR.PPrim p -> Ok $ AST.PLit $ case p of
     HPR.IInteger i -> LI i
@@ -182,17 +182,17 @@ transformPat name p = case p of
     HPR.IString s  -> LS s
     HPR.IChar c    -> LC c
 
-  HPR.PWild          -> Ok $ AST.PWild
+  HPR.PWild   -> Ok $ AST.PWild
 
-  HPR.PTuple [p]     -> transformPatTuple name p
-  HPR.PTuple ps      -> do ps' <- mapM (transformPatTuple name) ps
-                           Ok $ AST.PTuple ps'
+  HPR.PTuple [p] -> transformPatTuple name p
+  HPR.PTuple ps  -> do ps' <- mapM (transformPatTuple name) ps
+                       Ok $ AST.PTuple ps'
 
 transformPatTuple :: Modulename -> HPR.PatTuple -> Err AST.Pattern
 transformPatTuple name a = case a of
-  HPR.PTCon (IdCon s) qs -> do qs' <- mapM (transformPat name) qs
-                               Ok $ AST.PCon (prefix name s) qs'
-  HPR.PTPat p            -> transformPat name p
+  HPR.PTCon s qs -> do qs' <- mapM (transformPat name) qs
+                       Ok $ AST.PCon (prefix name s) qs'
+  HPR.PTPat p    -> transformPat name p
 
 transformArg :: Modulename -> HPR.Arg -> Err AST.Pattern
 transformArg name (APat p) = transformPat name p
@@ -203,25 +203,15 @@ transformClause name (CClause pat e) = case pat of
                  e' <- transformExpr name e
                  Ok (p',e')
 
-  CCPCon (IdCon i) p -> do p' <- mapM (transformPat name) p
-                           let p'' = AST.PCon (prefix name i) p'
-                           e' <- transformExpr name e
-                           Ok (p'',e')
+  CCPCon i p -> do p' <- mapM (transformPat name) p
+                   let p'' = AST.PCon (prefix name i) p'
+                   e' <- transformExpr name e
+                   Ok (p'',e')
 
 
 --
 -- Helper functions
 --
-
-prefix :: Modulename -> Identifier -> Identifier
-prefix _ "True"  = "True"
-prefix _ "False" = "False"
-prefix m i       = m ++ "." ++ i
-
--- | Take out the identifier from an Id
-fromId :: Id -> Identifier
-fromId (ICon (IdCon s)) = s
-fromId (IVar (IdVar s)) = s
 
 -- | Find ADT declarations and take them out to an own map
 findADTs :: Modulename -> [HPR.Def] -> (M.Map Identifier AST.Type, [HPR.Def])
@@ -233,7 +223,7 @@ findADTs name defs = foldr go (M.empty,[]) defs -- reverse?
 
     -- Put ADT in map
     go d (m,ds) = case d of 
-      DAdt (AAdt (IdCon t) vars cons) -> 
+      DAdt (AAdt (TIdCon t) vars cons) -> 
         let m' = M.fromList $ map (dataToSignature name t vars) cons
         in (m <> m', ds)
       
@@ -247,23 +237,25 @@ dataToSignature :: Modulename -> Constructor -> [AdtVar]
                 -> AdtCon -> (Constructor, AST.Type)
 dataToSignature name ty tyvars adtcon = (prefix name con, types)
   where
-    (ACCon (IdCon con) conargs) = adtcon
+    (ACCon con conargs) = adtcon
     types = transformTypes name $ map go' conargs 
-                               ++ [TName (IdCon ty) (map go tyvars)]
+                               ++ [TName (IdConNQ (TIdCon ty)) (map go tyvars)]
 
     go :: AdtVar -> TypeArg
-    go (AVVar i) = TTAId $ IVar i
+    go (AVVar i) = TTAId (IVar (IdVarNQ i))
 
     go' :: AdtArg -> HPR.Type
-    go' (AAId (ICon i)) = HPR.TName i []
-    go' (AAId (IVar i)) = HPR.TVar i
+    go' (AAId i)        = HPR.TName i []
+    go' (AAVar i)       = HPR.TVar i
     go' (AATuple tup)   = HPR.TTuple $ map go'' tup
 
     go'' :: AdtArgTuple -> TypeTuple
     go'' (AATCon i a as) = TTTuple [HPR.TName i (map go''' (a:as))]
+    go'' (AATArg a)      = TTTuple [go' a]
 
     go''' :: AdtArg -> TypeArg
-    go''' (AAId i)      = TTAId i
+    go''' (AAId i)      = TTAId (ICon i)
+    go''' (AAVar i)     = TTAId (IVar (IdVarNQ i))
     go''' (AATuple aat) = TTATuple $ map go'' aat
 
 -- | A temporary expression representing a function without an expression yet
@@ -324,3 +316,51 @@ doesMatching :: [Pattern] -> Bool
 doesMatching = any matching
   where matching (AST.PVar _) = False
         matching _        = True
+
+
+class Prefix a where
+  prefix :: Modulename -> a -> Identifier
+
+
+instance Prefix TIdVar where
+  prefix n (TIdVar i) = n ++ "." ++ i
+  
+instance Prefix TQIdVar where
+  prefix _ (TQIdVar i) = i
+
+instance Prefix TIdCon where
+  prefix _ (TIdCon "True") = "True"
+  prefix _ (TIdCon "False") = "False"
+  prefix n (TIdCon i)       = n ++ "." ++ i
+
+instance Prefix TQIdCon where
+  prefix _ (TQIdCon i) = i
+
+instance Prefix IdVar where
+  prefix n (IdVarNQ i) = prefix n i
+  prefix n (IdVarQ i)  = prefix n i
+
+instance Prefix IdCon where
+  prefix n (IdConNQ i) = prefix n i
+  prefix n (IdConQ i)  = prefix n i
+
+instance Prefix IdOpr where
+  prefix n (IdOpr i) = n ++ "." ++ i
+
+instance Prefix Id where
+  prefix n (ICon i) = prefix n i
+  prefix n (IVar i) = prefix n i
+
+-- | Take out the identifier from an Id
+fromId :: Id -> Identifier
+fromId (ICon i) = fromIdCon i
+fromId (IVar i) = fromIdVar i
+
+fromIdCon :: IdCon -> Identifier
+fromIdCon (IdConNQ (TIdCon i)) = i
+fromIdCon (IdConQ (TQIdCon i)) = i
+
+fromIdVar :: IdVar -> Identifier
+fromIdVar (IdVarNQ (TIdVar i)) = i
+fromIdVar (IdVarQ (TQIdVar i)) = i
+

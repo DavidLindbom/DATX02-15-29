@@ -36,7 +36,7 @@ data Def =
   deriving (Eq,Ord,Show,Read)
 
 data Func =
-   FFun IdVar [Arg] Expr
+   FFun TIdVar [Arg] Expr
   deriving (Eq,Ord,Show,Read)
 
 data Arg =
@@ -64,7 +64,8 @@ data ClausePat =
   deriving (Eq,Ord,Show,Read)
 
 data Pat =
-   PId Id
+   PCon IdCon
+ | PVar TIdVar
  | PPrim Prim
  | PWild
  | PTuple [PatTuple]
@@ -81,7 +82,7 @@ data Sign =
 
 data Type =
    TName IdCon [TypeArg]
- | TVar IdVar
+ | TVar TIdVar
  | TTuple [TypeTuple]
   deriving (Eq,Ord,Show,Read)
 
@@ -95,19 +96,20 @@ data TypeArg =
   deriving (Eq,Ord,Show,Read)
 
 data Adt =
-   AAdt IdCon [AdtVar] [AdtCon]
+   AAdt TIdCon [AdtVar] [AdtCon]
   deriving (Eq,Ord,Show,Read)
 
 data AdtVar =
-   AVVar IdVar
+   AVVar TIdVar
   deriving (Eq,Ord,Show,Read)
 
 data AdtCon =
-   ACCon IdCon [AdtArg]
+   ACCon TIdCon [AdtArg]
   deriving (Eq,Ord,Show,Read)
 
 data AdtArg =
-   AAId Id
+   AAId IdCon
+ | AAVar TIdVar
  | AATuple [AdtArgTuple]
   deriving (Eq,Ord,Show,Read)
 

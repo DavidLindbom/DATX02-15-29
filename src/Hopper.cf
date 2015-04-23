@@ -49,7 +49,7 @@ separator Def ";"   ;
 -- =========
 --
 
-FFun. Func ::= IdVar [Arg] "=" "{" Expr "}" ;
+FFun. Func ::= TIdVar [Arg] "=" "{" Expr "}" ;
 
 --
 -- Arguments
@@ -86,7 +86,8 @@ CCPCon. ClausePat ::= IdCon [Pat] ;
 -- ========
 --
 
-PId.    Pat ::= Id                 ;
+PCon.   Pat ::= IdCon              ;
+PVar.   Pat ::= TIdVar             ;
 PPrim.  Pat ::= Prim               ;
 PWild.  Pat ::= "_"                ;
 PTuple. Pat ::= "(" [PatTuple] ")" ;
@@ -110,7 +111,7 @@ SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
 -- Replace TName and TVar with TId ::= Id ?
 
 TName.  Type ::= IdCon [TypeArg]     ;
-TVar.   Type ::= IdVar               ;
+TVar.   Type ::= TIdVar              ;
 TTuple. Type ::= "(" [TypeTuple] ")" ;
 separator nonempty Type "->"         ;
 
@@ -126,15 +127,16 @@ terminator TypeArg ""                     ;
 -- ================
 -- 
 
-AAdt. Adt ::= "data" IdCon [AdtVar] "=" "{" [AdtCon] "}" ;
+AAdt. Adt ::= "data" TIdCon [AdtVar] "=" "{" [AdtCon] "}" ;
 
-AVVar. AdtVar ::= IdVar ;
+AVVar. AdtVar ::= TIdVar ;
 terminator AdtVar ""    ;
 
-ACCon. AdtCon ::= IdCon [AdtArg] ;
+ACCon. AdtCon ::= TIdCon [AdtArg] ;
 separator nonempty AdtCon "|"    ;
 
-AAId.    AdtArg ::= Id                    ;
+AAId.    AdtArg ::= IdCon                 ;
+AAVar.   AdtArg ::= TIdVar                ;
 AATuple. AdtArg ::= "(" [AdtArgTuple] ")" ;
 terminator AdtArg ""                      ;
 

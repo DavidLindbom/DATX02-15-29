@@ -102,7 +102,7 @@ ListDef : {- empty -} { [] }
 
 
 Func :: { Func }
-Func : IdVar ListArg '=' '{' Expr '}' { FFun $1 (reverse $2) $5 } 
+Func : TIdVar ListArg '=' '{' Expr '}' { FFun $1 (reverse $2) $5 } 
 
 
 Arg :: { Arg }
@@ -149,7 +149,8 @@ ClausePat : Pat { CCPPat $1 }
 
 
 Pat :: { Pat }
-Pat : Id { PId $1 } 
+Pat : IdCon { PCon $1 } 
+  | TIdVar { PVar $1 }
   | Prim { PPrim $1 }
   | '_' { PWild }
   | '(' ListPatTuple ')' { PTuple $2 }
@@ -177,7 +178,7 @@ Sign : IdVar '::' '{' ListType '}' { SSig $1 $4 }
 
 Type :: { Type }
 Type : IdCon ListTypeArg { TName $1 (reverse $2) } 
-  | IdVar { TVar $1 }
+  | TIdVar { TVar $1 }
   | '(' ListTypeTuple ')' { TTuple $2 }
 
 
@@ -207,11 +208,11 @@ ListTypeArg : {- empty -} { [] }
 
 
 Adt :: { Adt }
-Adt : 'data' IdCon ListAdtVar '=' '{' ListAdtCon '}' { AAdt $2 (reverse $3) $6 } 
+Adt : 'data' TIdCon ListAdtVar '=' '{' ListAdtCon '}' { AAdt $2 (reverse $3) $6 } 
 
 
 AdtVar :: { AdtVar }
-AdtVar : IdVar { AVVar $1 } 
+AdtVar : TIdVar { AVVar $1 } 
 
 
 ListAdtVar :: { [AdtVar] }
@@ -220,7 +221,7 @@ ListAdtVar : {- empty -} { [] }
 
 
 AdtCon :: { AdtCon }
-AdtCon : IdCon ListAdtArg { ACCon $1 (reverse $2) } 
+AdtCon : TIdCon ListAdtArg { ACCon $1 (reverse $2) } 
 
 
 ListAdtCon :: { [AdtCon] }
@@ -229,7 +230,8 @@ ListAdtCon : AdtCon { (:[]) $1 }
 
 
 AdtArg :: { AdtArg }
-AdtArg : Id { AAId $1 } 
+AdtArg : IdCon { AAId $1 } 
+  | TIdVar { AAVar $1 }
   | '(' ListAdtArgTuple ')' { AATuple $2 }
 
 

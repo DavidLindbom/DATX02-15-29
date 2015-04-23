@@ -5,6 +5,10 @@ module Test (a, A) where;
   Comment test
 -}
 
+import A
+import B.B
+import C.C.C
+
 -- Type tests
 t1 :: a1 -> b1
 t2 :: (a2 -> b2,c2)
