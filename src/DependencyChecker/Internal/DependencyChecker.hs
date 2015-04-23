@@ -47,9 +47,10 @@ import Data.Graph
 import System.Directory
 import System.FilePath
 
+import Parser.AbsHopper
 import AST.AST (Module (..), Modulename)
 import Parser.Parser
-import Renamer.Renamer (transform)
+--import Renamer.Renamer (transformImports, transformIdCon)
 import Utils.ErrM
 import Utils.PathTools
 
@@ -105,17 +106,28 @@ check fp = do
   fp' <- liftIO $ makeAbsolute fp
   f <- liftIO $ readFile fp'
   case parse f of
-    Ok m  -> case transform m of
-      Ok (Mod name _ imps _ _) -> do
-        let mfp = toFilePath name
+    Ok (MMod name _ imps _) -> case transformImports imps of
+      Ok imps' -> do
+        let name' = transformIdCon name
+        let mfp = toFilePath name'
         mfp' <- liftIO $ makeAbsolute mfp
         if fp' == mfp'
           then do
-            let fps = map toFilePath imps
+            let fps = map toFilePath imps'
             fps' <- liftIO $ mapM makeAbsolute fps
             modify (Map.insert fp' fps')
-            return imps
-          else fail $ "Bad module name '" ++ name ++ "' in path '"
+            return imps'
+          else fail $ "Bad module name '" ++ name' ++ "' in path '"
                ++ fp'
       Bad msg -> fail msg
     Bad msg -> fail msg
+
+transformImports :: [Import] -> Err [String]
+transformImports ids = Ok $ map go ids
+  where go (IImport i) = conv i
+        conv (IdConNQ (TIdCon  i)) = i
+        conv (IdConQ  (TQIdCon i)) = i
+
+transformIdCon :: IdCon -> String
+transformIdCon (IdConNQ (TIdCon  i)) = i
+transformIdCon (IdConQ  (TQIdCon i)) = i
