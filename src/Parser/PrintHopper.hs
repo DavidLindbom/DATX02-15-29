@@ -79,16 +79,24 @@ instance Print Double where
 
 
 
-instance Print IdVar where
-  prt _ (IdVar i) = doc (showString ( i))
+instance Print TIdVar where
+  prt _ (TIdVar i) = doc (showString ( i))
 
 
-instance Print IdCon where
-  prt _ (IdCon i) = doc (showString ( i))
+instance Print TIdCon where
+  prt _ (TIdCon i) = doc (showString ( i))
 
 
 instance Print IdOpr where
   prt _ (IdOpr i) = doc (showString ( i))
+
+
+instance Print TQIdVar where
+  prt _ (TQIdVar i) = doc (showString ( i))
+
+
+instance Print TQIdCon where
+  prt _ (TQIdCon i) = doc (showString ( i))
 
 
 
@@ -263,6 +271,18 @@ instance Print AdtArgTuple where
   prtList es = case es of
    [x] -> (concatD [prt 0 x])
    x:xs -> (concatD [prt 0 x , doc (showString ",") , prt 0 xs])
+
+instance Print IdVar where
+  prt i e = case e of
+   IdVarNQ tidvar -> prPrec i 0 (concatD [prt 0 tidvar])
+   IdVarQ tqidvar -> prPrec i 0 (concatD [prt 0 tqidvar])
+
+
+instance Print IdCon where
+  prt i e = case e of
+   IdConNQ tidcon -> prPrec i 0 (concatD [prt 0 tidcon])
+   IdConQ tqidcon -> prPrec i 0 (concatD [prt 0 tqidcon])
+
 
 instance Print Id where
   prt i e = case e of

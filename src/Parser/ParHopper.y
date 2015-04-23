@@ -41,9 +41,11 @@ L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
-L_IdVar { PT _ (T_IdVar $$) }
-L_IdCon { PT _ (T_IdCon $$) }
+L_TIdVar { PT _ (T_TIdVar $$) }
+L_TIdCon { PT _ (T_TIdCon $$) }
 L_IdOpr { PT _ (T_IdOpr $$) }
+L_TQIdVar { PT _ (T_TQIdVar $$) }
+L_TQIdCon { PT _ (T_TQIdCon $$) }
 
 
 %%
@@ -52,9 +54,11 @@ Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
 Double  :: { Double }  : L_doubl  { (read ( $1)) :: Double }
 String  :: { String }  : L_quoted {  $1 }
 Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
-IdVar    :: { IdVar} : L_IdVar { IdVar ($1)}
-IdCon    :: { IdCon} : L_IdCon { IdCon ($1)}
+TIdVar    :: { TIdVar} : L_TIdVar { TIdVar ($1)}
+TIdCon    :: { TIdCon} : L_TIdCon { TIdCon ($1)}
 IdOpr    :: { IdOpr} : L_IdOpr { IdOpr ($1)}
+TQIdVar    :: { TQIdVar} : L_TQIdVar { TQIdVar ($1)}
+TQIdCon    :: { TQIdCon} : L_TQIdCon { TQIdCon ($1)}
 
 Module :: { Module }
 Module : 'module' IdCon Exports 'where' ';' ListImport ListDef { MMod $2 $3 $6 $7 } 
@@ -242,6 +246,16 @@ AdtArgTuple : IdCon AdtArg ListAdtArg { AATCon $1 $2 (reverse $3) }
 ListAdtArgTuple :: { [AdtArgTuple] }
 ListAdtArgTuple : AdtArgTuple { (:[]) $1 } 
   | AdtArgTuple ',' ListAdtArgTuple { (:) $1 $3 }
+
+
+IdVar :: { IdVar }
+IdVar : TIdVar { IdVarNQ $1 } 
+  | TQIdVar { IdVarQ $1 }
+
+
+IdCon :: { IdCon }
+IdCon : TIdCon { IdConNQ $1 } 
+  | TQIdCon { IdConQ $1 }
 
 
 Id :: { Id }

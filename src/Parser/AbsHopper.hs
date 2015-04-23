@@ -7,9 +7,11 @@ module Parser.AbsHopper where
 
 
 
-newtype IdVar = IdVar String deriving (Eq,Ord,Show,Read)
-newtype IdCon = IdCon String deriving (Eq,Ord,Show,Read)
+newtype TIdVar = TIdVar String deriving (Eq,Ord,Show,Read)
+newtype TIdCon = TIdCon String deriving (Eq,Ord,Show,Read)
 newtype IdOpr = IdOpr String deriving (Eq,Ord,Show,Read)
+newtype TQIdVar = TQIdVar String deriving (Eq,Ord,Show,Read)
+newtype TQIdCon = TQIdCon String deriving (Eq,Ord,Show,Read)
 data Module =
    MMod IdCon Exports [Import] [Def]
   deriving (Eq,Ord,Show,Read)
@@ -112,6 +114,16 @@ data AdtArg =
 data AdtArgTuple =
    AATCon IdCon AdtArg [AdtArg]
  | AATArg AdtArg
+  deriving (Eq,Ord,Show,Read)
+
+data IdVar =
+   IdVarNQ TIdVar
+ | IdVarQ TQIdVar
+  deriving (Eq,Ord,Show,Read)
+
+data IdCon =
+   IdConNQ TIdCon
+ | IdConQ TQIdCon
   deriving (Eq,Ord,Show,Read)
 
 data Id =

@@ -147,6 +147,12 @@ separator nonempty  AdtArgTuple "," ;
 -- ==========================
 -- To simplify lists without any separators
 
+IdVarNQ. IdVar ::= TIdVar  ;
+IdVarQ.  IdVar ::= TQIdVar ;
+
+IdConNQ. IdCon ::= TIdCon  ;
+IdConQ.  IdCon ::= TQIdCon ;
+
 ICon. Id ::= IdCon ;
 IVar. Id ::= IdVar ;
 terminator Id ""   ;
@@ -159,13 +165,21 @@ IChar.    Prim ::= Char    ;
 --
 -- Tokens
 -- ======
--- IdVar: identifiers, starting with a lower letter
--- IdCon: constructors, starting with a upper letter
+-- TIdVar: identifiers, starting with a lower letter
+-- TIdCon: constructors, starting with a upper letter
 -- IdOpr: operators
 
-token IdVar (lower (digit | letter | '_' )* ) ; 
-token IdCon (upper (digit | letter)* )        ;
+token TIdVar (lower (digit | letter | '_' )* ) ; 
+token TIdCon (upper (digit | letter)* )        ;
 token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ )    ;
+
+--
+-- Qualified names
+-- ===============
+-- Have to be implemented using tokens in order to disallow spaces
+
+token TQIdVar ((upper (digit | letter)* '.')+ lower (digit | letter | '_' )* ) ;
+token TQIdCon ((upper (digit | letter)* '.')+ upper (digit | letter )* )       ;
 
 --
 -- Comments 
