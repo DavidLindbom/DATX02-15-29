@@ -47,7 +47,6 @@ main' args = do
   case files of
     [] -> putStr (usageInfo header options ++ footer) 
     fs -> forM_ fs (compile opts)
-  write "Done!"
   where
     argparse argv = case (getOpt Permute options argv) of
                       (o,n,[] ) -> return (o,n)
@@ -121,6 +120,7 @@ compileFile opts f = do
       Ok  c -> do
         write $ "Running erlc on " ++ f' ++ ".core"
         writeBeam f' c (Core `elem` opts)
+  write $ "Done with " ++ f ++ "!"
   where
     write' opt a = if Verbose `elem` opt
                    then putStrLn a
