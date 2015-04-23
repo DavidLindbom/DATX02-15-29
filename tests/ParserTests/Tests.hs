@@ -33,7 +33,6 @@ badTests =
           , ("Bad05", "import invalid qualified module name")
           , ("Bad06", "type signature with upper case name")
           , ("Bad07", "qualified type variable")
-          , ("Bad08", "export qualified names")
           ]
 
 goodTests :: [Test]
@@ -49,6 +48,7 @@ goodTests =
           , ("Good07", "import statement")
           , ("Good08", "import qualified modules")
           , ("Good09", "imports together with definitions")
+          , ("Good10", "export qualified names")
           ]
 
 checkBad :: String -> Assertion
