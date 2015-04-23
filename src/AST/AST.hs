@@ -32,7 +32,7 @@ data Type = TForAll Type
           | TVar Identifier
           | TCon Constructor -- Includes the module name
           | TApp Type Type
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord,Show,Read)
 
 data Pattern = PVar Identifier
              | PCon Constructor [Pattern]
