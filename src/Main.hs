@@ -14,6 +14,7 @@ import Parser.LayoutHopper
 import Parser.Parser
 
 import Utils.ErrM
+import Utils.HipFile
 
 import Renamer.Renamer (transform)
 import TypeChecker.TypeChecker (typeCheck)
@@ -96,8 +97,16 @@ compileFile opts f = do
     writeFile (f'++".ast.hs") ("import AST.AST\nast="++show ast)
     write $ "Wrote ast to " ++ f' ++ ".ast.hs"
 
+  -- Type information for imports
+  -- importTypes :: (Map Identifier Type, Map Constructor Type)
+  -- TODO: integrate into typechecker
+  importTypes <- getImportsInfo astE
+
   -- Typechecker
   let typedE = astE >>= typeCheck
+
+  -- Write .hip file
+  storeModuleInfo typedE
 
   whenFlag TypeCheck typedE $ \typed -> do
     writeFile (f'++".typed.hs") ("import AST.AST\ntyped="++show typed)
