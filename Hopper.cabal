@@ -16,7 +16,7 @@ executable hopper
   other-modules:       Parser.LexHopper,
                        Parser.ParHopper
   build-depends:       CoreErlang, 
-                       base >=4.5 && <4.8,
+                       base >=4.5 && <4.9,
                        process,
                        directory,
                        filepath,
@@ -37,7 +37,7 @@ test-suite test-hopper
     main-is:           Test.hs
     hs-source-dirs:    tests, src
     build-depends:     CoreErlang,
-                       base >=4.5 && <4.8, 
+                       base >=4.5 && <4.9,
                        process,
                        directory,
                        filepath,
@@ -58,7 +58,7 @@ test-suite DependencyChecker
     main-is:           DependencyChecker.hs
     hs-source-dirs:    tests, src
     build-depends:     CoreErlang,
-                       base >=4.5 && <4.8, 
+                       base >=4.5 && <4.9,
                        process,
                        directory,
                        filepath,
@@ -79,7 +79,7 @@ test-suite ParserTests
     main-is:           ParserTests.hs
     hs-source-dirs:    tests, src
     build-depends:     CoreErlang,
-                       base >=4.5 && <4.8, 
+                       base >=4.5 && <4.9,
                        process,
                        directory,
                        filepath,
