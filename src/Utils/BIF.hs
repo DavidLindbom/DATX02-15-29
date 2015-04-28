@@ -21,8 +21,12 @@ lookupBIF i = case M.lookup i bifs of
 -- some need to be different, e.g functions with same name but 
 -- different arity.
 bifs :: M.Map Identifier BIF
-bifs = M.fromList $ ("+", B "+" (int `TApp` int `TApp` int))
-                  : ("-", B "-" (int `TApp` int `TApp` int))
+bifs = M.fromList $ ("+",   B "+"   (int `TApp` int `TApp` int))
+                  : ("-",   B "-"   (int `TApp` int `TApp` int))
+                  : ("*",   B "*"   (int `TApp` int `TApp` int))
+                  : ("div", B "div" (int `TApp` int `TApp` int))
+                  : ("mod", B "rem" (int `TApp` int `TApp` int))
+                  : ("abs", B "abs" (int `TApp` int))
                   : []
   where int = TCon "Prim.Int"
         -- string = TCon "Prim.String"
