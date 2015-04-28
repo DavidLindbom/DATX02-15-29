@@ -35,7 +35,7 @@ typecheckModule rnm = do
                              ForallT $ foldr1 arrowtype
                                          [prim"String",prim"String",prim"Integer",
                                           tyVar "a",tyVar "b"])
-                            :cons rnm) (defs rnm) --todo TC transforms code
+                            :cons rnm ++ imports rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)
