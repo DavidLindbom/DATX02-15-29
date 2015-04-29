@@ -5,6 +5,10 @@ module Test (a, A) where;
   Comment test
 -}
 
+import A
+import B.B
+import C.C.C
+
 -- Type tests
 t1 :: a1 -> b1
 t2 :: (a2 -> b2,c2)
@@ -13,6 +17,7 @@ t4 :: {  a1
       -> a2
       -> a3 
       }
+t5 :: X.A -> A
 
 
 -- Pattern tests
@@ -25,6 +30,8 @@ f5 (5,5) 5 = 5
 g1 True = 1
 g2 (Just 'a') = 2
 g3 (3.14,Just pi) = 3
+g4 X.C = 4
+g5 (X.C c) = 5
 
 -- Expression syntax tests
 
@@ -41,6 +48,7 @@ e7 = case a b of
 e8 = if a then c
           else c
 e9 = \a b -> c
+e10 = X.A
 
 -- ADT tests
 
@@ -49,3 +57,4 @@ data B b = B b
 data C c = C (CC c)
 data D = D (Int,Int)
 data E = E (EE EEE, EEEE)
+data F = F F.FF

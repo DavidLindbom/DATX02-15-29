@@ -5,6 +5,7 @@ data TCModule = TCModule Name [Name] [(Name,AST,TypeAST)]
 data RenamedModule = RenamedModule{modId::ModuleId,
                                    exports::[Name],
                                    cons ::[(Name,TypeAST)],
+				   imports :: [(Name,TypeAST)],
                                    defs::[(Name,AST,Maybe TypeAST)]}
                      deriving (Eq,Ord,Show,Read)
 --Module data: name, exports, definitions, types?

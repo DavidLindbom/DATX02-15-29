@@ -7,11 +7,13 @@ module Parser.AbsHopper where
 
 
 
-newtype IdVar = IdVar String deriving (Eq,Ord,Show,Read)
-newtype IdCon = IdCon String deriving (Eq,Ord,Show,Read)
+newtype TIdVar = TIdVar String deriving (Eq,Ord,Show,Read)
+newtype TIdCon = TIdCon String deriving (Eq,Ord,Show,Read)
 newtype IdOpr = IdOpr String deriving (Eq,Ord,Show,Read)
+newtype TQIdVar = TQIdVar String deriving (Eq,Ord,Show,Read)
+newtype TQIdCon = TQIdCon String deriving (Eq,Ord,Show,Read)
 data Module =
-   MMod IdCon Exports [Def]
+   MMod IdCon Exports [Import] [Def]
   deriving (Eq,Ord,Show,Read)
 
 data Exports =
@@ -23,6 +25,10 @@ data Export =
    NExp Id
   deriving (Eq,Ord,Show,Read)
 
+data Import =
+   IImport IdCon
+  deriving (Eq,Ord,Show,Read)
+
 data Def =
    DFun Func
  | DSig Sign
@@ -30,7 +36,7 @@ data Def =
   deriving (Eq,Ord,Show,Read)
 
 data Func =
-   FFun IdVar [Arg] Expr
+   FFun TIdVar [Arg] Expr
   deriving (Eq,Ord,Show,Read)
 
 data Arg =
@@ -58,7 +64,8 @@ data ClausePat =
   deriving (Eq,Ord,Show,Read)
 
 data Pat =
-   PId Id
+   PCon IdCon
+ | PVar TIdVar
  | PPrim Prim
  | PWild
  | PTuple [PatTuple]
@@ -74,8 +81,8 @@ data Sign =
   deriving (Eq,Ord,Show,Read)
 
 data Type =
-   TName IdCon [Id]
- | TVar IdVar
+   TName IdCon [TypeArg]
+ | TVar TIdVar
  | TTuple [TypeTuple]
   deriving (Eq,Ord,Show,Read)
 
@@ -83,26 +90,42 @@ data TypeTuple =
    TTTuple [Type]
   deriving (Eq,Ord,Show,Read)
 
+data TypeArg =
+   TTAId Id
+ | TTATuple [TypeTuple]
+  deriving (Eq,Ord,Show,Read)
+
 data Adt =
-   AAdt IdCon [AdtVar] [AdtCon]
+   AAdt TIdCon [AdtVar] [AdtCon]
   deriving (Eq,Ord,Show,Read)
 
 data AdtVar =
-   AVVar IdVar
+   AVVar TIdVar
   deriving (Eq,Ord,Show,Read)
 
 data AdtCon =
-   ACCon IdCon [AdtArg]
+   ACCon TIdCon [AdtArg]
   deriving (Eq,Ord,Show,Read)
 
 data AdtArg =
-   AAId Id
+   AAId IdCon
+ | AAVar TIdVar
  | AATuple [AdtArgTuple]
   deriving (Eq,Ord,Show,Read)
 
 data AdtArgTuple =
    AATCon IdCon AdtArg [AdtArg]
  | AATArg AdtArg
+  deriving (Eq,Ord,Show,Read)
+
+data IdVar =
+   IdVarNQ TIdVar
+ | IdVarQ TQIdVar
+  deriving (Eq,Ord,Show,Read)
+
+data IdCon =
+   IdConNQ TIdCon
+ | IdConQ TQIdCon
   deriving (Eq,Ord,Show,Read)
 
 data Id =

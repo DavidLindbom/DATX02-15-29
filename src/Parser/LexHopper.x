@@ -28,9 +28,11 @@ $u = [\0-\255]          -- universal: any character
 
 $white+ ;
 @rsyms { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
-$s ($d | $l | \_)* { tok (\p s -> PT p (eitherResIdent (T_IdVar . share) s)) }
-$c ($d | $l)* { tok (\p s -> PT p (eitherResIdent (T_IdCon . share) s)) }
+$s ($d | $l | \_)* { tok (\p s -> PT p (eitherResIdent (T_TIdVar . share) s)) }
+$c ($d | $l)* { tok (\p s -> PT p (eitherResIdent (T_TIdCon . share) s)) }
 [\. \: \- \^ \* \+ \= \< \> \& \% \$ \! \# \% \| \/ \\]+ { tok (\p s -> PT p (eitherResIdent (T_IdOpr . share) s)) }
+($c ($d | $l)* \.)+ $s ($d | $l | \_)* { tok (\p s -> PT p (eitherResIdent (T_TQIdVar . share) s)) }
+($c ($d | $l)* \.)+ $c ($d | $l)* { tok (\p s -> PT p (eitherResIdent (T_TQIdCon . share) s)) }
 
 $l $i*   { tok (\p s -> PT p (eitherResIdent (TV . share) s)) }
 \" ([$u # [\" \\ \n]] | (\\ (\" | \\ | \' | n | t)))* \"{ tok (\p s -> PT p (TL $ share $ unescapeInitTail s)) }
@@ -53,9 +55,11 @@ data Tok =
  | TV !String         -- identifiers
  | TD !String         -- double precision float literals
  | TC !String         -- character literals
- | T_IdVar !String
- | T_IdCon !String
+ | T_TIdVar !String
+ | T_TIdCon !String
  | T_IdOpr !String
+ | T_TQIdVar !String
+ | T_TQIdCon !String
 
  deriving (Eq,Show,Ord)
 
@@ -90,9 +94,11 @@ prToken t = case t of
   PT _ (TV s)   -> s
   PT _ (TD s)   -> s
   PT _ (TC s)   -> s
-  PT _ (T_IdVar s) -> s
-  PT _ (T_IdCon s) -> s
+  PT _ (T_TIdVar s) -> s
+  PT _ (T_TIdCon s) -> s
   PT _ (T_IdOpr s) -> s
+  PT _ (T_TQIdVar s) -> s
+  PT _ (T_TQIdCon s) -> s
 
 
 data BTree = N | B String Tok BTree BTree deriving (Show)
@@ -106,7 +112,7 @@ eitherResIdent tv s = treeFind resWords
                               | s == a = t
 
 resWords :: BTree
-resWords = b "data" 11 (b ";" 6 (b "," 3 (b ")" 2 (b "(" 1 N N) N) (b "::" 5 (b "->" 4 N N) N)) (b "_" 9 (b "\\" 8 (b "=" 7 N N) N) (b "case" 10 N N))) (b "then" 16 (b "module" 14 (b "if" 13 (b "else" 12 N N) N) (b "of" 15 N N)) (b "|" 19 (b "{" 18 (b "where" 17 N N) N) (b "}" 20 N N)))
+resWords = b "data" 11 (b ";" 6 (b "," 3 (b ")" 2 (b "(" 1 N N) N) (b "::" 5 (b "->" 4 N N) N)) (b "_" 9 (b "\\" 8 (b "=" 7 N N) N) (b "case" 10 N N))) (b "then" 17 (b "import" 14 (b "if" 13 (b "else" 12 N N) N) (b "of" 16 (b "module" 15 N N) N)) (b "|" 20 (b "{" 19 (b "where" 18 N N) N) (b "}" 21 N N)))
    where b s n = let bs = id s
                   in B bs (TS bs n)
 

@@ -12,7 +12,7 @@ layout toplevel        ;
 --
 
 entrypoints Module;
-MMod. Module ::= "module" IdCon Exports "where" ";" [Def] ;
+MMod. Module ::= "module" IdCon Exports "where" ";" [Import] [Def] ;
 
 --
 -- Exports
@@ -25,6 +25,14 @@ NExps.  Exports ::= "(" [Export] ")" ;
 
 NExp. Export ::= Id  ;
 separator Export "," ;
+
+--
+-- Imports
+-- =======
+--
+
+IImport. Import ::= "import" IdCon ;
+separator Import ";" ;
 
 --
 -- Definitions
@@ -41,7 +49,7 @@ separator Def ";"   ;
 -- =========
 --
 
-FFun. Func ::= IdVar [Arg] "=" "{" Expr "}" ;
+FFun. Func ::= TIdVar [Arg] "=" "{" Expr "}" ;
 
 --
 -- Arguments
@@ -78,7 +86,8 @@ CCPCon. ClausePat ::= IdCon [Pat] ;
 -- ========
 --
 
-PId.    Pat ::= Id                 ;
+PCon.   Pat ::= IdCon              ;
+PVar.   Pat ::= TIdVar             ;
 PPrim.  Pat ::= Prim               ;
 PWild.  Pat ::= "_"                ;
 PTuple. Pat ::= "(" [PatTuple] ")" ;
@@ -101,28 +110,33 @@ SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
 -- If TypeTuple has one element, treat it as parenthethis
 -- Replace TName and TVar with TId ::= Id ?
 
-TName.  Type ::= IdCon [Id]          ;
-TVar.   Type ::= IdVar               ;
+TName.  Type ::= IdCon [TypeArg]     ;
+TVar.   Type ::= TIdVar              ;
 TTuple. Type ::= "(" [TypeTuple] ")" ;
 separator nonempty Type "->"         ;
 
 TTTuple. TypeTuple ::= [Type] ;
 separator TypeTuple ","       ;
 
+TTAId.    TypeArg ::= Id                  ;
+TTATuple. TypeArg ::= "(" [TypeTuple] ")" ;
+terminator TypeArg ""                     ;
+
 --
 -- ADT declarations
 -- ================
 -- 
 
-AAdt. Adt ::= "data" IdCon [AdtVar] "=" "{" [AdtCon] "}" ;
+AAdt. Adt ::= "data" TIdCon [AdtVar] "=" "{" [AdtCon] "}" ;
 
-AVVar. AdtVar ::= IdVar ;
+AVVar. AdtVar ::= TIdVar ;
 terminator AdtVar ""    ;
 
-ACCon. AdtCon ::= IdCon [AdtArg] ;
+ACCon. AdtCon ::= TIdCon [AdtArg] ;
 separator nonempty AdtCon "|"    ;
 
-AAId.    AdtArg ::= Id                    ;
+AAId.    AdtArg ::= IdCon                 ;
+AAVar.   AdtArg ::= TIdVar                ;
 AATuple. AdtArg ::= "(" [AdtArgTuple] ")" ;
 terminator AdtArg ""                      ;
 
@@ -134,6 +148,12 @@ separator nonempty  AdtArgTuple "," ;
 -- Identifiers and primitives
 -- ==========================
 -- To simplify lists without any separators
+
+IdVarNQ. IdVar ::= TIdVar  ;
+IdVarQ.  IdVar ::= TQIdVar ;
+
+IdConNQ. IdCon ::= TIdCon  ;
+IdConQ.  IdCon ::= TQIdCon ;
 
 ICon. Id ::= IdCon ;
 IVar. Id ::= IdVar ;
@@ -147,13 +167,21 @@ IChar.    Prim ::= Char    ;
 --
 -- Tokens
 -- ======
--- IdVar: identifiers, starting with a lower letter
--- IdCon: constructors, starting with a upper letter
+-- TIdVar: identifiers, starting with a lower letter
+-- TIdCon: constructors, starting with a upper letter
 -- IdOpr: operators
 
-token IdVar (lower (digit | letter | '_' )* ) ; 
-token IdCon (upper (digit | letter)* )        ;
+token TIdVar (lower (digit | letter | '_' )* ) ; 
+token TIdCon (upper (digit | letter)* )        ;
 token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ )    ;
+
+--
+-- Qualified names
+-- ===============
+-- Have to be implemented using tokens in order to disallow spaces
+
+token TQIdVar ((upper (digit | letter)* '.')+ lower (digit | letter | '_' )* ) ;
+token TQIdCon ((upper (digit | letter)* '.')+ upper (digit | letter )* )       ;
 
 --
 -- Comments 

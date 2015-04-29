@@ -11,7 +11,11 @@
 module AST.AST where
 import Data.Map
 
-data Module a = Mod Modulename [Identifier] [Function a] (Map Identifier Type)
+data Module a = Mod Modulename 
+                    [Identifier] -- Exports
+                    [Identifier] -- Imports
+                    [Function a] -- Definitions
+                    (Map Identifier Type) -- ADTs
   deriving (Eq,Ord,Show)
 
 type Identifier  = String
@@ -25,14 +29,14 @@ data Literal = LS String
              -- | LL []
   deriving (Eq,Ord,Show)
 
-data Function a = Fun Modulename Identifier a Expression
+data Function a = Fun Identifier a Expression
   deriving (Eq,Ord,Show)
 
 data Type = TForAll Type
           | TVar Identifier
           | TCon Constructor -- Includes the module name
           | TApp Type Type
-  deriving (Eq,Ord,Show)
+  deriving (Eq,Ord,Show,Read)
 
 data Pattern = PVar Identifier
              | PCon Constructor [Pattern]

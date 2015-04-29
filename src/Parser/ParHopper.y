@@ -4,7 +4,7 @@
 module Parser.ParHopper where
 import Parser.AbsHopper
 import Parser.LexHopper
-import Parser.ErrM
+import Utils.ErrM
 
 }
 
@@ -28,21 +28,24 @@ import Parser.ErrM
   'data' { PT _ (TS _ 11) }
   'else' { PT _ (TS _ 12) }
   'if' { PT _ (TS _ 13) }
-  'module' { PT _ (TS _ 14) }
-  'of' { PT _ (TS _ 15) }
-  'then' { PT _ (TS _ 16) }
-  'where' { PT _ (TS _ 17) }
-  '{' { PT _ (TS _ 18) }
-  '|' { PT _ (TS _ 19) }
-  '}' { PT _ (TS _ 20) }
+  'import' { PT _ (TS _ 14) }
+  'module' { PT _ (TS _ 15) }
+  'of' { PT _ (TS _ 16) }
+  'then' { PT _ (TS _ 17) }
+  'where' { PT _ (TS _ 18) }
+  '{' { PT _ (TS _ 19) }
+  '|' { PT _ (TS _ 20) }
+  '}' { PT _ (TS _ 21) }
 
 L_integ  { PT _ (TI $$) }
 L_doubl  { PT _ (TD $$) }
 L_quoted { PT _ (TL $$) }
 L_charac { PT _ (TC $$) }
-L_IdVar { PT _ (T_IdVar $$) }
-L_IdCon { PT _ (T_IdCon $$) }
+L_TIdVar { PT _ (T_TIdVar $$) }
+L_TIdCon { PT _ (T_TIdCon $$) }
 L_IdOpr { PT _ (T_IdOpr $$) }
+L_TQIdVar { PT _ (T_TQIdVar $$) }
+L_TQIdCon { PT _ (T_TQIdCon $$) }
 
 
 %%
@@ -51,12 +54,14 @@ Integer :: { Integer } : L_integ  { (read ( $1)) :: Integer }
 Double  :: { Double }  : L_doubl  { (read ( $1)) :: Double }
 String  :: { String }  : L_quoted {  $1 }
 Char    :: { Char }    : L_charac { (read ( $1)) :: Char }
-IdVar    :: { IdVar} : L_IdVar { IdVar ($1)}
-IdCon    :: { IdCon} : L_IdCon { IdCon ($1)}
+TIdVar    :: { TIdVar} : L_TIdVar { TIdVar ($1)}
+TIdCon    :: { TIdCon} : L_TIdCon { TIdCon ($1)}
 IdOpr    :: { IdOpr} : L_IdOpr { IdOpr ($1)}
+TQIdVar    :: { TQIdVar} : L_TQIdVar { TQIdVar ($1)}
+TQIdCon    :: { TQIdCon} : L_TQIdCon { TQIdCon ($1)}
 
 Module :: { Module }
-Module : 'module' IdCon Exports 'where' ';' ListDef { MMod $2 $3 $6 } 
+Module : 'module' IdCon Exports 'where' ';' ListImport ListDef { MMod $2 $3 $6 $7 } 
 
 
 Exports :: { Exports }
@@ -74,6 +79,16 @@ ListExport : {- empty -} { [] }
   | Export ',' ListExport { (:) $1 $3 }
 
 
+Import :: { Import }
+Import : 'import' IdCon { IImport $2 } 
+
+
+ListImport :: { [Import] }
+ListImport : {- empty -} { [] } 
+  | Import { (:[]) $1 }
+  | Import ';' ListImport { (:) $1 $3 }
+
+
 Def :: { Def }
 Def : Func { DFun $1 } 
   | Sign { DSig $1 }
@@ -87,7 +102,7 @@ ListDef : {- empty -} { [] }
 
 
 Func :: { Func }
-Func : IdVar ListArg '=' '{' Expr '}' { FFun $1 (reverse $2) $5 } 
+Func : TIdVar ListArg '=' '{' Expr '}' { FFun $1 (reverse $2) $5 } 
 
 
 Arg :: { Arg }
@@ -134,7 +149,8 @@ ClausePat : Pat { CCPPat $1 }
 
 
 Pat :: { Pat }
-Pat : Id { PId $1 } 
+Pat : IdCon { PCon $1 } 
+  | TIdVar { PVar $1 }
   | Prim { PPrim $1 }
   | '_' { PWild }
   | '(' ListPatTuple ')' { PTuple $2 }
@@ -161,8 +177,8 @@ Sign : IdVar '::' '{' ListType '}' { SSig $1 $4 }
 
 
 Type :: { Type }
-Type : IdCon ListId { TName $1 (reverse $2) } 
-  | IdVar { TVar $1 }
+Type : IdCon ListTypeArg { TName $1 (reverse $2) } 
+  | TIdVar { TVar $1 }
   | '(' ListTypeTuple ')' { TTuple $2 }
 
 
@@ -181,12 +197,22 @@ ListTypeTuple : {- empty -} { [] }
   | TypeTuple ',' ListTypeTuple { (:) $1 $3 }
 
 
+TypeArg :: { TypeArg }
+TypeArg : Id { TTAId $1 } 
+  | '(' ListTypeTuple ')' { TTATuple $2 }
+
+
+ListTypeArg :: { [TypeArg] }
+ListTypeArg : {- empty -} { [] } 
+  | ListTypeArg TypeArg { flip (:) $1 $2 }
+
+
 Adt :: { Adt }
-Adt : 'data' IdCon ListAdtVar '=' '{' ListAdtCon '}' { AAdt $2 (reverse $3) $6 } 
+Adt : 'data' TIdCon ListAdtVar '=' '{' ListAdtCon '}' { AAdt $2 (reverse $3) $6 } 
 
 
 AdtVar :: { AdtVar }
-AdtVar : IdVar { AVVar $1 } 
+AdtVar : TIdVar { AVVar $1 } 
 
 
 ListAdtVar :: { [AdtVar] }
@@ -195,7 +221,7 @@ ListAdtVar : {- empty -} { [] }
 
 
 AdtCon :: { AdtCon }
-AdtCon : IdCon ListAdtArg { ACCon $1 (reverse $2) } 
+AdtCon : TIdCon ListAdtArg { ACCon $1 (reverse $2) } 
 
 
 ListAdtCon :: { [AdtCon] }
@@ -204,7 +230,8 @@ ListAdtCon : AdtCon { (:[]) $1 }
 
 
 AdtArg :: { AdtArg }
-AdtArg : Id { AAId $1 } 
+AdtArg : IdCon { AAId $1 } 
+  | TIdVar { AAVar $1 }
   | '(' ListAdtArgTuple ')' { AATuple $2 }
 
 
@@ -221,6 +248,16 @@ AdtArgTuple : IdCon AdtArg ListAdtArg { AATCon $1 $2 (reverse $3) }
 ListAdtArgTuple :: { [AdtArgTuple] }
 ListAdtArgTuple : AdtArgTuple { (:[]) $1 } 
   | AdtArgTuple ',' ListAdtArgTuple { (:) $1 $3 }
+
+
+IdVar :: { IdVar }
+IdVar : TIdVar { IdVarNQ $1 } 
+  | TQIdVar { IdVarQ $1 }
+
+
+IdCon :: { IdCon }
+IdCon : TIdCon { IdConNQ $1 } 
+  | TQIdCon { IdConQ $1 }
 
 
 Id :: { Id }
