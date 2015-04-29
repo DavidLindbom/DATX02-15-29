@@ -5,7 +5,7 @@ import Data.Map as M
 
 -- Thinking we want to extend this later
 -- Maybe make a record of it?
-data BIF = B Identifier Type
+data BIF = B Identifier Type deriving Show
 
 isBIF :: Identifier -> Bool
 isBIF i = M.member i bifs
@@ -21,13 +21,18 @@ lookupBIF i = case M.lookup i bifs of
 -- some need to be different, e.g functions with same name but 
 -- different arity.
 bifs :: M.Map Identifier BIF
-bifs = M.fromList $ ("+",   B "+"   (int `TApp` int `TApp` int))
-                  : ("-",   B "-"   (int `TApp` int `TApp` int))
-                  : ("*",   B "*"   (int `TApp` int `TApp` int))
-                  : ("div", B "div" (int `TApp` int `TApp` int))
-                  : ("mod", B "rem" (int `TApp` int `TApp` int))
-                  : ("abs", B "abs" (int `TApp` int))
+bifs = M.fromList $ ("+",   B "+"   (int ~> int ~> int))
+                  : ("-",   B "-"   (int ~> int ~> int))
+                  : ("*",   B "*"   (int ~> int ~> int))
+                  : ("div", B "div" (int ~> int ~> int))
+                  : ("mod", B "rem" (int ~> int ~> int))
+                  : ("abs", B "abs" (int ~> int))
                   : []
   where int = TCon "Prim.Int"
         -- string = TCon "Prim.String"
         -- double = TCon "Prim.Double"
+
+(~>) :: Type -> Type -> Type
+(~>) a b = (TCon "Prim.->" `TApp` a) `TApp` b
+infixr 7 ~>
+
