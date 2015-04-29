@@ -3,7 +3,7 @@ FlexibleInstances #-}
 module TypeChecker.TypeChecker where
 
 import Control.Monad.State
-import AST.Liam_TC_AST 
+import AST.Liam_TC_AST
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.Foldable as F
@@ -22,6 +22,7 @@ import Data.List (partition,union)
 import TypeChecker.Convert (moduleToRenamed,tcModToModule)
 import Utils.ErrM (Err(..))
 import qualified AST.AST as A
+ 
 typeCheck :: A.Module (Maybe A.Signature) -> Err (A.Module A.Signature)
 typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   Left s -> Bad s
@@ -33,7 +34,8 @@ typecheckModule rnm = do
   --here.
   names'types <- typecheck ((Name Nothing "apply",
                              ForallT $ foldr1 arrowtype
-                                         [prim"String",prim"String",prim"Integer",
+                                         [prim"String",prim"String",
+                                          prim"Integer",
                                           tyVar "a",tyVar "b"])
                             :cons rnm) (defs rnm) --todo TC transforms code
   return $ TCModule 
