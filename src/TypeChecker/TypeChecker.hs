@@ -22,7 +22,7 @@ import Data.List (partition,union)
 import TypeChecker.Convert (moduleToRenamed,tcModToModule)
 import Utils.ErrM (Err(..))
 import qualified AST.AST as A
-typeCheck :: A.Module (Maybe A.Signature) -> Err (A.Module A.Signature)
+typeCheck :: A.Module (Maybe A.Type) -> Err (A.Module A.Type)
 typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   Left s -> Bad s
                   Right tcmod -> Ok $ tcModToModule tcmod
