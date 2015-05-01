@@ -104,12 +104,12 @@ compileFile opts f = do
   -- Typechecker
   let typedE = astE >>= typeCheck
 
-  -- Write .hip file
-  storeModuleInfo typedE
-
   whenFlag TypeCheck typedE $ \typed -> do
     writeFile (f'++".typed.hs") ("import AST.AST\ntyped="++show typed)
     write $ "Wrote typed ast to " ++ f' ++ ".typed.hs"
+
+  -- Write .hip file
+  storeModuleInfo typedE
 
   -- Code generation
   let coreE = typedE >>= compileModuleString 
