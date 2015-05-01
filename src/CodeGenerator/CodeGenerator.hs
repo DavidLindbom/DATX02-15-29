@@ -31,7 +31,7 @@ import qualified Control.Monad.Reader as R
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Type -> CES.Module
-compileModule m@(Mod mId exports defs datas) = CES.Module (Atom mId) es as ds
+compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId) es as ds
   where as = []
         ds = map compileFun defs ++ generateModuleInfo mId
         es = compileExports exports m
@@ -191,15 +191,15 @@ typeToArity _ = 1 -- TODO NOT CORRECT AT ALL
 -- |The 'getTypeSig' function gets the Signature
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Type -> Type
-getTypeSig fId (Mod _ _ [] _) = error $ "Could not find function when looking for signature: " ++ fId
-getTypeSig fId (Mod mId es (HPR.Fun funId typeSig _:defs) datas)
+getTypeSig fId (Mod _ _ _ [] _) = error $ "Could not find function when looking for signature: " ++ fId
+getTypeSig fId (Mod mId es is (HPR.Fun funId typeSig _:defs) datas)
   | fId == funId = typeSig
-  | otherwise    = getTypeSig fId (Mod mId es defs datas)
+  | otherwise    = getTypeSig fId (Mod mId es is defs datas)
 
 -- |The 'gitSignatures' function gets the function
 --  signatures from the give module
 getSignatures :: HPR.Module Type -> [(Identifier, Integer)]
-getSignatures (Mod _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, 1)) defs
+getSignatures (Mod _ _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, 1)) defs
 
 __fun :: Identifier -> CES.Function
 __fun s = Function (Atom$"__"++s,0)
