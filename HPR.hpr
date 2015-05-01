@@ -1,5 +1,5 @@
 
-module HPR () where
+module HPR (id) where
 {-
 f = 3
 --const "String" x = case x of

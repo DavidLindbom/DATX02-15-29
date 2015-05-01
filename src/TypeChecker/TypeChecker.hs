@@ -34,9 +34,10 @@ typecheckModule rnm = do
   --here.
   names'types <- typecheck ((Name Nothing "apply",
                              ForallT $ foldr1 arrowtype
-                                         [prim"String",prim"String",prim"Integer",
+                                         [prim"String",prim"String",
+                                              prim"Integer",
                                           tyVar "a",tyVar "b"])
-                            :cons rnm ++ imports rnm) (defs rnm) --todo TC transforms code
+                            :cons rnm ++ imports rnm) (defs rnm) 
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)
@@ -57,7 +58,7 @@ typecheckModule rnm = do
         nameToAtom (Name _ s) = LitAST $ AtomL $ case s of
                                                    ':':s' -> s'
                                                    upper:s' -> toLower upper:s'
-        arity (AppT (AppT (ConT(Name(Just["Prim"])"->")) _) t) = 
+        arity (AppT (AppT (ConT(Name Nothing "Prim.->")) _) t) = 
             1 + arity t
         arity _ = 0
         recombineTypes'Sigh ns'ts  = 
@@ -228,7 +229,7 @@ patToExpr p = case p of
 --locally modify name->type environment.
 
 --adds the module prefix Prim to a type name.
-prim = ConT . Name (Just ["Prim"])  
+prim s = ConT $ Name Nothing $ "Prim."++s  
 
 litType lit = case lit of 
                 StringL _ -> prim "String"
@@ -289,6 +290,9 @@ unify (VarT x) t = checkNoCycles x t
 unify t (VarT x) = checkNoCycles x t
 unify (AppT a b) (AppT c d) = unify a c >> unify b d
 unify (ConT n1) (ConT n2) | n1 == n2 = return ()
+--TODO remove this clause VVV
+unify (ConT (Name m s)) (ConT (Name m' s')) = error $
+                                              show(m,s,m',s')
 unify t1 t2 = lift $ lift $ Left $ 
               concat["Cannot unify: (",show t1,")(",show t2,")"]
         

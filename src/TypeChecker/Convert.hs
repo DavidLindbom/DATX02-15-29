@@ -18,9 +18,11 @@ moduleToRenamed (A.Mod s exps _ fs adts) = L.RenamedModule {
                                 	       L.modId = [s],
                                 	       L.exports = map idToName exps,
                                 	       L.cons = (map (idToName ***
-					       	     typeToTypeAST) $ toList adts),
+					       	     typeToTypeAST) $ 
+                                                         toList adts),
 					       L.imports = [],
-                                	       L.defs = (map functionToName'AST'MType fs)}
+                                	       L.defs = (map 
+                                                   functionToName'AST'MType fs)}
     where
       splitEveryDot s = case break (=='.') s of
                           (s,"") -> [s]
@@ -57,7 +59,8 @@ expToAST (A.ECase exp clauses) = L.CaseAST (expToAST exp) $
 
 patToPatAST :: A.Pattern -> L.PatAST
 patToPatAST (A.PVar id) = L.VarPat $ idToName id
-patToPatAST (A.PCon id ps) = foldl L.AppPat (L.ConPat (idToName id)) $ map patToPatAST ps
+patToPatAST (A.PCon id ps) = foldl L.AppPat (L.ConPat (idToName id)) $ 
+                             map patToPatAST ps
 patToPatAST (A.PLit lit) = L.LitPat $ aLitToLLit lit
 patToPatAST A.PWild = L.WildPat
 patToPatAST (A.PTuple ps) = L.TuplePat $ map patToPatAST ps
@@ -102,6 +105,10 @@ typeASTToType app@(L.AppT con t) = A.TName (nm con) (map typeASTToType $
 typeASTToType (L.ConT n) = A.TCon $ show n
 typeASTToType (L.VarT n) = A.TVar $ show n
 typeASTToType (L.ForallT t) = A.TForAll $ typeASTToType t
+typeASTToType (L.AppT tf tx) = A.TApp 
+                               (typeASTToType tf)
+                               (typeASTToType tx)
+typeASTToType t = error $ "Non-exhaustive: " ++ show t
 
 
 astToExp :: L.AST -> A.Expression

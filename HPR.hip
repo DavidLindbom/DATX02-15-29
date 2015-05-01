@@ -1,0 +1,1 @@
+(fromList [("HPR.id",TApp (TApp (TCon "Prim.->") (TCon "Prim.Int")) (TCon "Prim.Int"))],fromList [])
