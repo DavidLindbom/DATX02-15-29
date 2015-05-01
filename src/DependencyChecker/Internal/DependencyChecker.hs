@@ -69,7 +69,7 @@ dependencyCheck fp =
   if not $ isValid fp
     then fail $ "Bad file path " ++ fp
     else do
-      fp' <- makeAbsolute fp
+      fp' <- makeAbsolutePath fp
       themap <- execStateT (reccheck fp') emptyEnv
       let graph = map (\(k, v) -> (k, k, v)) $ Map.assocs themap
       let topsorted = stronglyConnComp graph
@@ -103,18 +103,18 @@ reccheck fp = do
 -- Returns the list of imported modules in the module.
 check :: FilePath -> CheckM [FilePath]
 check fp = do
-  fp' <- liftIO $ makeAbsolute fp
+  fp' <- liftIO $ makeAbsolutePath fp
   f <- liftIO $ readFile fp'
   case parse f of
     Ok (MMod name _ imps _) -> case transformImports imps of
       Ok imps' -> do
         let name' = transformIdCon name
         let mfp = toFilePath name'
-        mfp' <- liftIO $ makeAbsolute mfp
+        mfp' <- liftIO $ makeAbsolutePath mfp
         if fp' == mfp'
           then do
             let fps = map toFilePath imps'
-            fps' <- liftIO $ mapM makeAbsolute fps
+            fps' <- liftIO $ mapM makeAbsolutePath fps
             modify (Map.insert fp' fps')
             return imps'
           else fail $ "Bad module name '" ++ name' ++ "' in path '"

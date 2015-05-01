@@ -7,8 +7,8 @@ import AST.AST
 
 -- | Takes a file path and makes it absolute relative the working directory
 -- if it isn't already absolute
-makeAbsolute :: FilePath -> IO FilePath
-makeAbsolute fp =
+makeAbsolutePath :: FilePath -> IO FilePath
+makeAbsolutePath fp =
   if isAbsolute fp
   then return fp
   else do
