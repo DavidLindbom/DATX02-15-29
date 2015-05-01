@@ -20,7 +20,7 @@ toFilePath :: Modulename -> FilePath
 toFilePath fps = replace '.' pathSeparator fps <.> hopExt
 
 hopExt :: String
-hopExt = "hop"
+hopExt = "hpr"
 
 -- | Replace each occurence of the first argument with the second in the list.
 replace :: Eq a => a -> a -> [a] -> [a]

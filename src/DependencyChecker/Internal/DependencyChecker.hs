@@ -118,7 +118,7 @@ check fp = do
             modify (Map.insert fp' fps')
             return imps'
           else fail $ "Bad module name '" ++ name' ++ "' in path '"
-               ++ fp'
+               ++ fp' ++ "', expected path '" ++ mfp' ++ "'"
       Bad msg -> fail msg
     Bad msg -> fail msg
 
