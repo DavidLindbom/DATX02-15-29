@@ -112,9 +112,7 @@ typeASTToType t = error $ "Non-exhaustive: " ++ show t
 
 
 astToExp :: L.AST -> A.Expression
-{-astToExp (L.Named (L.Name _ (c:s))) 
-    | c == ':' || isUpper c = A.ECon (c:s)
-    | otherwise = A.EVar (c:s)-}
+astToExp (L.Named (L.Name _ s)) = A.EVar (c:s)
 astToExp (L.LitAST lit) = A.ELit $ lLitToALit lit
 astToExp (L.TupleAST exps) = A.ETuple $ map astToExp exps
 astToExp (L.LamAST ps body) = A.ELambda (map patASTToPat ps) (astToExp body)
