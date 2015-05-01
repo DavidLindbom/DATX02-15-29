@@ -1,6 +1,6 @@
 
 module HPR () where
-
+{-
 f = 3
 --const "String" x = case x of
 --      	       3 -> "ok"
@@ -15,3 +15,7 @@ const x _ = x
 -- id x = apply "HPR2" "id" 1 x
 
 -- loop x = loop x
+-}
+
+id :: Int -> Int
+id x = x
