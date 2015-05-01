@@ -1,0 +1,21 @@
+
+module HPR () where
+{-
+f = 3
+--const "String" x = case x of
+--      	       3 -> "ok"
+--	       2 -> "bah, humbug!"
+const x _ = x
+
+-- data M = M -- | N | O | P
+-- cool_cool = M
+
+-- plus x y = apply "erlang" "+" 2 x y
+
+-- id x = apply "HPR2" "id" 1 x
+
+-- loop x = loop x
+-}
+
+a :: Int -> Int
+a x = x
