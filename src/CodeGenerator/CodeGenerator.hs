@@ -141,7 +141,7 @@ compileLambda e                  = error $ "Not a lambda: " ++ show e
 --               (a, (b,c)) -> a + b
 lambdaToCase :: Expression -> Expression
 lambdaToCase (ELambda pats e) = let vns = map (("X@"++) . show) (zipWith const [1..] pats) in
-       ELambda (map HPR.PVar vns) $ ECase (HPR.ETuple $ map EVar vns) [(HPR.PTuple pats, e)]
+       ECase (HPR.ETuple $ map EVar vns) [(HPR.PTuple pats, e)]
 
 --  to a list of patterns. This means a tuple will be
 --  converted to a list of its patterns.
