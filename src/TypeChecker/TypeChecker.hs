@@ -12,6 +12,7 @@ import qualified Data.Graph as G
 import Control.Arrow ((***))
 import Data.Maybe (fromJust)
 import Data.List (partition,union)
+import Data.Char (toLower)
 
 --NOTE: I assume String == Prim.String,
 --Atom == Prim.Atom, (->) == Prim.(->) etc.
@@ -53,7 +54,9 @@ typecheckModule rnm = do
                                where
                                  vs = [name $ "x"++show n |
                                        n <- [1..ar]]
-        nameToAtom = LitAST . AtomL . show
+        nameToAtom (Name _ s) = LitAST $ AtomL $ case s of
+                                                   ':':s' -> s'
+                                                   upper:s' -> toLower upper:s'
         arity (AppT (AppT (ConT(Name(Just["Prim"])"->")) _) t) = 
             1 + arity t
         arity _ = 0
