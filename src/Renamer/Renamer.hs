@@ -1,6 +1,7 @@
 module Renamer.Renamer (transform) where
 
 import qualified Data.Map as M
+import qualified Data.Set as S
 import Control.Monad 
 import Data.Monoid
 
@@ -66,13 +67,14 @@ transformDefs name defs = do
     
     go m (DFun (FFun i' as e)) = do
       let TIdVar i = i'
-      e' <- transformExpr name e
 
       -- Add lambda if arguments
       e'' <- if null as
-              then return e'
+              then transformExpr name S.empty e
               else do pat <- mapM (transformArg name) as
-                      return $ AST.ELambda pat e'     
+                      let ctx = foldr patternToContext S.empty pat
+                      e'  <- transformExpr name ctx e
+                      return $ AST.ELambda pat e' 
 
       case M.lookup i m of
         Nothing           -> do
@@ -121,11 +123,13 @@ transformTypes name ts' = let (t:ts) = reverse ts'
     prim "String" = "Prim.String"
     prim s        = name ++ "." ++ s
 
-transformExpr :: Modulename -> HPR.Expr -> Err AST.Expression
-transformExpr name e = case e of
+transformExpr :: Modulename -> S.Set Identifier -> HPR.Expr -> Err AST.Expression
+transformExpr name ctx e = case e of
   HPR.EId i -> Ok $ case i of
     HPR.ICon i' -> AST.ECon $ prefix name i'
-    HPR.IVar i' -> AST.EVar $ prefix name i'
+    HPR.IVar i' -> AST.EVar $ if S.member (fromIdVar i') ctx 
+                                then fromIdVar i' 
+                                else prefix name i'
   
   HPR.EPrim p -> Ok $ AST.ELit $ case p of
     HPR.IInteger i -> LI i
@@ -134,7 +138,7 @@ transformExpr name e = case e of
     HPR.IString s  -> LS s
 
   -- To look after BIFs, this is converted and run again
-  HPR.EInfix a (IdOpr op) b -> transformExpr name $ HPR.EApp
+  HPR.EInfix a (IdOpr op) b -> transformExpr name ctx $ HPR.EApp
                                             (HPR.EApp
                                               (HPR.EId 
                                                 (HPR.IVar 
@@ -143,8 +147,8 @@ transformExpr name e = case e of
                                               a)
                                             b
 
-  HPR.EApp a b       -> do a' <- transformExpr name a
-                           b' <- transformExpr name b
+  HPR.EApp a b       -> do a' <- transformExpr name ctx a
+                           b' <- transformExpr name ctx b
                            case a' of
                             AST.EVar i -> case lookupBIF i of
                               Just (m,f,_) -> Ok $ ECall m f b'
@@ -153,18 +157,19 @@ transformExpr name e = case e of
 
   HPR.EOpr i         -> Ok $ AST.EVar $ prefix name i
   
-  HPR.ECase a c      -> do e' <- transformExpr name a
-                           c' <- mapM (transformClause name) c
+  HPR.ECase a c      -> do e' <- transformExpr name ctx a
+                           c' <- mapM (transformClause name ctx) c
                            Ok $ AST.ECase e' c'
   
-  HPR.EIf a b c      -> do a' <- transformExpr name a
-                           b' <- transformExpr name b
-                           c' <- transformExpr name c
+  HPR.EIf a b c      -> do a' <- transformExpr name ctx a
+                           b' <- transformExpr name ctx b
+                           c' <- transformExpr name ctx c
                            Ok $ AST.ECase a' [(AST.PCon "True"  [], b')
                                              ,(AST.PCon "False" [], c')]
 
-  HPR.ELambda ps a   -> do a'  <- transformExpr name a 
-                           ps' <- mapM (transformPat name) ps 
+  HPR.ELambda ps a   -> do ps' <- mapM (transformPat name) ps
+                           let ctx' = foldr patternToContext ctx ps'
+                           a'  <- transformExpr name ctx' a
                            Ok $ AST.ELambda ps' a' 
                            
   where app (Bad m) _      = Bad m
@@ -197,21 +202,29 @@ transformPatTuple name a = case a of
 transformArg :: Modulename -> HPR.Arg -> Err AST.Pattern
 transformArg name (APat p) = transformPat name p
 
-transformClause :: Modulename -> HPR.Clause -> Err (AST.Pattern, AST.Expression)
-transformClause name (CClause pat e) = case pat of
+transformClause :: Modulename -> S.Set Identifier -> HPR.Clause -> Err (AST.Pattern, AST.Expression)
+transformClause name ctx (CClause pat e) = case pat of
   CCPPat p -> do p' <- transformPat name p
-                 e' <- transformExpr name e
+                 let ctx' = patternToContext p' ctx
+                 e' <- transformExpr name ctx' e
                  Ok (p',e')
 
   CCPCon i p -> do p' <- mapM (transformPat name) p
                    let p'' = AST.PCon (prefix name i) p'
-                   e' <- transformExpr name e
+                   let ctx' = patternToContext p'' ctx
+                   e' <- transformExpr name ctx' e
                    Ok (p'',e')
 
 
 --
 -- Helper functions
 --
+
+patternToContext :: Pattern -> S.Set Identifier -> S.Set Identifier
+patternToContext (AST.PVar i)    s = S.insert i s
+patternToContext (AST.PCon _ ps) s = foldr patternToContext s ps
+patternToContext (AST.PTuple ps) s = foldr patternToContext s ps
+patternToContext _               s = s
 
 -- | Find ADT declarations and take them out to an own map
 findADTs :: Modulename -> [HPR.Def] -> (M.Map Identifier AST.Type, [HPR.Def])
