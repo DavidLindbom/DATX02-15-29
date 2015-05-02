@@ -31,7 +31,8 @@ import qualified Control.Monad.Reader as R
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Type -> CES.Module
-compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId) es as ds
+compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId) 
+                                                        es as ds
   where as = []
         ds = map compileFun defs ++ generateModuleInfo mId
         es = compileExports exports m
@@ -59,7 +60,10 @@ compileExport m eId = CES.Function (Atom eId, getArity eId m)
 --  to a CoreErlang.FunDef
 compileFun :: HPR.Function Type -> FunDef
 compileFun (HPR.Fun fId t e) =
-  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr (R.runReader (compileExp e') S.empty))
+  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr 
+                                                            (R.runReader 
+                                                                  (compileExp 
+                                                                   e') S.empty))
   where e' = case e of
                (ELambda _ _) -> e
                _             -> (ELambda [] e)
@@ -71,18 +75,22 @@ compileFun (HPR.Fun fId t e) =
 --  an AppAST will be a function identifier
 compileExp :: Expression -> R.Reader (S.Set Identifier) CES.Exp
 compileExp (EVar nId)         = case strToName nId of
-                                  (Nothing, _) -> do isVariable <- R.asks $ S.member nId
+                                  (Nothing, _) -> do isVariable <- R.asks $ 
+                                                                   S.member nId
                                                      return $ if isVariable
                                                                  then Var nId
-                                                                 else CES.Fun $ __fun nId
+                                                                 else CES.Fun $
+                                                                      __fun nId
                                   (Just mId, fId) -> return $ modCall 
                                                      (atom "erlang")
                                                      (atom "make_fun")
-                                                     [atom $ intercalate "." mId,
+                                                     [atom $ intercalate "." 
+                                                           mId,
                                                      atom $ "__"++fId,
                                                      Lit $ LInt 0]
 compileExp (ELit l)           = return $ Lit $ compileLiteral l
-compileExp (ETuple es)        = fmap Tuple $ mapM (\e -> fmap exps $ compileExp e) es
+compileExp (ETuple es)        = fmap Tuple $ mapM (\e -> fmap exps $ compileExp
+                                                         e) es
 compileExp l@(ELambda pats e) = compileLambda l
 compileExp (EApp ef ex)       = do ef' <- compileExp ef
                                    ex' <- compileExp ex
@@ -90,7 +98,7 @@ compileExp (EApp ef ex)       = do ef' <- compileExp ef
 compileExp (ECase e cases)    = do exp <- compileExp e
                                    alts <- mapM (\(pat,res)->
                                                  do 
-                                                   let cpat = compileCasePat pat
+                                                   let cpat = compilePat pat
                                                        vars = namesOccP pat
                                                    cres <- R.local 
                                                            (inserts vars) $
@@ -102,7 +110,8 @@ compileExp (ECase e cases)    = do exp <- compileExp e
                                                         atom"true")
                                                        (exps cres)) cases
                                    return $ Case (exps exp) alts
-compileExp (ECall mId fId e)  = fmap (ModCall (m, fun)) (mapM (fmap exps . compileExp) as)
+compileExp (ECall mId fId e)  = fmap (ModCall (m, fun)) 
+                                (mapM (fmap exps . compileExp) as)
   where m           = Exp (Constr (Lit (LAtom (Atom mId))))
         fun         = Exp (Constr (Lit (LAtom (Atom fId))))
         (ETuple as) = e
@@ -133,15 +142,26 @@ inserts ns set = foldr (\n set -> S.insert n set) set ns
 -- pattern contains something else, it should replace it with a
 -- fresh variable and wrap the expression with a case clause
 compileLambda :: Expression -> R.Reader (S.Set Identifier) CES.Exp
-compileLambda l@(ELambda pats e) = compileExp $ lambdaToCase l
+compileLambda l@(ELambda pats e) = do let vns = map (("X@"++) . show) 
+                                                (zipWith const [1..] pats)
+                                      let erlps = map compilePat pats
+                                      erle <- compileExp e
+                                      return (Lambda vns $ exps $
+                                             Case (exps (Tuple $ 
+                                                         map (exps. Var) vns))
+                                             [alt (CES.PTuple erlps,erle)])
+    where 
+      alt (p,e) = Constr $ Alt (Pat p) (Guard $ exps $ atom "true") $ exps e
 compileLambda e                  = error $ "Not a lambda: " ++ show e
 
 -- \a (b,c) -> a + b
 -- \X@1 X@0 -> case (X@1, X@0) of
 --               (a, (b,c)) -> a + b
-lambdaToCase :: Expression -> Expression
-lambdaToCase (ELambda pats e) = let vns = map (("X@"++) . show) (zipWith const [1..] pats) in
-       ECase (HPR.ETuple $ map EVar vns) [(HPR.PTuple pats, e)]
+{-lambdaToCase :: Expression -> Expression
+lambdaToCase (ELambda pats e) =  
+                                ELambda (map HPR.PVar vns) $ ECase (HPR.ETuple 
+                                $ map EVar vns) [(HPR.PTuple pats, e)]
+-}      
 
 --  to a list of patterns. This means a tuple will be
 --  converted to a list of its patterns.
@@ -151,15 +171,16 @@ getCasePatterns p               = [p]
 
 -- |The 'compileCasePat' function compiles a hopper pattern
 --  to a core erlang pattern
-compileCasePat :: Pattern -> Pat
-compileCasePat (HPR.PVar i)     = CES.PVar i
-compileCasePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : map compileCasePat pts
+compilePat :: Pattern -> Pat
+compilePat (HPR.PVar i)     = CES.PVar i
+compilePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : 
+                                  map compilePat pts
   where c' = case c of
                ':':xs -> xs
                x:xs   -> toLower x : xs
-compileCasePat PWild             = CES.PVar "_" 
-compileCasePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
-compileCasePat (HPR.PTuple pats) = CES.PTuple $ map compileCasePat pats
+compilePat PWild             = CES.PVar "_" 
+compilePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
+compilePat (HPR.PTuple pats) = CES.PTuple $ map compilePat pats
 
 -- |The 'compileLiteral' function compiles a hopper literal
 --  to a core erlang literal
@@ -191,7 +212,9 @@ typeToArity _ = 1 -- TODO NOT CORRECT AT ALL
 -- |The 'getTypeSig' function gets the Signature
 --  of the function with the given id in the given ModuleAST
 getTypeSig :: String -> HPR.Module Type -> Type
-getTypeSig fId (Mod _ _ _ [] _) = error $ "Could not find function when looking for signature: " ++ fId
+getTypeSig fId (Mod _ _ _ [] _) = error $ 
+                                  "Could not find function when looking" ++
+                                  "for signature: " ++ fId
 getTypeSig fId (Mod mId es is (HPR.Fun funId typeSig _:defs) datas)
   | fId == funId = typeSig
   | otherwise    = getTypeSig fId (Mod mId es is defs datas)
@@ -231,4 +254,5 @@ generateModuleInfo mId = [mi0,mi1]
                      (Constr (Lambda ["_cor0"] (Exp (Constr (ModCall
                         (Exp (Constr (Lit (LAtom (Atom "erlang")))),
                          Exp (Constr (Lit (LAtom (Atom "get_module_info")))))
-                        [Exp (Constr (Lit (LAtom (Atom mId)))),Exp (Constr (Var "_cor0"))])))))
+                        [Exp (Constr (Lit (LAtom (Atom mId)))),Exp (Constr 
+                                           (Var "_cor0"))])))))
