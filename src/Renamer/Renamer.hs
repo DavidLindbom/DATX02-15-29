@@ -179,7 +179,7 @@ transformExpr name ctx e = case e of
 transformPat :: Modulename -> HPR.Pat -> Err AST.Pattern
 transformPat name p = case p of
   HPR.PCon i  -> Ok $ AST.PCon (prefix name i) []
-  HPR.PVar i  -> Ok $ AST.PVar (prefix name i)
+  HPR.PVar (TIdVar i) -> Ok $ AST.PVar i
 
   HPR.PPrim p -> Ok $ AST.PLit $ case p of
     HPR.IInteger i -> LI i
