@@ -113,8 +113,10 @@ compileExp (EVar nId)         = case strToName nId of {-
                                                               handleVarName nId
                                                          else 
                                                             if mId == thisModule
-                                                            then CES.Fun $
-                                                                 __fun nId
+                                                            then App
+                                                         (exps $ CES.Fun $
+                                                          __fun nId)
+                                                         []
                                                             else modCall 
                                                          (atom "erlang")
                                                          (atom "make_fun")
