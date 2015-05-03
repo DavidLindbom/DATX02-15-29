@@ -1,1 +1,1 @@
-(fromList [("HPR.id",TApp (TApp (TCon "Prim.->") (TCon "Prim.Int")) (TCon "Prim.Int"))],fromList [])
+(fromList [("HPR.id",TForAll (TApp (TApp (TCon "Prim.->") (TVar "t1")) (TVar "t1")))],fromList [])

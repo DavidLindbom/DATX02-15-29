@@ -17,5 +17,5 @@ const x _ = x
 -- loop x = loop x
 -}
 
-id :: Int -> Int
+--id :: Int -> Int
 id x = x

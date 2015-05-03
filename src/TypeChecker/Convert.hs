@@ -108,8 +108,6 @@ typeASTToType (L.ForallT t) = A.TForAll $ typeASTToType t
 typeASTToType (L.AppT tf tx) = A.TApp 
                                (typeASTToType tf)
                                (typeASTToType tx)
-typeASTToType t = error $ "Non-exhaustive: " ++ show t
-
 
 astToExp :: L.AST -> A.Expression
 astToExp (L.Named (L.Name _ s)) = A.EVar s

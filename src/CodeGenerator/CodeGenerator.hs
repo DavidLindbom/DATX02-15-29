@@ -27,6 +27,7 @@ import Data.Char
 import qualified Data.Set as S
 import Data.List (break, intercalate)
 import qualified Control.Monad.Reader as R
+import Control.Arrow ((***))
 
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
@@ -34,7 +35,7 @@ compileModule :: HPR.Module Type -> CES.Module
 compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId) 
                                                         es as ds
   where as = []
-        ds = map compileFun defs ++ generateModuleInfo mId
+        ds = map (compileFun mId) defs ++ generateModuleInfo mId
         es = compileExports exports m
 
 -- |The 'compileModuleString' function compiles a hoppper
@@ -58,12 +59,13 @@ compileExport m eId = CES.Function (Atom eId, getArity eId m)
 
 -- |The 'compileFun' function compiles a hopper Function
 --  to a CoreErlang.FunDef
-compileFun :: HPR.Function Type -> FunDef
-compileFun (HPR.Fun fId t e) =
+compileFun :: Modulename -> HPR.Function Type -> FunDef
+compileFun mId (HPR.Fun fId t e) =
   CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr 
                                                             (R.runReader 
                                                                   (compileExp 
-                                                                   e') S.empty))
+                                                                   e') 
+                                                             (mId,S.empty)))
   where e' = case e of
                (ELambda _ _) -> e
                _             -> (ELambda [] e)
@@ -73,21 +75,42 @@ compileFun (HPR.Fun fId t e) =
 --  Named and AppAst are implemented with parameterless functions in mind
 --  AppAST will rely on that the first AST in the first occurence of
 --  an AppAST will be a function identifier
-compileExp :: Expression -> R.Reader (S.Set Identifier) CES.Exp
-compileExp (EVar nId)         = case strToName nId of
+compileExp :: Expression -> R.Reader (Modulename,S.Set Identifier) CES.Exp
+compileExp (EVar nId)         = case strToName nId of {-
+                                  --Everything has a module prefix, even vars:(
                                   (Nothing, _) -> do isVariable <- R.asks $ 
-                                                                   S.member nId
+                                                                   S.member nId 
+                                                                  . snd
                                                      return $ if isVariable
                                                                  then Var nId
                                                                  else CES.Fun $
                                                                       __fun nId
-                                  (Just mId, fId) -> return $ modCall 
-                                                     (atom "erlang")
-                                                     (atom "make_fun")
-                                                     [atom $ intercalate "." 
-                                                           mId,
-                                                     atom $ "__"++fId,
-                                                     Lit $ LInt 0]
+                                                       -}
+                                  (mId, fId) -> do isVariable <- R.asks $
+                                                         S.member nId . snd
+                                                   thisModule <- R.asks fst
+                                                   return $ 
+                                                         if isVariable 
+                                                         then Var nId
+                                                         else 
+                                                            if mId == thisModule
+                                                            then CES.Fun $
+                                                                 __fun nId
+                                                            else modCall 
+                                                         (atom "erlang")
+                                                         (atom "make_fun")
+                                                        [atom mId,
+                                                         atom $ "__"++fId,
+                                                         Lit $ LInt 0]
+                                 {-
+                                   return $ modCall 
+                                             (atom "erlang")
+                                             (atom "make_fun")
+                                             [atom $ intercalate "." 
+                                              mId,
+                                              atom $ "__"++fId,
+                                              Lit $ LInt 0]
+                                              -}
 compileExp (ELit l)           = return $ Lit $ compileLiteral l
 compileExp (ETuple es)        = fmap Tuple $ mapM (\e -> fmap exps $ compileExp
                                                          e) es
@@ -101,7 +124,8 @@ compileExp (ECase e cases)    = do exp <- compileExp e
                                                    let cpat = compilePat pat
                                                        vars = namesOccP pat
                                                    cres <- R.local 
-                                                           (inserts vars) $
+                                                           (id ***inserts vars)
+                                                           $
                                                         compileExp res
                                                    return $ Constr $ Alt
                                                        (pats cpat)
@@ -141,7 +165,7 @@ inserts ns set = foldr (\n set -> S.insert n set) set ns
 -- have a list of variables as the pattern. Whenever the hopper
 -- pattern contains something else, it should replace it with a
 -- fresh variable and wrap the expression with a case clause
-compileLambda :: Expression -> R.Reader (S.Set Identifier) CES.Exp
+compileLambda :: Expression -> R.Reader (Modulename, S.Set Identifier) CES.Exp
 compileLambda l@(ELambda pats e) = do let vns = map (("X@"++) . show) 
                                                 (zipWith const [1..] pats)
                                       let erlps = map compilePat pats
@@ -230,15 +254,15 @@ __fun s = Function (Atom$"__"++s,0)
 modCall :: Exp -> Exp -> [Exp] -> Exp
 modCall mod fn args = ModCall (exps mod,exps fn) $ map exps args
 
-strToName :: Identifier -> (Maybe [String], String)
+--Breaks a name into its module prefix and its unqualified name.
+--Because all names now have a module prefix, it no longer returns a Maybe.
+strToName :: Identifier -> (String, String)
 strToName (c:s) | isUpper c = case break (=='.') (c:s) of
-                                (con,"") -> (Nothing, con)
+                                (con,"") -> ("", con)
                                 (mod,'.':s') -> addModule mod $ strToName s'
-                | otherwise = (Nothing, c:s )
+                | otherwise = ([], c:s )
                 where
-                  addModule m (Nothing, s) = (Just[m], s)
-                  addModule m (Just ms, s) = (Just$m:ms, s)
-
+                  addModule m (mId, s) = (m++"."++mId, s)
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
 --  module_info/1 functions
