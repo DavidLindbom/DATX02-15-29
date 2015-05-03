@@ -153,7 +153,7 @@ compileExp (ECase e cases)    = do exp <- compileExp e
                                                         atom"true")
                                                        (exps cres)) cases
                                    let alts' = alts++[caseClauseException]
-                                   return $ Case (exps exp) alts
+                                   return $ Case (exps exp) alts'
 compileExp (ECall mId fId e)  = fmap (ModCall (m, fun)) 
                                 (mapM (fmap exps . compileExp) as)
   where m           = Exp (Constr (Lit (LAtom (Atom mId))))
