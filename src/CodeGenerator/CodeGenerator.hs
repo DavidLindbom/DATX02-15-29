@@ -46,14 +46,15 @@ compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId)
                          
                   
              ++ generateModuleInfo mId
-        arityOf (ELambda ps _) = fromIntegral $ length ps
-        arityOf _ = 0
+        
         es = compileExports exports m
 apply ef ex =  App (exps ef) [exps ex]
 fun mod name arity = modCall 
                      (atom "erlang")
                      (atom "make_fun")
                      [atom mod,atom name,Lit$LInt arity]
+arityOf (ELambda ps _) = fromIntegral $ length ps
+arityOf _ = 0
 -- |The 'compileModuleString' function compiles a hoppper
 --  to a Core Erlang code string
 compileModuleString :: HPR.Module Type -> Err String
@@ -77,7 +78,7 @@ compileExport m eId = CES.Function (Atom $ unqualifiedName eId, getArity eId m)
 --  to a CoreErlang.FunDef
 compileFun :: Modulename -> HPR.Function Type -> FunDef
 compileFun mId (HPR.Fun fId t e) =
-  CES.FunDef (Constr (Function (Atom $ unqualifiedName fId, typeToArity t))) 
+  CES.FunDef (Constr (Function (Atom $ unqualifiedName fId, arityOf e))) 
          (Constr 
           (R.runReader 
                 (compileExp 

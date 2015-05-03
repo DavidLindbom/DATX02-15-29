@@ -5,15 +5,21 @@ module 'HPR' ['id'/1, 'module_info'/0, 'module_info'/1]
         case {X@1} of
             {Px} when 'true' ->
                 Px
+            (<_cor1> when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
         end
 '__id'/0 =
     fun() ->
         apply call 'erlang':'make_fun' ('curry', 'curry', 1)('id'/1)
-'loop'/1 =
+'loop'/0 =
     fun() ->
         case {} of
             {} when 'true' ->
                 '__loop'/0
+            (<_cor1> when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
         end
 '__loop'/0 =
     fun() ->
