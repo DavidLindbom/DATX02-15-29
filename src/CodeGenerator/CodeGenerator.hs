@@ -323,7 +323,7 @@ generateModuleInfo mId = [mi0,mi1]
 --  core erlang case clause alternative containing
 --  a match fail case, used for descriptive error output
 caseClauseException :: Ann Alt
-caseClauseException = Ann (Alt (Pats [CES.PVar "_cor1"])
+caseClauseException = Ann (Alt (Pat (CES.PTuple [CES.PVar "_cor1"]))
                                (Guard (Exp (Constr (Lit (LAtom (Atom "true"))))))
                                (Exp (Constr (Op (Atom "match_fail")
                                                 [Exp (Constr (Tuple [Exp (Constr (Lit (LAtom (Atom "case_clause"))))
