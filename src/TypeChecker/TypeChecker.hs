@@ -55,9 +55,9 @@ typecheckModule rnm = do
                                where
                                  vs = [name $ "x"++show n |
                                        n <- [1..ar]]
-        nameToAtom (Name _ s) = LitAST $ AtomL $ case s of
+        nameToAtom (Name _ s) = LitAST $ AtomL s {-$ case s of
                                                    ':':s' -> s'
-                                                   upper:s' -> toLower upper:s'
+                                                   upper:s' -> toLower upper:s'-}
         arity (AppT (AppT (ConT(Name Nothing "Prim.->")) _) t) = 
             1 + arity t
         arity _ = 0

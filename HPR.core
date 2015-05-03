@@ -1,4 +1,28 @@
 module 'HPR' ['and'/2, 'id'/1, 'loop'/1] attributes []
+'Cons'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px1, Px2} when 'true' ->
+                {'HPR.Cons', Px1, Px2}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Cons'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('Cons'/2)
+'Nil'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'HPR.Nil'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Nil'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('Nil'/0)
 'and'/2 =
     fun(X@1, X@2) ->
         case {X@1, X@2} of

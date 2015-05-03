@@ -26,3 +26,5 @@ id x = x
 --a x = b x
 
 and x y = x
+
+data List a = a :+ (List a) | Nil

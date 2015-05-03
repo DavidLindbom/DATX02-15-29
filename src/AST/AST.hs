@@ -26,7 +26,7 @@ data Literal = LS String
              | LC Char
              | LI Integer
              | LD Double
-             -- | LL []
+             | LA String
   deriving (Eq,Ord,Show)
 
 data Function a = Fun Identifier a Expression

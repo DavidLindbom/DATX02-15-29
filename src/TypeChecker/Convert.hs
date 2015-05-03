@@ -136,3 +136,4 @@ lLitToALit (L.StringL s) = A.LS s
 lLitToALit (L.CharL c) = A.LC c
 lLitToALit (L.IntegerL i) = A.LI i
 lLitToALit (L.DoubleL d) = A.LD d
+lLitToALit (L.AtomL s) = A.LA s

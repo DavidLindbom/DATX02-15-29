@@ -265,6 +265,7 @@ compileLiteral (LS s) = LString s
 compileLiteral (LC c) = LChar c
 compileLiteral (LI i) = LInt i
 compileLiteral (LD d) = LFloat d -- No double constructor in CoreErlang
+compileLiteral (LA s) = LAtom $ Atom s
 
 -- |The 'isIdBound' function checks if the given id is
 --  bound in the given scope
