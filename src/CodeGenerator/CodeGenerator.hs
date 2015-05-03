@@ -91,7 +91,8 @@ compileExp (EVar nId)         = case strToName nId of {-
                                                    thisModule <- R.asks fst
                                                    return $ 
                                                          if isVariable 
-                                                         then Var nId
+                                                         then Var $ 
+                                                              handleVarName nId
                                                          else 
                                                             if mId == thisModule
                                                             then CES.Fun $
@@ -141,6 +142,20 @@ compileExp (ECall mId fId e)  = fmap (ModCall (m, fun))
         (ETuple as) = e
 compileExp e                  = error $ "Illegal expression: " ++ show e
 
+handleVarName s = 
+    if isPrefixName s
+    then 'P':s
+    else 'I':
+         encodeInfix s         
+        where
+          isPrefixName (c:s) = c == '_' || isAlpha c
+        --converts an infix variable name such as "+" to
+        --a representation Erlang is guaranteed to accept.
+        --Does this in a very simple fashion (by turning
+        --characters into their integer representation).
+          encodeInfix cs = foldr1 (\s str -> s ++ "_" ++ str) $ 
+                           map (show.ord) cs
+
 pats :: Pat -> Pats
 pats = Pat
 
@@ -169,7 +184,9 @@ compileLambda :: Expression -> R.Reader (Modulename, S.Set Identifier) CES.Exp
 compileLambda l@(ELambda pats e) = do let vns = map (("X@"++) . show) 
                                                 (zipWith const [1..] pats)
                                       let erlps = map compilePat pats
-                                      erle <- compileExp e
+                                          vars = pats >>= namesOccP
+                                      erle <- R.local (id *** inserts vars) $
+                                              compileExp e
                                       return (Lambda vns $ exps $
                                              Case (exps (Tuple $ 
                                                          map (exps. Var) vns))
@@ -196,7 +213,7 @@ getCasePatterns p               = [p]
 -- |The 'compileCasePat' function compiles a hopper pattern
 --  to a core erlang pattern
 compilePat :: Pattern -> Pat
-compilePat (HPR.PVar i)     = CES.PVar i
+compilePat (HPR.PVar i)     = CES.PVar $ handleVarName i
 compilePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : 
                                   map compilePat pts
   where c' = case c of
