@@ -1,11 +1,23 @@
-module 'HPR' ['HPR.id'/1, 'module_info'/0, 'module_info'/1]
+module 'HPR' ['id'/1, 'module_info'/0, 'module_info'/1]
     attributes []
-'HPR.id'/1 =
+'id'/1 =
     fun(X@1) ->
         case {X@1} of
             {Px} when 'true' ->
                 Px
         end
+'__id'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('id'/1)
+'loop'/1 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                '__loop'/0
+        end
+'__loop'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('loop'/0)
 'module_info'/0 =
     fun() -> call 'erlang':'get_module_info' ('HPR')
 'module_info'/1 =

@@ -35,9 +35,25 @@ compileModule :: HPR.Module Type -> CES.Module
 compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId) 
                                                         es as ds
   where as = []
-        ds = map (compileFun mId) defs ++ generateModuleInfo mId
+        ds = (defs >>= \d@(HPR.Fun fname t expr) -> 
+                        [compileFun mId d,
+                         FunDef (Constr $ __fun fname) $ 
+                         Constr $ Lambda [] $ exps $
+                                apply 
+                                (fun "curry" "curry" 1) $
+                                CES.Fun (Function (Atom $unqualifiedName fname,
+                                                    arityOf expr))])
+                         
+                  
+             ++ generateModuleInfo mId
+        arityOf (ELambda ps _) = fromIntegral $ length ps
+        arityOf _ = 0
         es = compileExports exports m
-
+apply ef ex =  App (exps ef) [exps ex]
+fun mod name arity = modCall 
+                     (atom "erlang")
+                     (atom "make_fun")
+                     [atom mod,atom name,Lit$LInt arity]
 -- |The 'compileModuleString' function compiles a hoppper
 --  to a Core Erlang code string
 compileModuleString :: HPR.Module Type -> Err String
@@ -55,17 +71,18 @@ compileExports es m = map (compileExport m) es ++ [mi0,mi1]
 -- |The 'compileExport' function compiles an Identifier
 --  to a CoreErlang.Syntax.Function
 compileExport :: HPR.Module Type -> Identifier -> CES.Function
-compileExport m eId = CES.Function (Atom eId, getArity eId m)
+compileExport m eId = CES.Function (Atom $ unqualifiedName eId, getArity eId m)
 
 -- |The 'compileFun' function compiles a hopper Function
 --  to a CoreErlang.FunDef
 compileFun :: Modulename -> HPR.Function Type -> FunDef
 compileFun mId (HPR.Fun fId t e) =
-  CES.FunDef (Constr (Function (Atom fId, typeToArity t))) (Constr 
-                                                            (R.runReader 
-                                                                  (compileExp 
-                                                                   e') 
-                                                             (mId,S.empty)))
+  CES.FunDef (Constr (Function (Atom $ unqualifiedName fId, typeToArity t))) 
+         (Constr 
+          (R.runReader 
+                (compileExp 
+                 e') 
+           (mId,S.empty)))
   where e' = case e of
                (ELambda _ _) -> e
                _             -> (ELambda [] e)
@@ -267,7 +284,7 @@ getSignatures :: HPR.Module Type -> [(Identifier, Integer)]
 getSignatures (Mod _ _ _ defs _) = map (\(HPR.Fun i sig _) -> (i, 1)) defs
 
 __fun :: Identifier -> CES.Function
-__fun s = Function (Atom$"__"++s,0)
+__fun s = Function (Atom$"__"++unqualifiedName s,0)
 
 modCall :: Exp -> Exp -> [Exp] -> Exp
 modCall mod fn args = ModCall (exps mod,exps fn) $ map exps args
@@ -275,12 +292,14 @@ modCall mod fn args = ModCall (exps mod,exps fn) $ map exps args
 --Breaks a name into its module prefix and its unqualified name.
 --Because all names now have a module prefix, it no longer returns a Maybe.
 strToName :: Identifier -> (String, String)
-strToName (c:s) | isUpper c = case break (=='.') (c:s) of
+strToName = (init *** id) . strToName'
+strToName' (c:s) | isUpper c = case break (=='.') (c:s) of
                                 (con,"") -> ("", con)
-                                (mod,'.':s') -> addModule mod $ strToName s'
+                                (mod,'.':s') -> addModule mod $ strToName' s'
                 | otherwise = ([], c:s )
                 where
                   addModule m (mId, s) = (m++"."++mId, s)
+unqualifiedName = snd . strToName
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
 --  module_info/1 functions
