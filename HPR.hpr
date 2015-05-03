@@ -1,5 +1,5 @@
 
-module HPR (id,loop) where
+module HPR (id,loop,and) where
 {-
 f = 3
 --const "String" x = case x of
@@ -24,3 +24,5 @@ id x = x
 
 --b x = x
 --a x = b x
+
+and x y = x

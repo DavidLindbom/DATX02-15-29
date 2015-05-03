@@ -25,7 +25,7 @@ import AST.AST as HPR
 
 import Data.Char
 import qualified Data.Set as S
-import Data.List (break, intercalate)
+import Data.List (break, intercalate, sort)
 import qualified Control.Monad.Reader as R
 import Control.Arrow ((***))
 
@@ -47,7 +47,21 @@ compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId)
                   
              ++ generateModuleInfo mId
         
-        es = compileExports exports m
+        es = let sds =
+                     sort ds
+                 sexports =
+                     sort $ map unqualifiedName exports
+             in 
+               getArities sexports sds
+        getArities [] _ = []
+        getArities (exp:exps) (d:ds) 
+                               | exp == nameOfDef d = 
+                               CES.Function (Atom exp, arityOfDef d) 
+                                      : getArities exps ds
+                               | exp > nameOfDef d = getArities (exp:exps) ds
+        getArities (exp:_) _ = error $ exp ++ " was exported but not defined!"
+        nameOfDef (FunDef (Constr (Function ((Atom nm,ar)))) _) = nm
+        arityOfDef (FunDef (Constr (Function ((Atom nm,ar)))) _) = ar
 apply ef ex =  App (exps ef) [exps ex]
 fun mod name arity = modCall 
                      (atom "erlang")

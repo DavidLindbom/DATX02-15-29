@@ -1,1 +1,1 @@
-(fromList [("HPR.id",TForAll (TApp (TApp (TCon "Prim.->") (TVar "t1")) (TVar "t1"))),("HPR.loop",TForAll (TApp (TApp (TCon "Prim.->") (TVar "t2")) (TVar "t3")))],fromList [])
+(fromList [("HPR.and",TForAll (TApp (TApp (TCon "Prim.->") (TVar "t1")) (TApp (TApp (TCon "Prim.->") (TVar "t2")) (TVar "t1")))),("HPR.id",TForAll (TApp (TApp (TCon "Prim.->") (TVar "t1")) (TVar "t1"))),("HPR.loop",TForAll (TApp (TApp (TCon "Prim.->") (TVar "t2")) (TVar "t3")))],fromList [])
