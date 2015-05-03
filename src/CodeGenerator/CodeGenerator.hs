@@ -16,6 +16,7 @@ abstract module as seen in AST.hs
 This module is part of the Hopper language project
 -}
 
+
 module CodeGenerator.CodeGenerator where
 
 import Language.CoreErlang.Syntax as CES
@@ -29,6 +30,9 @@ import Data.List (break, intercalate, sort)
 import qualified Control.Monad.Reader as R
 import Control.Arrow ((***))
 
+--NOTE: curry and other primitives now live in Prim.erl in the root directory
+prim_module_name = "Prim"
+
 -- |The 'compileModule' function compiles a hopper Module
 --  to a CoreErlang<F6>fe<F6>tax.Module
 compileModule :: HPR.Module Type -> CES.Module
@@ -40,7 +44,7 @@ compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId)
                          FunDef (Constr $ __fun fname) $ 
                          Constr $ Lambda [] $ exps $
                                 apply 
-                                (fun "curry" "curry" 1) $
+                                (fun prim_module_name "curry" 1) $
                                 CES.Fun (Function (Atom $unqualifiedName fname,
                                                     arityOf expr))])
                          
@@ -50,7 +54,7 @@ compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId)
         es = let sds =
                      sort ds
                  sexports =
-                     sort $ map unqualifiedName exports
+                     sort $ map unqualifiedName $ "module_info" : exports
              in 
                getArities sexports sds
         getArities [] _ = []
@@ -131,12 +135,13 @@ compileExp (EVar nId)         = case strToName nId of {-
                                                          (exps $ CES.Fun $
                                                           __fun nId)
                                                          []
-                                                            else modCall 
+                                                            else App (exps $
+                                                          modCall 
                                                          (atom "erlang")
                                                          (atom "make_fun")
                                                         [atom mId,
                                                          atom $ "__"++fId,
-                                                         Lit $ LInt 0]
+                                                         Lit $ LInt 0]) []
                                  {-
                                    return $ modCall 
                                              (atom "erlang")

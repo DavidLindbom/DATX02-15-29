@@ -1,0 +1,4 @@
+
+module M () where
+
+three = 3

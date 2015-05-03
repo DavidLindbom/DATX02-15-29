@@ -123,14 +123,14 @@ patASTToPat :: L.PatAST -> A.Pattern
 patASTToPat (L.VarPat (L.Name _ s)) = A.PVar s
 patASTToPat app@(L.AppPat _ _) = unfoldApps app []
 	where 
-		unfoldApps (L.ConPat (L.Name _ s)) ps = 
-			A.PCon s (reverse $ map patASTToPat ps)
+		unfoldApps (L.ConPat n) ps = 
+			A.PCon (show n) (reverse $ map patASTToPat ps)
 		unfoldApps (L.AppPat app p) ps =
 			unfoldApps app (p:ps)
---patASTToPat (L.ConPat (L.Name _ s)) = A.PCon s
 patASTToPat (L.LitPat lit) = A.PLit $ lLitToALit lit
 patASTToPat L.WildPat = A.PWild
 patASTToPat (L.TuplePat ps) = A.PTuple $ map patASTToPat ps
+patASTToPat (L.ConPat n) = A.PCon (show n) []
 
 lLitToALit (L.StringL s) = A.LS s
 lLitToALit (L.CharL c) = A.LC c

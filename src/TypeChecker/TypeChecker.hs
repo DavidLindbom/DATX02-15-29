@@ -30,13 +30,13 @@ typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   
 typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do
-  --NOTE: I HARDCODED THE TYPE OF apply :: String -> String -> Integer -> a -> b
+  --NOTE: I HARDCODED THE TYPE OF apply :: String -> String -> Number -> a
   --here.
-  names'types <- typecheck ((Name Nothing "apply",
+  names'types <- typecheck ((Name Nothing "Prim.apply",
                              ForallT $ foldr1 arrowtype
                                          [prim"String",prim"String",
-                                              prim"Integer",
-                                          tyVar "a",tyVar "b"])
+                                              prim"Number",
+                                          tyVar "a"])
                             :cons rnm ++ imports rnm) (defs rnm)
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
@@ -233,8 +233,8 @@ prim s = ConT $ Name Nothing $ "Prim."++s
 
 litType lit = case lit of 
                 StringL _ -> prim "String"
-                IntegerL _ -> prim "Integer"
-                DoubleL _ -> prim "Double"
+                IntegerL _ -> prim "Number"
+                DoubleL _ -> prim "Number"
                 CharL _ -> prim "Char"
                 AtomL _ -> prim "Atom"                               
 

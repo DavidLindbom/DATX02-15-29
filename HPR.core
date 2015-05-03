@@ -1,52 +1,42 @@
-module 'HPR' ['and'/2, 'id'/1, 'loop'/1] attributes []
-'Cons'/2 =
-    fun(X@1, X@2) ->
-        case {X@1, X@2} of
-            {Px1, Px2} when 'true' ->
-                {'HPR.Cons', Px1, Px2}
-            ({_cor1} when 'true' ->
-                 primop 'match_fail'({'case_clause', _cor1})
-             -| ['compiler_generated'])
-        end
-'__Cons'/0 =
-    fun() ->
-        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('Cons'/2)
-'Nil'/0 =
+module 'HPR' ['add'/2, 'module_info'/0, 'three'/0] attributes []
+'False'/0 =
     fun() ->
         case {} of
             {} when 'true' ->
-                'HPR.Nil'
+                'False'
             ({_cor1} when 'true' ->
                  primop 'match_fail'({'case_clause', _cor1})
              -| ['compiler_generated'])
         end
-'__Nil'/0 =
+'__False'/0 =
     fun() ->
-        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('Nil'/0)
-'and'/2 =
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('False'/0)
+'True'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'True'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__True'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('True'/0)
+'add'/2 =
     fun(X@1, X@2) ->
         case {X@1, X@2} of
             {Px, Py} when 'true' ->
-                Px
+                apply apply apply apply apply apply call 'erlang':'make_fun'
+                                                    ('Prim', '__apply',
+                                                     0)()("erlang")("+")(2)(Px)(Py)
             ({_cor1} when 'true' ->
                  primop 'match_fail'({'case_clause', _cor1})
              -| ['compiler_generated'])
         end
-'__and'/0 =
+'__add'/0 =
     fun() ->
-        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('and'/2)
-'id'/1 =
-    fun(X@1) ->
-        case {X@1} of
-            {Px} when 'true' ->
-                Px
-            ({_cor1} when 'true' ->
-                 primop 'match_fail'({'case_clause', _cor1})
-             -| ['compiler_generated'])
-        end
-'__id'/0 =
-    fun() ->
-        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('id'/1)
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('add'/2)
 'loop'/1 =
     fun(X@1) ->
         case {X@1} of
@@ -58,7 +48,19 @@ module 'HPR' ['and'/2, 'id'/1, 'loop'/1] attributes []
         end
 '__loop'/0 =
     fun() ->
-        apply call 'erlang':'make_fun' ('curry', 'curry', 1)('loop'/1)
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('loop'/1)
+'three'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply apply '__add'/0()(1)(2)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__three'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('three'/0)
 'module_info'/0 =
     fun() -> call 'erlang':'get_module_info' ('HPR')
 'module_info'/1 =
