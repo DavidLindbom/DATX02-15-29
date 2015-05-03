@@ -134,6 +134,7 @@ compileExp (ECase e cases)    = do exp <- compileExp e
                                                         exps$
                                                         atom"true")
                                                        (exps cres)) cases
+                                   let alts' = alts++[caseClauseException]
                                    return $ Case (exps exp) alts
 compileExp (ECall mId fId e)  = fmap (ModCall (m, fun)) 
                                 (mapM (fmap exps . compileExp) as)
@@ -190,7 +191,7 @@ compileLambda l@(ELambda pats e) = do let vns = map (("X@"++) . show)
                                       return (Lambda vns $ exps $
                                              Case (exps (Tuple $ 
                                                          map (exps. Var) vns))
-                                             [alt (CES.PTuple erlps,erle)])
+                                             [alt (CES.PTuple erlps,erle), caseClauseException])
     where 
       alt (p,e) = Constr $ Alt (Pat p) (Guard $ exps $ atom "true") $ exps e
 compileLambda e                  = error $ "Not a lambda: " ++ show e
@@ -297,3 +298,14 @@ generateModuleInfo mId = [mi0,mi1]
                          Exp (Constr (Lit (LAtom (Atom "get_module_info")))))
                         [Exp (Constr (Lit (LAtom (Atom mId)))),Exp (Constr 
                                            (Var "_cor0"))])))))
+
+-- |The 'caseClauseException' function returns a
+--  core erlang case clause alternative containing
+--  a match fail case, used for descriptive error output
+caseClauseException :: Ann Alt
+caseClauseException = Ann (Alt (Pats [CES.PVar "_cor1"])
+                               (Guard (Exp (Constr (Lit (LAtom (Atom "true"))))))
+                               (Exp (Constr (Op (Atom "match_fail")
+                                                [Exp (Constr (Tuple [Exp (Constr (Lit (LAtom (Atom "case_clause"))))
+                                                                    ,Exp (Constr (Var "_cor1"))]))]))))
+                          [CLit (LAtom (Atom "compiler_generated"))]
