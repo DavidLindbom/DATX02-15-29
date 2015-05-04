@@ -1,9 +1,11 @@
-module 'HPR' ['add'/2, 'module_info'/0, 'three'/0] attributes []
+module 'HPR' ['add'/2, 'fac'/1, 'module_info'/0, 'mul'/2,
+              'three'/0]
+    attributes []
 'False'/0 =
     fun() ->
         case {} of
             {} when 'true' ->
-                'False'
+                'false'
             ({_cor1} when 'true' ->
                  primop 'match_fail'({'case_clause', _cor1})
              -| ['compiler_generated'])
@@ -15,7 +17,7 @@ module 'HPR' ['add'/2, 'module_info'/0, 'three'/0] attributes []
     fun() ->
         case {} of
             {} when 'true' ->
-                'True'
+                'true'
             ({_cor1} when 'true' ->
                  primop 'match_fail'({'case_clause', _cor1})
              -| ['compiler_generated'])
@@ -37,6 +39,75 @@ module 'HPR' ['add'/2, 'module_info'/0, 'three'/0] attributes []
 '__add'/0 =
     fun() ->
         apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('add'/2)
+'bif'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply call 'erlang':'make_fun'
+                            ('Prim', '__apply', 0)()("erlang")
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__bif'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('bif'/0)
+'binop'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Ps} when 'true' ->
+                apply apply apply '__bif'/0()(Ps)(2)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__binop'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('binop'/1)
+'error'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Ps} when 'true' ->
+                apply apply apply apply '__bif'/0()("error")(1)(Ps)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__error'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('error'/1)
+'fac'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Pn} when 'true' ->
+                case apply apply apply '__gr8r'/0()(Pn)(0) of
+                    'true' when 'true' ->
+                        apply apply apply '__mul'/0()(Pn)(apply apply '__fac'/0()(apply apply apply '__sub'/0()(Pn)(1)))
+                    'false' when 'true' ->
+                        1
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__fac'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('fac'/1)
+'gr8r'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Pa, Pb} when 'true' ->
+                apply apply apply apply '__binop'/0()(">")(Pa)(Pb)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__gr8r'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('gr8r'/2)
 'loop'/1 =
     fun(X@1) ->
         case {X@1} of
@@ -49,6 +120,30 @@ module 'HPR' ['add'/2, 'module_info'/0, 'three'/0] attributes []
 '__loop'/0 =
     fun() ->
         apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('loop'/1)
+'mul'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px, Py} when 'true' ->
+                apply apply apply apply '__binop'/0()("*")(Px)(Py)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__mul'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('mul'/2)
+'sub'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px, Py} when 'true' ->
+                apply apply apply apply '__binop'/0()("-")(Px)(Py)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__sub'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('sub'/2)
 'three'/0 =
     fun() ->
         case {} of

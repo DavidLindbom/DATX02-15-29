@@ -55,9 +55,9 @@ typecheckModule rnm = do
                                where
                                  vs = [name $ "x"++show n |
                                        n <- [1..ar]]
-        nameToAtom (Name _ s) = LitAST $ AtomL s {-$ case s of
+        nameToAtom (Name _ s) = LitAST $ AtomL $ case s of
                                                    ':':s' -> s'
-                                                   upper:s' -> toLower upper:s'-}
+                                                   upper:s' -> toLower upper:s'
         arity (AppT (AppT (ConT(Name Nothing "Prim.->")) _) t) = 
             1 + arity t
         arity _ = 0
@@ -100,8 +100,10 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                     checkTypes ((n,ast,t):nastts) = do
                                       put (0,M.empty) --start new session
                                       t' <- tcExpr ast
-                                      --t'' <- getFullType' S.empty t'
-                                      unify t' t
+                                      t2 <- newVarNames t
+--NOTE: a -> b CONVERTED TO forall a -> b HERE TO AVOID TYPE 
+-- VARIABLE NAME CAPTURE                    ^^^^^^^^^
+                                      unify t' t2
                                       {-if t == t'' 
                                        then return ()
                                        else do
@@ -291,10 +293,10 @@ unify t (VarT x) = checkNoCycles x t
 unify (AppT a b) (AppT c d) = unify a c >> unify b d
 unify (ConT n1) (ConT n2) | n1 == n2 = return ()
 --TODO remove this clause VVV
-unify (ConT (Name m s)) (ConT (Name m' s')) = error $
-                                              show(m,s,m',s')
+--unify (ConT (Name m s)) (ConT (Name m' s')) = error $
+--                                              show(m,s,m',s')
 unify t1 t2 = lift $ lift $ Left $ 
-              concat["Cannot unify: (",show t1,")(",show t2,")"]
+              concat["Cannot unify: (",show t1,")\n(",show t2,")"]
         
 checkNoCycles :: TyVarName -> TypeAST -> TCMonad ()      
 checkNoCycles tvn newType = do

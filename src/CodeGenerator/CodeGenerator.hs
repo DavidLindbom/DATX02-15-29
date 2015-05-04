@@ -254,6 +254,10 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compilePat :: Pattern -> Pat
 compilePat (HPR.PVar i)     = CES.PVar $ handleVarName i
+compilePat (HPR.PCon c []) = CES.PLit $ LAtom $ Atom c'
+    where c' = case c of
+               ':':xs -> xs
+               x:xs   -> toLower x : xs
 compilePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : 
                                   map compilePat pts
   where c' = case c of
