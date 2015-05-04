@@ -116,7 +116,7 @@ check fp = do
             let fps = map toFilePath imps'
             fps' <- liftIO $ mapM makeAbsolutePath fps
             modify (Map.insert fp' fps')
-            return imps'
+            return fps'
           else fail $ "Bad module name '" ++ name' ++ "' in path '"
                ++ fp' ++ "', expected path '" ++ mfp' ++ "'"
       Bad msg -> fail msg

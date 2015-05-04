@@ -67,7 +67,7 @@ checkImports = do
     doesExist :: FilePath -> Assertion
     doesExist fp = do
       exists <- doesFileExist fp
-      assertBool ("Created bad file path: " ++ fp) $ not exists
+      assertBool ("Created bad file path: " ++ fp) $ exists
 
 -- | Test error is generated for module where the module name doesn't match
 -- the file path.
