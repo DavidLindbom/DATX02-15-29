@@ -43,7 +43,7 @@ dependencyCheckerTests =
 --   the import list from the return value is empty
 checkNoImports :: Assertion
 checkNoImports = do
-  fp' <- makeAbsolute $ good "NoImports"
+  fp' <- makeAbsolutePath $ good "NoImports"
   (imps, themap) <- runStateT (check fp') emptyEnv
   assertBool "Size of map not one" $ Map.size themap == 1
   assertBool "File path key not found" $ Map.member fp' themap
@@ -58,7 +58,7 @@ checkNoImports = do
 --   the generated file paths are correct
 checkImports :: Assertion
 checkImports = do
-  fp' <- makeAbsolute $ good "ImportNoImports"
+  fp' <- makeAbsolutePath $ good "ImportNoImports"
   (imps, themap) <- runStateT (check fp') emptyEnv
   assertBool "Size of map not one" $ Map.size themap == 1
   assertBool "Import list from return of wrong size" $ 3 == length imps
@@ -74,7 +74,7 @@ checkImports = do
 -- Check that error is generated
 checkInvalidName :: Assertion
 checkInvalidName = do
-  fp' <- makeAbsolute $ bad "InvalidName"
+  fp' <- makeAbsolutePath $ bad "InvalidName"
   res <- IOErr.tryIOError $ execStateT (check fp') emptyEnv
   case res of
     Left err -> do
@@ -87,7 +87,7 @@ checkInvalidName = do
 -- Check that erro is generated
 checkMissingModule :: Assertion
 checkMissingModule = do
-  fp' <- makeAbsolute $ bad "Hopper"
+  fp' <- makeAbsolutePath $ bad "Hopper"
   res <- IOErr.tryIOError $ execStateT (check fp') emptyEnv
   case res of
     Left err -> when (not $ IOErr.isDoesNotExistError err)

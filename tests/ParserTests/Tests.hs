@@ -53,7 +53,7 @@ goodTests =
 
 checkBad :: String -> Assertion
 checkBad name = do
-  fp <- makeAbsolute $ "tests" </> "ParserTests" </> "Bad" </> name <.> "hpr"
+  fp <- makeAbsolutePath $ "tests" </> "ParserTests" </> "Bad" </> name <.> "hpr"
   contents <- readFile fp
   case parse contents of
        Ok _  ->
@@ -63,7 +63,7 @@ checkBad name = do
 
 checkGood :: String -> Assertion
 checkGood name = do
-  fp <- makeAbsolute $ "tests" </> "ParserTests" </> "Good" </> name <.> "hpr"
+  fp <- makeAbsolutePath $ "tests" </> "ParserTests" </> "Good" </> name <.> "hpr"
   contents <- readFile fp
   case parse contents of
        Bad _ ->
