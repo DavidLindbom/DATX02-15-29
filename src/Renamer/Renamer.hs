@@ -150,8 +150,8 @@ transformExpr name ctx e = case e of
   HPR.EApp a b       -> do a' <- transformExpr name ctx a
                            b' <- transformExpr name ctx b
                            case a' of
-                            AST.EVar i -> case lookupBIF i of
-                              Just (m,f,_) -> Ok $ ECall m f b'
+                            AST.EVar i -> case lookupBIF (unqualify name i) of
+                              Just (m,f,_) -> Ok $ AST.EApp (AST.EApp (AST.EApp (AST.EVar "Prim.apply") (AST.ELit (AST.LS m))) (AST.ELit (AST.LS f))) b'
                               _            -> Ok $ AST.EApp a' b'
                             _          -> Ok $ AST.EApp a' b'
 
@@ -220,6 +220,20 @@ transformClause name ctx (CClause pat e) = case pat of
 -- Helper functions
 --
 
+-- | Removes the modulename from a identifier
+unqualify :: Modulename -> Identifier -> Identifier
+unqualify name ident 
+  | elem '.' ident = case go name ident of
+                       Ok i  -> i
+                       Bad _ -> ident
+  | otherwise      = ident
+  where
+    go :: Modulename -> Identifier -> Err Identifier
+    go []     ('.':i)            = Ok i
+    go (m:ms) (i:is) | m == i    = go ms is
+    go _      _                  = Bad ""
+
+-- | Inserts a pattern variable to the variable context
 patternToContext :: Pattern -> S.Set Identifier -> S.Set Identifier
 patternToContext (AST.PVar i)    s = S.insert i s
 patternToContext (AST.PCon _ ps) s = foldr patternToContext s ps

@@ -28,7 +28,7 @@ bifs = M.fromList $ ("+",   B "+"   (int ~> int ~> int))
                   : ("mod", B "rem" (int ~> int ~> int))
                   : ("abs", B "abs" (int ~> int))
                   : []
-  where int = TCon "Prim.Int"
+  where int = TCon "Prim.Number"
         -- string = TCon "Prim.String"
         -- double = TCon "Prim.Double"
 
