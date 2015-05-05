@@ -23,6 +23,7 @@ import Data.Char (toLower)
 import TypeChecker.Convert (moduleToRenamed,tcModToModule)
 import Utils.ErrM (Err(..))
 import qualified AST.AST as A
+import Data.Char (isUpper)
 typeCheck :: A.Module (Maybe A.Type) -> Err (A.Module A.Type)
 typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   Left s -> Bad s
@@ -55,9 +56,10 @@ typecheckModule rnm = do
                                where
                                  vs = [name $ "x"++show n |
                                        n <- [1..ar]]
-        nameToAtom (Name _ s) = LitAST $ AtomL $ case s of
+        nameToAtom (Name _ s) = LitAST $ AtomL $ case unqualifiedName s of
                                                    ':':s' -> s'
                                                    upper:s' -> toLower upper:s'
+                                                  
         arity (AppT (AppT (ConT(Name Nothing "Prim.->")) _) t) = 
             1 + arity t
         arity _ = 0
@@ -409,5 +411,18 @@ unifyLoopTest = do [t0,t1,t2,t3] <- sequence $ replicate 4 newTyVar
 
 arrowtype a b = AppT (prim"->") a `AppT` b
 
-
+--Code replication :(
  
+--Breaks a name into its module prefix and its unqualified name.
+--Because all names now have a module prefix, it no longer returns a Maybe.
+strToName :: String -> (String, String)
+strToName = (init' *** id) . strToName'
+            where init' [] = ""
+                  init' s = init s
+strToName' (c:s) | isUpper c = case break (=='.') (c:s) of
+                                (con,"") -> ("", con)
+                                (mod,'.':s') -> addModule mod $ strToName' s'
+                | otherwise = ([], c:s )
+                where
+                  addModule m (mId, s) = (m++"."++mId, s)
+unqualifiedName = snd . strToName

@@ -1,0 +1,47 @@
+module Prelude (map, Cons,id) where
+--Primitives
+{-
+add :: a -> a -> a
+mul :: a -> a -> a
+sub :: a -> a -> a
+div :: a -> a -> Double
+
+print :: a -> Ok
+
+
+--types with no constructors. No empty dt's in syntax, so need to add NoCon_t
+data Double = NoConDouble
+data Integer = NoConInteger
+data Atom = NoConAtom
+-}
+--simple types
+data Bool = True | False
+data List a = Cons a (List a) | Nil
+
+--erlang types
+data Ok = Ok
+--simulates empty tuple:
+data ET = ET
+--simulates function type
+--data FT a b = FT
+--toFT :: (a -> b) -> FT a b
+
+map :: (a -> b) -> List a -> List b
+map f xs = case xs of
+      	   	Nil -> Nil
+		Cons x xs -> Cons (f x) ((map f) xs)
+
+bif :: String -> Number -> a
+bif s n = Prim.apply "erlang" s n
+binop :: String -> a -> b -> c
+binop s = bif s 2
+
+error :: String -> a
+error = bif "error" 1
+
+not True = False
+not False = True
+
+
+id :: a -> a
+id = \x -> x

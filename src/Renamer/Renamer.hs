@@ -121,6 +121,8 @@ transformTypes name ts' = let (t:ts) = reverse ts'
     prim "Double" = "Prim.Double"
     prim "Char"   = "Prim.Char"
     prim "String" = "Prim.String"
+    prim "Atom" = "Prim.Atom"
+    prim "Number" = "Prim.Number"
     prim s        = name ++ "." ++ s
 
 transformExpr :: Modulename -> S.Set Identifier -> HPR.Expr -> Err AST.Expression

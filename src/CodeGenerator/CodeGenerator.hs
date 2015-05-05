@@ -254,15 +254,11 @@ getCasePatterns p               = [p]
 --  to a core erlang pattern
 compilePat :: Pattern -> Pat
 compilePat (HPR.PVar i)     = CES.PVar $ handleVarName i
-compilePat (HPR.PCon c []) = CES.PLit $ LAtom $ Atom c'
-    where c' = case c of
-               ':':xs -> xs
-               x:xs   -> toLower x : xs
-compilePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom c') : 
-                                  map compilePat pts
-  where c' = case c of
-               ':':xs -> xs
-               x:xs   -> toLower x : xs
+compilePat (HPR.PCon c []) = CES.PLit $ LAtom $ Atom $ 
+                             nameToConstructorAtomStr c
+compilePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom $ 
+                                               nameToConstructorAtomStr c) : 
+                                  (reverse $ map compilePat pts)
 compilePat PWild             = CES.PVar "_" 
 compilePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compilePat (HPR.PTuple pats) = CES.PTuple $ map compilePat pats
@@ -319,7 +315,9 @@ modCall mod fn args = ModCall (exps mod,exps fn) $ map exps args
 --Breaks a name into its module prefix and its unqualified name.
 --Because all names now have a module prefix, it no longer returns a Maybe.
 strToName :: Identifier -> (String, String)
-strToName = (init *** id) . strToName'
+strToName = (init' *** id) . strToName'
+            where init' [] = ""
+                  init' s = init s
 strToName' (c:s) | isUpper c = case break (=='.') (c:s) of
                                 (con,"") -> ("", con)
                                 (mod,'.':s') -> addModule mod $ strToName' s'
@@ -327,6 +325,9 @@ strToName' (c:s) | isUpper c = case break (=='.') (c:s) of
                 where
                   addModule m (mId, s) = (m++"."++mId, s)
 unqualifiedName = snd . strToName
+nameToConstructorAtomStr s = case unqualifiedName s of
+                            ':':s' -> s
+                            c:s' -> toLower c : s'
 -- |The 'generateModuleInfo' function generates a list of
 --  CoreErlang.FunDec of containing the module_info/0 and
 --  module_info/1 functions
