@@ -1,4 +1,5 @@
-module 'Prelude' ['Cons'/2, 'id'/1, 'map'/2, 'module_info'/0]
+module 'Prelude' ['Cons'/2, '__Cons'/0, '__id'/0, '__map'/0,
+                  'id'/1, 'map'/2, 'module_info'/0]
     attributes []
 'False'/0 =
     fun() ->

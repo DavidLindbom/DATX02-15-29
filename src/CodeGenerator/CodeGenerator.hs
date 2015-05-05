@@ -54,8 +54,12 @@ compileModule m@(Mod mId exports _imports defs datas) = CES.Module (Atom mId)
         es = let sds =
                      sort ds
                  sexports =
-                     sort $ map unqualifiedName $ "module_info" : exports
-             in 
+                     sort $ "module_info" : (exports >>= (\qn ->
+                                                let
+                                                    un = 
+                                                        unqualifiedName qn
+                                                in [un,"__"++un]))
+                     in
                getArities sexports sds
         getArities [] _ = []
         getArities (exp:exps) (d:ds) 
