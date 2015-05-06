@@ -36,14 +36,16 @@ typecheckModule rnm = do
                                          [prim"String",prim"String",
                                               prim"Number",
                                           tyVar "a"])
-                            :cons rnm ++ imports rnm) (defs rnm)
+                            :(map (id *** ForallT)$ cons rnm ++ imports rnm)) 
+                 --IT NEVER HURTS TO MAKE A TYPE SIGNATURE forall! Or does it? 
+                 (map (\(n,a,mt) -> (n,a,fmap ForallT mt)) $ defs rnm)
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
              (exports rnm)
              (map constructorDef (cons rnm) ++
               recombineTypes'Sigh names'types (defs rnm))
       where
-        constructorDef (n,t) = (n,argsToValue n $ arity t,t)
+        constructorDef (n,t) = (n,argsToValue n $ arity t,ForallT t)
         --TODO make n fully qualified!
         argsToValue n 0 = nameToAtom n
         argsToValue n ar = LamAST 
@@ -58,6 +60,7 @@ typecheckModule rnm = do
                                                    ':':s' -> s'
                                                    upper:s' -> toLower upper:s'
                                                   
+        arity (ForallT t) = arity t
         arity (AppT (AppT (ConT(Name Nothing "Prim.->")) _) t) = 
             1 + arity t
         arity _ = 0
@@ -82,7 +85,12 @@ typecheck imps'cons vs = let (withDecls,woDecls) = ((map $ \(n,ast,Just t)->
                                         ((n,ast),n,namesOccuring ast)) 
                                woDecls
                              names = map (\(n,_,_) -> n) vs
-                        in runTCMonad (typecheckDefs names sccs withDecls)
+                             addForalls = map (\(n,a,t) -> (n,a,
+                                                       case t of
+                                                         ForallT _ -> t
+                                                         _ -> ForallT t))
+                        in runTCMonad (typecheckDefs names sccs 
+                                       (addForalls withDecls))
                            tmap (0,M.empty)
 typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                               R.local (const tmap) $ checkTypes wd
@@ -101,13 +109,14 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                       put (0,M.empty) --start new session
                                       --error "got here!"
                                       t' <- tcExpr ast
+                                      --error "got here!"
 --NOTE: PUT DEBUG CODE HERE; REMOVE AS SOON AS FIXED
-                                      if n == name "Test.map" then 
+                                      {-if n == name "Test.map" then 
                                           R.local(M.insert (name "Test.map") t')
                                                 (do t'' <- getFullType 
                                                          (name "Test.map")
-                                                    error $ show t'') 
-                                          else return ()
+                                                    error $ "HOY! " ++show t'') 
+                                          else return ()-}
                                       t2 <- newVarNames t
 
 --NOTE: a -> b CONVERTED TO forall a -> b HERE TO AVOID TYPE 
@@ -129,6 +138,7 @@ typecheckSCCs :: [[(Name,AST)]] ->
                   TCMonad (M.Map Name TypeAST)
 typecheckSCCs [] = R.ask
 typecheckSCCs (scc:sccs) = do map <- typecheckSCC scc
+--NOTE: SHOULDN'T IT BE UNION MAP?
                               R.local (const map) (typecheckSCCs sccs)
 typecheckSCC :: [(Name,AST)] -> TCMonad (M.Map Name TypeAST)
 typecheckSCC nasts = do
@@ -178,7 +188,7 @@ tcExpr (Named n) = do map <- R.ask
                       case M.lookup n map of
                        Just (ForallT t) -> do t' <- newVarNames t
                                               return t'
-                       Just t -> return t
+                       Just t -> return t 
                        Nothing -> complain $
                                   "Unexpected Nothing in tcExpr "++
                                   "when looking up " ++ show n
@@ -346,9 +356,12 @@ newVarNames' (ForallT t) = newVarNames' t
 newVarNames' (VarT x) = do (i,vs) <- get
                            case M.lookup x vs of
                              Just t -> return t
-                             _ -> let t = tyVar $ "t"++show i
+                             _ -> {-let t = tyVar $ "t"++show i
                                   in do put (i+1,M.insert x t vs)
-                                        return t
+                                        return t-}
+                                              do t' <- newTyVar
+                                                 modify (id***M.insert x t')
+                                                 return t'
 newVarNames' c@(ConT _) = return c
 newVarNames' (AppT a b) = do a' <- newVarNames' a
                              b' <- newVarNames' b

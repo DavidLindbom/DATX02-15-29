@@ -61,8 +61,7 @@ expToAST (A.ECase exp clauses) = L.CaseAST (expToAST exp) $
 patToPatAST :: A.Pattern -> L.PatAST
 patToPatAST (A.PVar id) = L.VarPat $ idToName id
 patToPatAST (A.PCon id ps) = foldl L.AppPat (L.ConPat (idToName id)) $ 
-                             map patToPatAST $ reverse ps
---NOTE: REVERSED THE PATTERNS HERE. IS THAT A MISTAKE?
+                             map patToPatAST ps
 patToPatAST (A.PLit lit) = L.LitPat $ aLitToLLit lit
 patToPatAST A.PWild = L.WildPat
 patToPatAST (A.PTuple ps) = L.TuplePat $ map patToPatAST ps
@@ -126,7 +125,8 @@ patASTToPat (L.VarPat (L.Name _ s)) = A.PVar s
 patASTToPat app@(L.AppPat _ _) = unfoldApps app []
 	where 
 		unfoldApps (L.ConPat n) ps = 
-			A.PCon (show n) (reverse $ map patASTToPat ps)
+                    --NOTE: removed reverse before patASTToPat here
+			A.PCon (show n) (map patASTToPat ps)
 		unfoldApps (L.AppPat app p) ps =
 			unfoldApps app (p:ps)
 patASTToPat (L.LitPat lit) = A.PLit $ lLitToALit lit
