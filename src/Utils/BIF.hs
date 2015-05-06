@@ -24,11 +24,19 @@ bifs :: M.Map Identifier BIF
 bifs = M.fromList $ ("+",   B "+"   (int ~> int ~> int))
                   : ("-",   B "-"   (int ~> int ~> int))
                   : ("*",   B "*"   (int ~> int ~> int))
-                  : ("div", B "div" (int ~> int ~> int))
-                  : ("mod", B "rem" (int ~> int ~> int))
-                  : ("abs", B "abs" (int ~> int))
+                  : ("/",   B "/"   (int ~> int ~> int))
+                  : ("<",   B "<"   (int ~> int ~> bool))
+                  : (">",   B ">"   (int ~> int ~> bool))
+                  : ("==",  B "=:=" (var ~> var ~> bool))
+                  : ("/=",  B "=/=" (var ~> var ~> bool))
+                  : (">=",  B ">="  (int ~> int ~> bool))
+                  : ("<=",  B "<="  (int ~> int ~> bool))
+                --  : ("++",  B "++"  (list ~> list ~> list)
+                --  : ("!",   B "!"   (atom ~> msg ~> io)
                   : []
-  where int = TCon "Prim.Number"
+  where int  = TCon "Prim.Number"
+        bool = TCon "Prim.Bool"
+        var  = TVar "a"
         -- string = TCon "Prim.String"
         -- double = TCon "Prim.Double"
 

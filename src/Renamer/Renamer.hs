@@ -153,7 +153,7 @@ transformExpr name ctx e = case e of
                            b' <- transformExpr name ctx b
                            case a' of
                             AST.EVar i -> case lookupBIF (unqualify name i) of
-                              Just (m,f,_) -> Ok $ AST.EApp (AST.EApp (AST.EApp (AST.EVar "Prim.apply") (AST.ELit (AST.LS m))) (AST.ELit (AST.LS f))) b'
+                              Just (m,f,_) -> Ok $ AST.EApp (AST.EApp (AST.EApp (AST.EApp (AST.EVar "Prim.apply") (AST.ELit (AST.LS m))) (AST.ELit (AST.LS f))) (AST.ELit (AST.LI 2))) b'
                               _            -> Ok $ AST.EApp a' b'
                             _          -> Ok $ AST.EApp a' b'
 
