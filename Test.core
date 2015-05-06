@@ -1,0 +1,108 @@
+module 'Test' ['Cons'/0, 'False'/0, 'Nil'/0, 'True'/0, '__Cons'/0,
+               '__False'/0, '__Nil'/0, '__True'/0, '__coerce'/0, '__map'/0,
+               '__not'/0, 'coerce'/0, 'map'/2, 'module_info'/0, 'not'/1]
+    attributes []
+'False'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'false'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__False'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('False'/0)
+'Cons'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'cons'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Cons'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Cons'/0)
+'Nil'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'nil'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Nil'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Nil'/0)
+'True'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'true'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__True'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('True'/0)
+'coerce'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply apply apply call 'erlang':'make_fun'
+                                        ('Prim', '__apply', 0)()("Prim")("coerce")(1)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__coerce'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('coerce'/0)
+'map'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Pf, Pxs} when 'true' ->
+                case Pxs of
+                    {'cons', Px, Pxs2} when 'true' ->
+                        apply apply apply '__Cons'/0()(apply Pf(Px))(apply apply apply '__map'/0()(Pf)(Pxs2))
+                    _ when 'true' ->
+                        apply '__Nil'/0()
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__map'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('map'/2)
+'not'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {P_arg1} when 'true' ->
+                case {P_arg1} of
+                    {'true'} when 'true' ->
+                        apply call 'erlang':'make_fun' ('', '__False', 0)()
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__not'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('not'/1)
+'module_info'/0 =
+    fun() -> call 'erlang':'get_module_info' ('Test')
+'module_info'/1 =
+    fun(_cor0) -> call 'erlang':'get_module_info' ('Test', _cor0)
+end

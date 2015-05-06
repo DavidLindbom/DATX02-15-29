@@ -262,7 +262,7 @@ compilePat (HPR.PCon c []) = CES.PLit $ LAtom $ Atom $
                              nameToConstructorAtomStr c
 compilePat (HPR.PCon c pts) = CES.PTuple $ (CES.PLit $ LAtom $ Atom $ 
                                                nameToConstructorAtomStr c) : 
-                                  (reverse $ map compilePat pts)
+                                  (map compilePat pts)
 compilePat PWild             = CES.PVar "_" 
 compilePat (HPR.PLit l)      = CES.PLit $ compileLiteral l
 compilePat (HPR.PTuple pats) = CES.PTuple $ map compilePat pats

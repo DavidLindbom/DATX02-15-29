@@ -97,7 +97,7 @@ transformDefs name defs = do
 
 transformTypes :: Modulename -> [HPR.Type] -> AST.Type
 transformTypes name ts' = let (t:ts) = reverse ts'
-                          in foldl go (go' t) ts
+                          in TForAll $ foldl go (go' t) ts
   where
     go :: AST.Type -> HPR.Type -> AST.Type
     go a b = AST.TCon "Prim.->" `AST.TApp` go' b `AST.TApp` a

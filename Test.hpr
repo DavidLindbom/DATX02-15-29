@@ -1,0 +1,37 @@
+
+module Test () where
+
+
+data List a = Cons a (List a) | Nil
+
+
+--map :: (a -> b) -> List a -> List b
+--map _ Nil = Nil
+--map f (Cons x xs2) = Cons (f x) (map f xs2)
+--map :: (a -> b) -> List a -> List b 
+map f xs = case xs of
+      	   	--Nil -> Nil
+		(Cons x xs2) -> Cons (f x) ((map f) xs2)
+		_ -> Nil
+
+--incorrectUseOfMap =
+-- map not (Cons 1 Nil)
+
+{-
+
+sum :: List Number -> Number
+sum Nil = 0
+sum (Cons n ns) = n + sum ns
+
+--dollar works, loop works
+
+-}
+coerce :: a -> b
+coerce = Prim.apply "Prim" "coerce" 1
+
+--head :: List a -> a
+--head (Cons x xs) = x
+
+data Bool = True | False
+
+not True = False

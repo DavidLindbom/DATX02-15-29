@@ -17,8 +17,6 @@ import Data.Char (toLower)
 --NOTE: I assume String == Prim.String,
 --Atom == Prim.Atom, (->) == Prim.(->) etc.
 --Change depending on hopper module structure.
---Tuple-cons: Prim.*
---Tuplr-nil: Prim.()??
 
 import TypeChecker.Convert (moduleToRenamed,tcModToModule)
 import Utils.ErrM (Err(..))
@@ -101,11 +99,22 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                     checkTypes [] = return ()
                                     checkTypes ((n,ast,t):nastts) = do
                                       put (0,M.empty) --start new session
+                                      --error "got here!"
                                       t' <- tcExpr ast
+--NOTE: PUT DEBUG CODE HERE; REMOVE AS SOON AS FIXED
+                                      if n == name "Test.map" then 
+                                          R.local(M.insert (name "Test.map") t')
+                                                (do t'' <- getFullType 
+                                                         (name "Test.map")
+                                                    error $ show t'') 
+                                          else return ()
                                       t2 <- newVarNames t
+
 --NOTE: a -> b CONVERTED TO forall a -> b HERE TO AVOID TYPE 
 -- VARIABLE NAME CAPTURE                    ^^^^^^^^^
                                       unify t' t2
+                                      
+                                      checkTypes nastts
                                       {-if t == t'' 
                                        then return ()
                                        else do
@@ -332,7 +341,8 @@ newVarNames t = do (i,con) <- get
                    t' <- newVarNames' t
                    modify $ id *** const con
                    return t'
-newVarNames' :: TypeAST -> TCMonad TypeAST  
+newVarNames' :: TypeAST -> TCMonad TypeAST
+newVarNames' (ForallT t) = newVarNames' t
 newVarNames' (VarT x) = do (i,vs) <- get
                            case M.lookup x vs of
                              Just t -> return t

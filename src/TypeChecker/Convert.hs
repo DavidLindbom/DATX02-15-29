@@ -37,6 +37,7 @@ functionToName'AST'MType (A.Fun id msig expression) =
     (idToName id,expToAST expression, fmap typeToTypeAST msig)
 
 typeToTypeAST :: A.Type -> L.TypeAST
+typeToTypeAST (A.TForAll t) = L.ForallT $ typeToTypeAST t
 --typeToTypeAST (A.TName s ts) = foldl1 L.AppT $ (L.ConT $ idToName s):
 --                               map typeToTypeAST ts
 typeToTypeAST (A.TVar s) = L.VarT $ idToName s
@@ -60,7 +61,8 @@ expToAST (A.ECase exp clauses) = L.CaseAST (expToAST exp) $
 patToPatAST :: A.Pattern -> L.PatAST
 patToPatAST (A.PVar id) = L.VarPat $ idToName id
 patToPatAST (A.PCon id ps) = foldl L.AppPat (L.ConPat (idToName id)) $ 
-                             map patToPatAST ps
+                             map patToPatAST $ reverse ps
+--NOTE: REVERSED THE PATTERNS HERE. IS THAT A MISTAKE?
 patToPatAST (A.PLit lit) = L.LitPat $ aLitToLLit lit
 patToPatAST A.PWild = L.WildPat
 patToPatAST (A.PTuple ps) = L.TuplePat $ map patToPatAST ps
