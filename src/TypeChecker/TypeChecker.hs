@@ -37,7 +37,7 @@ typecheckModule rnm = do
                                               prim"Number",
                                           tyVar "a"])
                             :(map (id *** ForallT)$ cons rnm ++ imports rnm)) 
-                 --IT NEVER HURTS TO MAKE A TYPE SIGNATURE forall! Or does it? 
+                 --IT NEVER HURTS TO MAKE A TYPE SIGNATURE forall! Or does it?
                  (map (\(n,a,mt) -> (n,a,fmap ForallT mt)) $ defs rnm)
   return $ TCModule 
              (Name (Just $ init $ modId rnm)$last$modId rnm)
@@ -105,35 +105,35 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                              Just x -> x):
                                         getVals ns map
                                     checkTypes [] = return ()
-                                    checkTypes ((n,ast,t):nastts) = do
-                                      put (0,M.empty) --start new session
-                                      --error "got here!"
-                                      t' <- tcExpr ast
-                                      --error "got here!"
---NOTE: PUT DEBUG CODE HERE; REMOVE AS SOON AS FIXED
-                                      {-if n == name "Test.map" then 
-                                          R.local(M.insert (name "Test.map") t')
-                                                (do t'' <- getFullType 
-                                                         (name "Test.map")
-                                                    error $ "HOY! " ++show t'') 
-                                          else return ()-}
-                                      t2 <- newVarNames t
-
---NOTE: a -> b CONVERTED TO forall a -> b HERE TO AVOID TYPE 
--- VARIABLE NAME CAPTURE                    ^^^^^^^^^
-                                      unify t' t2
-                                      
+                                    checkTypes ((n,ast,sigt):nastts) = do
+--NOTE: I don't get why tcExpr terminates without a signature,
+--but loops with. I'll just call typeCheckSCCs here and hope it does the trick.
+                                      --texpr <- tcExpr ast
+                                      texpr <- fmap (fromJust . M.lookup n) $
+                                               typecheckSCC [(n,ast)]
+                                      nsigt <- newVarNames sigt
+                                      unify texpr nsigt
+                                      nsigt `checkIsInstanceOf` texpr
                                       checkTypes nastts
-                                      {-if t == t'' 
-                                       then return ()
-                                       else do
-                                         p <- get
-                                         lift$lift$Left 
-                                            ("Incorrect type signature: "
-                                             ++show (n,t,t',p))-}
-                                                
-                                                
-                                          
+--checks that the type signature is less general than
+--the inferred type, e.g if you accidentally give
+--map the type (a->a) -> List a -> List a
+--and the signature (a->b) -> List a -> List b,
+--then checkIsLessGeneral will complain.
+--It does this by checking that each type variable
+--in the type signature refers to a different type
+--variable in the expression's type when
+--you unify them.
+checkIsInstanceOf :: TypeAST -> TypeAST -> TCMonad ()
+checkIsInstanceOf sig t = do nsig <- newVarNames sig
+                             fullT <- fullType t
+                             if nsig `isInstanceOf` fullT
+                                then return ()
+                                else complain $ 
+                                         "Type signature: \n"++
+                                         show nsig ++ "\n" ++
+                                         "is not an instance of:  \n" ++
+                                         show fullT ++ "!"
 typecheckSCCs :: [[(Name,AST)]] -> 
                   TCMonad (M.Map Name TypeAST)
 typecheckSCCs [] = R.ask
@@ -159,23 +159,38 @@ typecheckSCC nasts = do
     ntmap <- R.ask
     put (0,M.empty)
     return $ M.fromList namesTypes `M.union` ntmap
+
+--NOTE: getFullType may have had bug where
+--e.g. AppT t1 t2, t1 ==> t2, t2 ==> t1
+--would be converted into AppT t2 t1 and not
+--AppT t2 t2 as it should have been.
+--getFullType' now returns its set of 
+--mentioned variables in order to prevent that.
+--NOTE: Changed back, it induced a bug I think.
 getFullType :: Name -> TCMonad (Name,TypeAST)
 getFullType n = do m <- R.ask
                    let Just tyvar = M.lookup n m  
-                   t <- getFullType' S.empty tyvar
+                   (_,t) <- getFullType' S.empty tyvar
                    return $ if S.null $ tyVarNamesOf t 
                             then (n,t)
                             else (n,ForallT t)
-getFullType' s (VarT n) | S.member n s = return (VarT n)
+getFullType' s (VarT n) | S.member n s = return (s,VarT n)
                         | otherwise = do (_,con) <- get
                                          case M.lookup n con of
-                                           Nothing -> return $ VarT n
+                                           Nothing -> return (s,VarT n)
                                            Just t  -> getFullType' 
                                                       (S.insert n s) t
-getFullType' s (AppT tf tx) = do t1 <- getFullType' s tf
-                                 t2 <- getFullType' s tx
-                                 return $ AppT t1 t2
-getFullType' _ t = return t
+getFullType' s (AppT tf tx) = do (_,t1) <- getFullType' s tf
+                                 (_,t2) <- getFullType' s tx
+                                 return (s,AppT t1 t2)
+getFullType' s t = return (s,t)
+
+--Dirty hack to get full type (i.e. the type with all variables
+--expanded as far as possible) given just a TypeAST
+fullType :: TypeAST -> TCMonad TypeAST
+fullType t = R.local (M.insert (name "Grammatically incorrect name!") t) $
+             do (_,t) <- getFullType (name "Grammatically incorrect name!")
+                return t
   
 --takes the type variable assigned to the expression and its definition
 typecheckDef :: (TypeAST,AST) -> TCMonad TypeAST
@@ -306,8 +321,12 @@ runTCMonad m r s = do (v,s') <- runStateT (R.runReaderT m r) s
 
 --cyclical types not ok
 
---unifies instantiated types, no forall
+--unifies instantiated types, now handles forall
 unify :: TypeAST -> TypeAST -> TCMonad ()
+unify (ForallT t) t2 = do t' <- newVarNames t
+                          unify t t2
+unify t (ForallT t2) = do t2' <- newVarNames t2
+                          unify t t2'
 unify (VarT x) (VarT y) | x == y = return ()
 unify (VarT x) t = checkNoCycles x t
 unify t (VarT x) = checkNoCycles x t
@@ -373,15 +392,26 @@ newTyVar = do (i,_) <- get
               return $ tyVar $ "t"++show i
 
 --assumes they share no type variable names
+--t1 is an instance of t2 if each of its 
+--type variables points to a unique t.v.
+--if t1 is unified with t2:
+--e.g. (b -> c) > (a -> a) bc. b == a && c == a
 isInstanceOf :: TypeAST -> TypeAST -> Bool
-t1 `isInstanceOf` t2 = let readf :: TCMonad () -> 
-                                    StateT (Int,Constraint) (Either String) ()
-                           readf = flip R.runReaderT M.empty 
-                           statef = flip execStateT (0,M.empty) 
-                       in case statef $ readf (unify t1 t2)of
-                         Left _ -> False
-                         Right (_,con) -> F.all (\tvn -> not $ M.member tvn con)
-                                          (tyVarNamesOf t2) 
+t1 `isInstanceOf` (ForallT t2) = t1 `isInstanceOf` t2
+t1 `isInstanceOf` t2 = 
+    let 
+        readf :: TCMonad () -> 
+                 StateT (Int,Constraint) (Either String) ()
+        readf = flip R.runReaderT M.empty 
+        statef = flip execStateT (0,M.empty) 
+    in
+      case statef $ readf (unify t2 t1)of
+        Left _ -> False
+        Right (_,con) -> F.all (\tvn -> not $ M.member tvn con)
+                         (tyVarNamesOf t1)
+
+
+
 tyVarNamesOf (VarT v) = S.singleton v
 tyVarNamesOf (AppT a b) = S.union (tyVarNamesOf a) $ tyVarNamesOf b
 tyVarNamesOf _ = S.empty
@@ -392,7 +422,7 @@ complain = lift . lift . Left
 
 --DEBUGGING ||
 --          \/
-fullTypeTest :: TCMonad TypeAST
+fullTypeTest :: TCMonad (S.Set TyVarName,TypeAST)
 fullTypeTest = do let t0 = tyVar "t0"
                       t1 = tyVar "t1"
                       t2 = tyVar "t2"
