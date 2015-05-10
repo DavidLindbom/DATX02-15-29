@@ -32,3 +32,7 @@ rcv_key(Key,Timeout)->
 	receive {t2,Key,X} -> {just,X}
 		after Timeout -> nothing 
 	end.
+
+%%Takes an IO and spawns it
+primSpawn(Arity1)->
+	spawn(fun()-> Arity1(t0) end).

@@ -1,0 +1,16 @@
+
+module NewTest () where
+
+--poly = (\_ _ -> poly) (poly == "") (poly == 3)
+
+--equals :: x -> y -> Bool
+--equals x y = x == y
+
+typetest = "" == 3
+--typetest2 = sametype "" 3
+typetest3 = True + ""
+
+sametype :: a -> a -> Bool
+sametype a b = True
+data Bool = True | False
+

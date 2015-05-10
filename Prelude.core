@@ -1,19 +1,518 @@
-module 'Prelude' ['__another_sig'/0, 'another_sig'/0,
-                  'module_info'/0]
+module 'Prelude' ['__example'/0, '__exampleProgram'/0, '__lol'/0,
+                  '__prog'/0, 'example'/0, 'exampleProgram'/0, 'lol'/0,
+                  'module_info'/0, 'prog'/1]
     attributes []
-'another_sig'/0 =
+'False'/0 =
     fun() ->
         case {} of
             {} when 'true' ->
-                3
+                'false'
             ({_cor1} when 'true' ->
                  primop 'match_fail'({'case_clause', _cor1})
              -| ['compiler_generated'])
         end
-'__another_sig'/0 =
+'__False'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('False'/0)
+'AppT'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px1, Px2} when 'true' ->
+                {'appT', Px1, Px2}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__AppT'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('AppT'/2)
+'ConT'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Px1} when 'true' ->
+                {'conT', Px1}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__ConT'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('ConT'/1)
+'Cons'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px1, Px2} when 'true' ->
+                {'cons', Px1, Px2}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Cons'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Cons'/2)
+'F'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'f'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__F'/0 =
+    fun() -> apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('F'/0)
+'Fale'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'fale'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Fale'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Fale'/0)
+'Infinity'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'infinity'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Infinity'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Infinity'/0)
+'Nil'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'nil'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Nil'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Nil'/0)
+'NoConIO'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'noConIO'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__NoConIO'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('NoConIO'/0)
+'T'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                't'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__T'/0 =
+    fun() -> apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('T'/0)
+'T0'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                't0'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__T0'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('T0'/0)
+'T2'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px1, Px2} when 'true' ->
+                {'t2', Px1, Px2}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__T2'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('T2'/2)
+'T3'/3 =
+    fun(X@1, X@2, X@3) ->
+        case {X@1, X@2, X@3} of
+            {Px1, Px2, Px3} when 'true' ->
+                {'t3', Px1, Px2, Px3}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__T3'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('T3'/3)
+'T4'/4 =
+    fun(X@1, X@2, X@3, X@4) ->
+        case {X@1, X@2, X@3, X@4} of
+            {Px1, Px2, Px3, Px4} when 'true' ->
+                {'t4', Px1, Px2, Px3, Px4}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__T4'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('T4'/4)
+'Timeout'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Px1} when 'true' ->
+                {'timeout', Px1}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Timeout'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Timeout'/1)
+'Tue'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'tue'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Tue'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Tue'/0)
+'True'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'true'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__True'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('True'/0)
+'arity0'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Pmod, Pfun} when 'true' ->
+                apply apply apply apply apply apply call 'erlang':'make_fun'
+                                                    ('Prim', '__apply',
+                                                     0)()("Prim")("arity0toArity1")(2)(Pmod)(Pfun)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__arity0'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('arity0'/2)
+'bind'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Pio, Pf} when 'true' ->
+                apply apply '__mkIO'/0()(fun(X@1) ->
+                                             case {X@1} of
+                                                 {_} when 'true' ->
+                                                     apply apply '__runIO'/0()(apply Pf(apply apply '__runIO'/0()(Pio)))
+                                                 ({_cor1} when 'true' ->
+                                                      primop 'match_fail'({'case_clause', _cor1})
+                                                  -| ['compiler_generated'])
+                                             end)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__bind'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('bind'/2)
+'coerce'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Px} when 'true' ->
+                apply apply apply apply apply call 'erlang':'make_fun'
+                                              ('Prim', '__apply', 0)()("Prim")("coerce")(1)(Px)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__coerce'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('coerce'/1)
+'example'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply apply '__show'/0()({'conT',
+                                                "Prelude.Boll"})(apply '__Tue'/0())
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__example'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('example'/0)
+'exampleProgram'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply apply '__bind'/0()(apply '__self'/0())(apply '__fun1'/0())
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__exampleProgram'/0 =
     fun() ->
         apply call 'erlang':'make_fun'
-              ('Prim', 'curry', 1)('another_sig'/0)
+              ('Prim', 'curry', 1)('exampleProgram'/0)
+'fun1'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Ps} when 'true' ->
+                apply apply apply '__bind'/0()(apply apply apply apply '__send'/0()({'conT',
+                                                                                     "Prelude.Bool"})(Ps)(apply '__T'/0()))(apply '__fun2'/0())
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__fun1'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('fun1'/1)
+'fun2'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {P_arg1} when 'true' ->
+                case {P_arg1} of
+                    {_} when 'true' ->
+                        fun(_) ->
+                            receive
+                                {'t2', {'conT', "Prelude.Bool"}, Pb} when 'true' ->
+                                    apply apply apply '__isBool'/0()(Pb)(apply apply '__io_format'/0()("Got a list of numbers!"))
+                            after
+                                3000 ->
+                                    apply apply '__io_format'/0()("huh")
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__fun2'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('fun2'/1)
+'io_format'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Ps} when 'true' ->
+                apply apply '__mkIO'/0()(fun(X@1) ->
+                                             case {X@1} of
+                                                 {_} when 'true' ->
+                                                     apply apply apply apply apply call 'erlang':'make_fun'
+                                                                                   ('Prim',
+                                                                                    '__apply',
+                                                                                    0)()("io")("format")(1)(Ps)
+                                                 ({_cor1} when 'true' ->
+                                                      primop 'match_fail'({'case_clause', _cor1})
+                                                  -| ['compiler_generated'])
+                                             end)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__io_format'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('io_format'/1)
+'isBool'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {_, Px} when 'true' ->
+                Px
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__isBool'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('isBool'/2)
+'isListNumber'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {_, Px} when 'true' ->
+                Px
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__isListNumber'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun'
+              ('Prim', 'curry', 1)('isListNumber'/2)
+'listNumber'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply '__Nil'/0()
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__listNumber'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('listNumber'/0)
+'lol'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply apply '__typeOf'/0()({'conT',
+                                                  "Prelude.Type"})(apply apply '__ConT'/0()("woop"))
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__lol'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('lol'/0)
+'mkIO'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Pf} when 'true' ->
+                apply apply '__coerce'/0()(Pf)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__mkIO'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('mkIO'/1)
+'prog'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Ppid} when 'true' ->
+                apply apply apply apply '__send'/0()({'conT',
+                                                      "Prelude.Bool"})(Ppid)(apply '__T'/0())
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__prog'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('prog'/1)
+'runIO'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Pio} when 'true' ->
+                apply apply apply '__coerce'/0()(Pio)(apply '__T0'/0())
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__runIO'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('runIO'/1)
+'sametype'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Px, Py} when 'true' ->
+                Px
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__sametype'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('sametype'/2)
+'self'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply apply '__mkIO'/0()(apply apply apply '__arity0'/0()("erlang")("self"))
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__self'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('self'/0)
+'send'/3 =
+    fun(X@1, X@2, X@3) ->
+        case {X@1, X@2, X@3} of
+            {Ptype, Ppid, Pmessage} when 'true' ->
+                apply apply '__mkIO'/0()(fun(X@1) ->
+                                             case {X@1} of
+                                                 {_} when 'true' ->
+                                                     apply apply apply apply apply apply call 'erlang':'make_fun'
+                                                                                         ('Prim',
+                                                                                          '__apply',
+                                                                                          0)()("erlang")("!")(2)(Ppid)(apply apply apply '__T2'/0()(Ptype)(Pmessage))
+                                                 ({_cor1} when 'true' ->
+                                                      primop 'match_fail'({'case_clause', _cor1})
+                                                  -| ['compiler_generated'])
+                                             end)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__send'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('send'/3)
+'show'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {{'conT', "Prelude.Boll"}, Px} when 'true' ->
+                case apply apply '__coerce'/0()(Px) of
+                    'tue' when 'true' ->
+                        "Tue"
+                    'fale' when 'true' ->
+                        "Fale"
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__show'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('show'/2)
+'spawn'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Pio} when 'true' ->
+                apply apply apply apply apply call 'erlang':'make_fun'
+                                              ('Prim', '__apply', 0)()("Prim")("primSpawn")(1)(Pio)
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__spawn'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('spawn'/1)
+'typeOf'/2 =
+    fun(X@1, X@2) ->
+        case {X@1, X@2} of
+            {Pt, _} when 'true' ->
+                Pt
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__typeOf'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('typeOf'/2)
 'module_info'/0 =
     fun() -> call 'erlang':'get_module_info' ('Prelude')
 'module_info'/1 =

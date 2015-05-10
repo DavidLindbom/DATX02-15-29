@@ -179,12 +179,36 @@ compileExp (ECase e cases)    = do exp <- compileExp e
                                                        (exps cres)) cases
                                    let alts' = alts++[caseClauseException]
                                    return $ Case (exps exp) alts'
+compileExp (EReceive cases (timeout,e)) = 
+    do exp <- compileExp e
+       alts <- mapM (\(pat,res)->
+                     do 
+                       let cpat = compilePat pat
+                           vars = namesOccP pat
+                       cres <- R.local 
+                               (id ***inserts vars)
+                               $
+                               compileExp res
+                       return $ Constr $ Alt
+                                  (pats cpat)
+                                  (Guard$
+                                   exps$
+                                   atom"true")
+                                  (exps cres)) cases
+       return $ Lambda ["_"] $ --It's an IO, remember! It needs to be
+                               --triggered by passing an argument to it
+              exps $ Rec alts (CES.TimeOut (compileTimeout timeout) (exps exp))
+                    where
+                      compileTimeout Infinity = exps $ atom "infinity"
+                      compileTimeout (HPR.Timeout integer) = 
+                          exps $ Lit $ LInt integer
 compileExp (ECall mId fId e)  = fmap (ModCall (m, fun)) 
                                 (mapM (fmap exps . compileExp) as)
   where m           = Exp (Constr (Lit (LAtom (Atom mId))))
         fun         = Exp (Constr (Lit (LAtom (Atom fId))))
         (ETuple as) = e
 compileExp e                  = error $ "Illegal expression: " ++ show e
+
 
 handleVarName s = 
     if isPrefixName s

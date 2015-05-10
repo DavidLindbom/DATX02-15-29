@@ -22,6 +22,11 @@ import TypeChecker.Convert (moduleToRenamed,tcModToModule)
 import Utils.ErrM (Err(..))
 import qualified AST.AST as A
 import Data.Char (isUpper)
+import System.IO.Unsafe (unsafePerformIO)
+import Data.IORef
+
+nothingIORef = unsafePerformIO $ newIORef (Left "doesn't matter")
+
 typeCheck :: A.Module (Maybe A.Type) -> Err (A.Module A.Type)
 typeCheck mod = case typecheckModule $ moduleToRenamed mod of
                   Left s -> Bad s
@@ -31,7 +36,7 @@ typecheckModule :: RenamedModule -> Either String TCModule
 typecheckModule rnm = do
   --NOTE: I HARDCODED THE TYPE OF apply :: String -> String -> Number -> a
   --here.
-  names'types <- typecheck ((Name Nothing "Prim.apply",
+  names'types <- typecheck ((Name nothingIORef "Prim.apply",
                              ForallT $ foldr1 arrowtype
                                          [prim"String",prim"String",
                                               prim"Number",
@@ -40,7 +45,7 @@ typecheckModule rnm = do
                  --IT NEVER HURTS TO MAKE A TYPE SIGNATURE forall! Or does it?
                  (map (\(n,a,mt) -> (n,a,fmap ForallT mt)) $ defs rnm)
   return $ TCModule 
-             (Name (Just $ init $ modId rnm)$last$modId rnm)
+             (Name nothingIORef $ modId rnm)
              (exports rnm)
              (map constructorDef (cons rnm) ++
               recombineTypes'Sigh names'types (defs rnm))
@@ -61,12 +66,13 @@ typecheckModule rnm = do
                                                    upper:s' -> toLower upper:s'
                                                   
         arity (ForallT t) = arity t
-        arity (AppT (AppT (ConT(Name Nothing "Prim.->")) _) t) = 
+        arity (AppT (AppT (ConT(Name _ "Prim.->")) _) t) = 
             1 + arity t
         arity _ = 0
         recombineTypes'Sigh ns'ts  = 
             map (\(n,ast,_) -> (n,ast,fromJust $ lookup n ns'ts))
---TODO typecheck also returns modified expression
+--TODO typecheck also returns modified expression: DONE!
+--Need to treat implicit specially now
 typecheck :: [(Name,TypeAST)] -> --imports, constructors
              [(Name,AST,Maybe TypeAST)] -> --defs
             Either String [(Name,TypeAST)]
@@ -106,12 +112,21 @@ typecheckDefs ns sccs wd = do tmap <- typecheckSCCs sccs
                                         getVals ns map
                                     checkTypes [] = return ()
                                     checkTypes ((n,ast,sigt):nastts) = do
+                                      let sigt2 = case sigt of
+                                                    ForallT (Implicit t1 t2)->
+                                                        ForallT (arrowtype
+                                                                 (ConT
+                                                                  (Name 
+                                                                   undefined $
+                                                                   "Prelude."++
+                                                                   "Type")) t2)
+                                                    ForallT _ -> sigt
 --NOTE: I don't get why tcExpr terminates without a signature,
 --but loops with. I'll just call typeCheckSCCs here and hope it does the trick.
                                       --texpr <- tcExpr ast
                                       texpr <- fmap (fromJust . M.lookup n) $
                                                typecheckSCC [(n,ast)]
-                                      nsigt <- newVarNames sigt
+                                      nsigt <- newVarNames sigt2
                                       unify texpr nsigt
                                       nsigt `checkIsInstanceOf` texpr
                                       checkTypes nastts
@@ -146,6 +161,7 @@ typecheckSCC nasts = do
   ntasts <- mapM (\(n,ast) -> do t <- newTyVar
                                  return (n,t,ast)) nasts
   let ns = map fst nasts
+      asts = map snd nasts
       nts = map (\(n,t,_)->(n,t)) ntasts
       tvAndDefs = map (\(_,t,ast)->(t,ast)) ntasts
   R.local (M.union (M.fromList nts)) $ do 
@@ -156,9 +172,39 @@ typecheckSCC nasts = do
     --getFullType (name "loop")
     --error "Done"
     namesTypes <- mapM getFullType ns
+    mapM putFullTypeInIORef asts
     ntmap <- R.ask
-    put (0,M.empty)
+    --NOTE: What purpose does resetting variables serve?
+    --They don't interfere with each other right?
+    --put (0,M.empty)
     return $ M.fromList namesTypes `M.union` ntmap
+           
+putFullTypeInIORef = putFT
+putFT (Named (Name ioref n)) = 
+    case unsafePerformIO $ readIORef ioref of
+      Right implicitTypeArg ->
+          do ft <- fullType implicitTypeArg
+             unsafePerformIO $ writeIORef ioref (Right ft) >>
+                             return (return ())
+             --error $ show (n,ft,implicitTypeArg)
+      Left _ -> return ()
+putFT (LamAST _ ast) = putFT ast
+putFT (AppAST f x) = putFT f >> putFT x
+putFT (CaseAST ast cases) = 
+    mapM (putFT . snd) cases >>
+         putFT ast
+putFT (TupleAST asts) = mapM putFT asts >> return ()
+putFT (UnsafeReceive cases (_,ast)) = mapM (putFT . snd) cases >>
+                                      putFT ast
+
+putFT (Receive iorefs'cases (_,ast)) =
+    mapM (\(ioref,_,ast) -> do
+              ft <- fullType $ unsafePerformIO $ readIORef ioref
+              unsafePerformIO $ writeIORef ioref ft >> return (return ())
+              putFT ast)
+    iorefs'cases >>
+    putFT ast
+putFT _ = return ()
 
 --NOTE: getFullType may have had bug where
 --e.g. AppT t1 t2, t1 ==> t2, t2 ==> t1
@@ -183,6 +229,8 @@ getFullType' s (VarT n) | S.member n s = return (s,VarT n)
 getFullType' s (AppT tf tx) = do (_,t1) <- getFullType' s tf
                                  (_,t2) <- getFullType' s tx
                                  return (s,AppT t1 t2)
+getFullType' s (ForallT t) = getFullType' s t
+getFullType' s (Implicit t1 t2) = getFullType' s t2
 getFullType' s t = return (s,t)
 
 --Dirty hack to get full type (i.e. the type with all variables
@@ -196,17 +244,25 @@ fullType t = R.local (M.insert (name "Grammatically incorrect name!") t) $
 typecheckDef :: (TypeAST,AST) -> TCMonad TypeAST
 typecheckDef (tv,ast) = do t <- tcExpr ast
                            unify tv t
+                           --putFT ast --wrong place to put this?"
                            return tv
 tcExpr :: AST -> TCMonad TypeAST
 tcExpr (LitAST lit) = return $ litType lit
-tcExpr (Named n) = do map <- R.ask
-                      case M.lookup n map of
-                       Just (ForallT t) -> do t' <- newVarNames t
-                                              return t'
-                       Just t -> return t 
-                       Nothing -> complain $
-                                  "Unexpected Nothing in tcExpr "++
-                                  "when looking up " ++ show n
+tcExpr (Named n@(Name ioref _)) = do 
+  map <- R.ask
+  case M.lookup n map of
+    Just (ForallT t) -> do t' <- newVarNames t
+                           case t' of
+                             Implicit ta tb -> do
+                                 unsafePerformIO (writeIORef ioref (Right ta)
+                                                 >> return (return ()))
+                                 --error $ show (t,t')
+                             _ -> return ()
+                           return t'
+    Just t -> return t 
+    Nothing -> complain $
+               "Unexpected Nothing in tcExpr "++
+              "when looking up " ++ show n
 tcExpr (AppAST f x) = do a <- newTyVar
                          b <- newTyVar
                          let a_arrow_b = prim "->" `AppT` a `AppT` b
@@ -235,23 +291,42 @@ tcExpr (TupleAST []) = return $ prim "()"
 tcExpr (TupleAST (x:tup)) = do tx <- tcExpr x
                                ttup <- tcExpr $ TupleAST tup
                                return $ prim"*" `AppT` tx `AppT` ttup
---problem: variables in case patterns must be put in type map.
 tcExpr (CaseAST exp clauses) = do
   t:ts <- mapM (\(pat,res) -> 
                      tcExpr (LamAST[pat]res `AppAST` exp))
            clauses
   t <- foldM unifyT t ts
   return t
-    where
-      unifyT t1 t2 = unify t1 t2 >> return t1
+     
 tcExpr WildAST = newTyVar
 tcExpr (AsAST a b) = do ta <- tcExpr a
                         tb <- tcExpr b
                         unify ta tb
                         return ta
+tcExpr (UnsafeReceive cases (timeout,exp)) = do
+  a <- tcExpr exp
+  t:ts <- mapM (\(pat,res) ->
+               do (ConT (Name _ "Prim.->") `AppT` _ `AppT` t) <- 
+                      tcExpr (LamAST[pat] res)
+                  return t) cases
+  tret <- foldM unifyT a (t:ts)
+  return $ ioType tret
+tcExpr (Receive iorefs'cases (timeout,exp)) = do
+  a <- tcExpr exp
+  t:ts <- mapM (\(ioref,pat,res) ->
+                    do (ConT (Name _ "Prim.->") `AppT` patT `AppT` retT) <-
+                           tcExpr (LamAST[pat]res)
+                       unsafePerformIO (writeIORef ioref patT >> 
+                                        return (return ()))
+                       return retT) iorefs'cases
+  tret <- foldM unifyT a (t:ts)
+  return $ ioType tret
 --Todo receive uses different tcPattern function
 tcPattern :: PatAST -> TCMonad TypeAST
 tcPattern = tcExpr . patToExpr
+
+unifyT t1 t2 = unify t1 t2 >> return t1
+ioType t = (AppT (ConT (Name (error "Don't read this IORef!") "Prelude.IO")) t)
 
 patToExpr :: PatAST -> AST
 patToExpr p = case p of
@@ -267,7 +342,8 @@ patToExpr p = case p of
 --locally modify name->type environment.
 
 --adds the module prefix Prim to a type name.
-prim s = ConT $ Name Nothing $ "Prim."++s  
+prim s = ConT $ Name (error "Don't inspect TypeChecker.prim's IORef field!") 
+         $ "Prim."++s  
 
 litType lit = case lit of 
                 StringL _ -> prim "String"
@@ -327,14 +403,13 @@ unify (ForallT t) t2 = do t' <- newVarNames t
                           unify t t2
 unify t (ForallT t2) = do t2' <- newVarNames t2
                           unify t t2'
+unify (Implicit t1 t2) t3 = unify t2 t3
+unify t1 (Implicit t2 t3) = unify t1 t3
 unify (VarT x) (VarT y) | x == y = return ()
 unify (VarT x) t = checkNoCycles x t
 unify t (VarT x) = checkNoCycles x t
 unify (AppT a b) (AppT c d) = unify a c >> unify b d
 unify (ConT n1) (ConT n2) | n1 == n2 = return ()
---TODO remove this clause VVV
---unify (ConT (Name m s)) (ConT (Name m' s')) = error $
---                                              show(m,s,m',s')
 unify t1 t2 = lift $ lift $ Left $ 
               concat["Cannot unify: (",show t1,")\n(",show t2,")"]
         
@@ -372,6 +447,9 @@ newVarNames t = do (i,con) <- get
                    return t'
 newVarNames' :: TypeAST -> TCMonad TypeAST
 newVarNames' (ForallT t) = newVarNames' t
+newVarNames' (Implicit t1 t2) = do t1' <- newVarNames' t1
+                                   t2' <- newVarNames' t2
+                                   return $ Implicit t1' t2'
 newVarNames' (VarT x) = do (i,vs) <- get
                            case M.lookup x vs of
                              Just t -> return t
@@ -416,12 +494,15 @@ tyVarNamesOf (VarT v) = S.singleton v
 tyVarNamesOf (AppT a b) = S.union (tyVarNamesOf a) $ tyVarNamesOf b
 tyVarNamesOf _ = S.empty
 
-name = Name Nothing 
+name = Name nothingIORef 
 
 complain = lift . lift . Left
 
 --DEBUGGING ||
 --          \/
+--Commented it out instead of updating it to work
+--with new IORef field in Name
+{-
 fullTypeTest :: TCMonad (S.Set TyVarName,TypeAST)
 fullTypeTest = do let t0 = tyVar "t0"
                       t1 = tyVar "t1"
@@ -461,7 +542,7 @@ unifyLoopTest = do [t0,t1,t2,t3] <- sequence $ replicate 4 newTyVar
                    unify t1 t2
                    mapM (getFullType' S.empty) [t0,t1,t2,t3]
 
-
+-}
 arrowtype a b = AppT (prim"->") a `AppT` b
 
 --Code replication :(

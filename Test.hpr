@@ -1,68 +1,15 @@
 
 module Test () where
 
+
 {-
-data List a = Cons a (List a) | Nil
-
-
---map :: (a -> b) -> List a -> List b
---map _ Nil = Nil
---map f (Cons x xs2) = Cons (f x) (map f xs2)
-
-map :: (a -> b) -> List a -> List b 
-map f xs = case xs of
-      	   	Nil -> Nil
-		(Cons x xs2) -> Cons (f x) ((map f) xs2)
-		-- _ -> Nil
-
---incorrectUseOfMap =
--- map not (Cons 1 Nil)
-
-
-
-sum :: List Number -> Number
-sum Nil = 0
-sum (Cons n ns) = n + sum ns
-
---dollar works, loop works
-
-
---coerce :: a -> b
---coerce = Prim.apply "Prim" "coerce" 1
-
-data List a = Cons a (List a) | Nil
-
-
---head :: List Number -> Number
---head (Cons x xs) = x
---tail :: List a -> List a
---tail (Cons x xs) = xs
-
-map :: (a -> b) -> List a -> List b
-map _ Nil = Nil
-map f (Cons x xs) = Cons (f x) (map f xs)
---id x = x
---bad :: List Number -> List String
---bad = map id
-
-add x y = x + y
-list = map (add 1) (Cons 1 (Cons 2 Nil))
-
---Are functions too general in recursive definitions?
-
-f :: a -> a
-const3 x y z = z
-f x = const3 (f Nil) (f "") x
 
 f :: a -> a
 f x = x
 g = (\_ _ -> 3) (f 3) (f "")
 
---index :: Number -> List a -> a
---index 0 (Cons x _) = x
---index n (Cons _ xs) = index (n-1) xs
 
--}
+
 data List a = Cons a (List a) | Nil
 map :: (a->b)->List a->List b
 map f (Cons x xs) = Cons (f x) (map f xs)
@@ -71,20 +18,39 @@ map _ Nil = Nil
 --The order in which I put the cases determines whether
 --the bug appears.
 
---data Stack = Cons Stack | Nil
---count :: Stack -> Number
---count Nil = 0
---count (Cons stack) = 1 + count stack
 
---data Maybe a = Just a | Nothing
---fromJust (Just a) = a
---fromJust Nothing = Nothing
-
-{---foldr :: (a -> b -> b) -> b -> List a -> b
 foldr op id (Cons x xs) = op x (foldr op id xs)
-foldr _ id _ = id-}
+foldr _ id _ = id 
 
-type_error = (\_ _ -> 0) (map (\x->x) (Cons "" Nil)) (map (\x->x) (Cons 0 Nil))
 
-poly :: a
-poly = (\_ _ -> poly) (poly == "") (poly == 3)
+sametype :: a -> a -> Bool
+sametype x y = True 
+data Bool = True | False 
+char = if True then 1 else 0
+
+name_underscore = 1
+
+data TypeUnderscore = NoCon
+-}
+
+data B = T | F
+
+f T = T
+
+{-rcv = case receive of
+      	   _ -> "yoohoo!"
+	   After Infinity -> "cool!"-}
+urcv = case receive of
+     3 -> "yoop"
+     After Infinity -> "nay man"
+
+data Either = Left B | Right Number
+
+exp = case Left T of
+      	   Left x -> ignore x
+	   Right x -> ignore x
+
+ignore _ = 0
+
+impl :: Implicit t -> t
+impl = impl

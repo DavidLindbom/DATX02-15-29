@@ -1,0 +1,109 @@
+module Prelude () where
+
+
+--types with no constructors. No empty dt's in syntax, so need to add NoCon_t
+{-
+data Float = NoConFloat
+toFloat :: Number -> Float
+toFloat n = coerce_if is_float
+fromFloat :: Float -> Number
+fromFloat f = coerce f
+
+data Integer = NoConInteger
+toInteger :: Number -> Integer
+toInteger n = coerce_if is_integer
+fromInteger :: Integer -> Number
+fromInteger i = coerce i
+
+data Pid = NoConPid
+data Ref = NoConRef
+--tuples
+data T0 = T0
+data T2 a b = T2 a b
+data T3 a b c = T3 a b c
+data T4 a b c d = T4 a b c d
+
+--simple types
+
+data Maybe a = Just a | Nothing
+data Either l r = Left l | Right r
+
+--equivalent to Haskell's unsafePerformIO
+runIO :: IO a -> a
+runIO io = coerce io T0
+
+arity0 :: String -> String -> (T0 -> a)
+arity0 mod fun = Prim.apply "Prim" "arity0toarity1" 2 mod fun
+--equivalent to Haskell's unsafeCoerce
+coerce :: a -> b
+coerce x = Prim.apply "Prim" "coerce" 1 x
+
+coerce_if :: (a -> Bool) -> a -> b
+coerce_if pred x = case pred x of
+	       	    	True -> coerce x
+			_ -> error "Pred not matched!"
+-}
+map :: (a -> b) -> List a -> List b
+map f xs = case xs of
+      	   	Nil -> Nil
+		Cons x xs -> Cons (f x) ((map f) xs)
+
+bif :: String -> Number -> a
+bif s n = Prim.apply "erlang" s n
+binop :: String -> a -> b -> c
+binop s = bif s 2
+
+error :: String -> a
+error = bif "error" 1
+
+not True = False
+not False = True
+data Bool = True | False 
+data List a = Cons a (List a) | Nil
+
+--abstract datatypes
+data IO a = NoConIO
+mkIO :: (T0 -> a) -> IO a
+mkIO f = coerce f
+
+id :: a -> a
+id x = x
+
+fac :: Number -> Number
+fac n = fac2 n 1
+fac2 0 acc = acc
+fac2 n acc = fac2 (n-1) (n*acc)
+
+--bifs
+send :: Pid -> a -> IO a
+send pid a = mkIO (\_ -> binop "!" pid a)
+make_ref :: IO Ref
+make_ref = mkIO (\_ -> bif "make_ref" 0)
+io_format_1 :: String -> IO Atom
+io_format_1 s = mkIO (\_ -> Prim.apply "io" "format" 1 s)
+list_to_atom :: String -> Atom
+list_to_atom s = bif "list_to_atom" 1 s
+
+--guard bifs
+is_atom :: a -> Bool
+is_atom x = bif "is_atom" 1 x
+is_integer :: a -> Bool
+is_integer x = bif "is_integer" 1 x
+is_float :: a -> Bool
+is_float x = bif "is_float" 1 x
+
+--non-typesafe receive primitive.
+rcv_key :: key -> Timeout -> IO (Maybe a)
+rcv_key key timeout = mkIO (\_ -> Prim.apply "Prim" "rcv_key" 2 key timeout)
+
+data Timeout = Infinity -- | toTimeout Integer
+toTimeout :: Integer -> Timeout
+toTimeout i = coerce_if not i
+
+addOne :: List Number -> List Number
+addOne xs = map (\x -> x + 1) xs
+
+
+
+another_sig :: Number
+another_sig = 3

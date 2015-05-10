@@ -117,12 +117,12 @@ transformTypes name ts' = let (t:ts) = reverse ts'
     go''' (TTTuple ts) b = b `AST.TApp` (transformTypes name ts)
 
     -- Prefix primitive types with Prim module instead of current module
-    prim "Int"    = "Prim.Int"
-    prim "Double" = "Prim.Double"
-    prim "Char"   = "Prim.Char"
-    prim "String" = "Prim.String"
-    prim "Atom" = "Prim.Atom"
-    prim "Number" = "Prim.Number"
+    prim s | s `elem` 
+             ["Char","String","Atom","Ref","Pid","Number"]
+             --Changed some types here. We don't have Ints or Doubles,
+             --for example. Also, Bools need to be made with a 
+             --data-declaration because it has constructors.
+                                                  = "Prim."++s
     prim s        = name ++ "." ++ s
 
 transformExpr :: Modulename -> S.Set Identifier -> HPR.Expr -> Err AST.Expression

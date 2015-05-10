@@ -13,9 +13,13 @@ import Data.Char (isUpper)
 import Control.Arrow ((***))
 import Data.Map (toList, empty)
 
+import System.IO.Unsafe (unsafePerformIO)
+import Data.IORef
+import Data.List (isPrefixOf)
+
 moduleToRenamed :: A.Module (Maybe A.Type)-> L.RenamedModule
 moduleToRenamed (A.Mod s exps _ fs adts) = L.RenamedModule {
-                                	       L.modId = [s],
+                                	       L.modId = s,
                                 	       L.exports = map idToName exps,
                                 	       L.cons = (map (idToName ***
 					       	     typeToTypeAST) $ 
@@ -23,13 +27,9 @@ moduleToRenamed (A.Mod s exps _ fs adts) = L.RenamedModule {
 					       L.imports = [],
                                 	       L.defs = (map 
                                                    functionToName'AST'MType fs)}
-    where
-      splitEveryDot s = case break (=='.') s of
-                          (s,"") -> [s]
-                          (s,'.':ss) -> s:splitEveryDot ss
 
 idToName :: A.Identifier -> L.Name
-idToName s = L.Name Nothing s
+idToName s = L.Name (unsafePerformIO $ newIORef $ Left s) s
 
 functionToName'AST'MType :: A.Function (Maybe A.Type) -> 
     (L.Name,L.AST,Maybe L.TypeAST)
@@ -37,16 +37,32 @@ functionToName'AST'MType (A.Fun id msig expression) =
     (idToName id,expToAST expression, fmap typeToTypeAST msig)
 
 typeToTypeAST :: A.Type -> L.TypeAST
+--yet another syntax hack:
+-- Implicit t1 -> t2 ==> Implicit t1 t2
+typeToTypeAST (A.TCon "Prim.->" `A.TApp` 
+               (A.TCon implicit `A.TApp` t1) `A.TApp`
+               t2) | ".Implicit" `isSuffixOf` implicit =
+ L.Implicit (typeToTypeAST t1) (typeToTypeAST t2)
 typeToTypeAST (A.TForAll t) = L.ForallT $ typeToTypeAST t
---typeToTypeAST (A.TName s ts) = foldl1 L.AppT $ (L.ConT $ idToName s):
---                               map typeToTypeAST ts
 typeToTypeAST (A.TVar s) = L.VarT $ idToName s
---typeToTypeAST (A.TFun ts) = foldr1 arrowt $ map typeToTypeAST ts
---    where
---      arrowt a b = L.ConT(L.Name(Just["Prim"])"->") `L.AppT` a `L.AppT` b
 typeToTypeAST (A.TCon s) = L.ConT $ idToName s
 typeToTypeAST (A.TApp tf tx) = L.AppT (typeToTypeAST tf) (typeToTypeAST tx)
 
+--Abusing syntax to create receive (typesafe) & unsafeReceive (non-typesafe,
+-- but more like Erlang's receive):
+expToAST (A.ECase (A.EVar unsafeReceive) cases) 
+    | isSuffixOf ".unsafeReceive" unsafeReceive = 
+        L.UnsafeReceive (map (\(pat,exp)->(patToPatAST pat,expToAST exp)) $
+                             init cases)
+        $ patToTimeout $ last cases
+expToAST (A.ECase (A.EVar receive) cases)
+    | isSuffixOf ".receive" receive =
+        L.Receive (map (\(pat,exp)->(unsafePerformIO$newIORef $ 
+                                                    error 
+                                     "IORef in receive not assigned!",
+                                     patToPatAST pat,
+                                     expToAST exp)) $ init cases)
+      $ patToTimeout $ last cases
 expToAST (A.EVar id) = L.Named $ idToName id
 expToAST (A.ECon id) = L.Named $ idToName id
 expToAST (A.ELit lit) = L.LitAST $ aLitToLLit lit
@@ -57,6 +73,15 @@ expToAST (A.ECase exp clauses) = L.CaseAST (expToAST exp) $
                                  map (\(pat,exp) ->
                                           (patToPatAST pat,expToAST exp))
                                  clauses
+isSuffixOf suffix str = reverse suffix `isPrefixOf` reverse str
+patToTimeout (A.PCon after [timeout],exp) 
+    | isSuffixOf ".After" after = (,)
+        (case timeout of
+           A.PCon infinity [] | isSuffixOf ".Infinity" infinity ->
+                                  L.Infinity
+           A.PCon timeout [A.PLit (A.LI i)] | isSuffixOf ".Timeout" timeout ->
+                                                L.Timeout i)
+        (expToAST exp)
 
 patToPatAST :: A.Pattern -> L.PatAST
 patToPatAST (A.PVar id) = L.VarPat $ idToName id
@@ -106,12 +131,38 @@ typeASTToType app@(L.AppT con t) = A.TName (nm con) (map typeASTToType $
 typeASTToType (L.ConT n) = A.TCon $ show n
 typeASTToType (L.VarT n) = A.TVar $ show n
 typeASTToType (L.ForallT t) = A.TForAll $ typeASTToType t
+typeASTToType (L.Implicit timpl t) = A.TImplicit 
+                                     (typeASTToType timpl)
+                                     (typeASTToType t)
 typeASTToType (L.AppT tf tx) = A.TApp 
                                (typeASTToType tf)
                                (typeASTToType tx)
 
 astToExp :: L.AST -> A.Expression
-astToExp (L.Named (L.Name _ s)) = A.EVar s
+astToExp (L.UnsafeReceive cases (timeout,timeoutAST)) = 
+    A.EReceive (map (\(pat,ast) -> (patASTToPat pat,astToExp ast)) cases)
+     $ (,) (case timeout of
+              L.Infinity -> A.Infinity
+              L.Timeout i -> A.Timeout i)
+     $ astToExp timeoutAST
+astToExp (L.Receive iorefs'cases (timeout,timeoutAST)) =
+    A.EReceive (map (\(ioref,pat,ast) -> (patASTToPat $ L.TuplePat 
+                                          [L.LitPat $ L.AtomL "t2",
+                                            typeToPat $ 
+                                                       unsafePerformIO $
+                                                         readIORef ioref,
+                                           pat],
+                                                      astToExp ast)) 
+                iorefs'cases)
+     $ (,) (case timeout of
+              L.Infinity -> A.Infinity
+              L.Timeout i -> A.Timeout i)
+     $ astToExp timeoutAST
+astToExp (L.Named (L.Name ioref s)) = 
+    case unsafePerformIO $ readIORef ioref of
+          Left _ -> A.EVar s
+          Right implicitTypeArg -> A.EApp (A.EVar s) (astToExp $ 
+                                                     typeToAST implicitTypeArg)
 astToExp (L.LitAST lit) = A.ELit $ lLitToALit lit
 astToExp (L.TupleAST exps) = A.ETuple $ map astToExp exps
 astToExp (L.LamAST ps body) = A.ELambda (map patASTToPat ps) (astToExp body)
@@ -119,6 +170,27 @@ astToExp (L.AppAST f x) = A.EApp (astToExp f) (astToExp x)
 astToExp (L.CaseAST ast clauses) = A.ECase (astToExp ast) $ map
                                    (\(pat,res)->(patASTToPat pat,astToExp res))
                                    clauses
+
+typeToPat :: L.TypeAST -> L.PatAST
+typeToPat (L.VarT n) = error $ "Type error: type pattern in receive clause "++
+                       "contains the type variable "++show n 
+typeToPat (L.ConT (L.Name _ s)) = L.AppPat 
+                                (L.ConPat (L.Name undefined "Prelude.ConT"))
+                                (L.LitPat $ L.StringL s)
+typeToPat (L.AppT t1 t2) = L.ConPat (L.Name undefined "Prelude.AppT")
+                           `L.AppPat`
+                           typeToPat t1
+                           `L.AppPat`
+                           typeToPat t2
+typeToAST :: L.TypeAST -> L.AST
+typeToAST (L.VarT n) = error $ "Type error: Implicit type argument "++
+                       "contains the type variable "++show n
+typeToAST (L.ConT (L.Name _ s)) = --Prelude.ConT s
+    L.TupleAST [L.LitAST $ L.AtomL "conT",L.LitAST $ L.StringL s]
+typeToAST (L.AppT t1 t2) =
+    L.TupleAST [L.LitAST $ L.AtomL "appT",typeToAST t1,typeToAST t2]
+typeToAST (L.ForallT t) = typeToAST t --should this case even happen?
+typeToAST t = error $ "Non-exhaustive function typeToAST: " ++ show t
 
 patASTToPat :: L.PatAST -> A.Pattern
 patASTToPat (L.VarPat (L.Name _ s)) = A.PVar s

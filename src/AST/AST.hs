@@ -33,6 +33,7 @@ data Function a = Fun Identifier a Expression
   deriving (Eq,Ord,Show)
 
 data Type = TForAll Type
+          | TImplicit Type Type
           | TVar Identifier
           | TCon Constructor -- Includes the module name
           | TApp Type Type
@@ -52,9 +53,11 @@ data Expression = EVar Identifier
                 | ELambda [Pattern] Expression
                 | EApp Expression Expression
                 | EVal Identifier [Expression]
+                | EReceive [(Pattern,Expression)] (Timeout,Expression)
                -- | EWhere [Function a]
                 | ECase Expression [(Pattern, Expression)]
                 | ECall Identifier Identifier Expression
                -- | ELet Pattern Expression Expression
   deriving (Eq,Ord,Show)
+data Timeout = Infinity | Timeout Integer deriving (Eq,Ord,Show)
 

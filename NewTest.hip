@@ -1,0 +1,1 @@
+(fromList [("False",TForAll (TCon "NewTest.Bool")),("NewTest.sametype",TForAll (TApp (TApp (TCon "Prim.->") (TVar "a")) (TApp (TApp (TCon "Prim.->") (TVar "a")) (TCon "NewTest.Bool")))),("NewTest.typetest",TForAll (TVar "t2")),("NewTest.typetest3",TForAll (TVar "t2")),("True",TForAll (TCon "NewTest.Bool"))],fromList [])
