@@ -1,0 +1,10 @@
+
+module RenameTest (b) where
+a :: Int -> Int
+a = 1 + 1
+b :: Double -> Bool
+b = 2 + 3
+a = 2 + 4
+b = 1 + 5
+-- these definitions make little sense..
+c 1 = 1

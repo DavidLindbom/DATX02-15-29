@@ -1,6 +1,9 @@
-.eunit
-deps
+.cabal-sandbox/
+cabal.sandbox.config
+cabal.config
+dist
 *.o
+*.hi
 *.beam
 *.plt
 erl_crash.dump
@@ -11,3 +14,14 @@ rel/example_project
 *.swp
 *.swo
 *~
+*.hi
+src/Parser/LexHopper.hs
+src/Parser/ParHopper.hs
+src/Parser/DocHopper.tex
+src/Parser/DocHopper.txt
+src/Parser/ErrM.hs
+src/Parser/SkelHopper.hs
+src/Parser/TestHopper.hs
+*.bak
+.#*
+\#*#

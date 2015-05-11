@@ -1,0 +1,1 @@
+(fromList [("Prelude.example",TCon "Prim.String"),("Prelude.exampleProgram",TApp (TCon "Prelude.IO") (TApp (TCon "Prelude.IO") (TCon "Prim.Atom"))),("Prelude.lol",TCon "Prelude.Type"),("Prelude.prog",TApp (TApp (TCon "Prim.->") (TCon "Prim.Pid")) (TApp (TCon "Prelude.IO") (TCon "Prelude.Bool")))],fromList [])

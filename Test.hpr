@@ -1,0 +1,56 @@
+
+module Test () where
+
+
+{-
+
+f :: a -> a
+f x = x
+g = (\_ _ -> 3) (f 3) (f "")
+
+
+
+data List a = Cons a (List a) | Nil
+map :: (a->b)->List a->List b
+map f (Cons x xs) = Cons (f x) (map f xs)
+map _ Nil = Nil
+
+--The order in which I put the cases determines whether
+--the bug appears.
+
+
+foldr op id (Cons x xs) = op x (foldr op id xs)
+foldr _ id _ = id 
+
+
+sametype :: a -> a -> Bool
+sametype x y = True 
+data Bool = True | False 
+char = if True then 1 else 0
+
+name_underscore = 1
+
+data TypeUnderscore = NoCon
+-}
+
+data B = T | F
+
+f T = T
+
+{-rcv = case receive of
+      	   _ -> "yoohoo!"
+	   After Infinity -> "cool!"-}
+urcv = case receive of
+     3 -> "yoop"
+     After Infinity -> "nay man"
+
+data Either = Left B | Right Number
+
+exp = case Left T of
+      	   Left x -> ignore x
+	   Right x -> ignore x
+
+ignore _ = 0
+
+impl :: Implicit t -> t
+impl = impl

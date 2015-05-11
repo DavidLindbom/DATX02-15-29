@@ -1,0 +1,141 @@
+module 'Test' ['F'/0, 'Left'/1, 'Right'/1, 'T'/0, '__F'/0,
+               '__Left'/0, '__Right'/0, '__T'/0, '__exp'/0, '__f'/0, '__ignore'/0,
+               '__impl'/0, '__urcv'/0, 'exp'/0, 'f'/1, 'ignore'/1, 'impl'/0,
+               'module_info'/0, 'urcv'/0]
+    attributes []
+'F'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                'f'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__F'/0 =
+    fun() -> apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('F'/0)
+'Left'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Px1} when 'true' ->
+                {'left', Px1}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Left'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Left'/1)
+'Right'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {Px1} when 'true' ->
+                {'right', Px1}
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__Right'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('Right'/1)
+'T'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                't'
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__T'/0 =
+    fun() -> apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('T'/0)
+'exp'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                case apply apply '__Left'/0()(apply '__T'/0()) of
+                    {'left', Px} when 'true' ->
+                        apply apply '__ignore'/0()(Px)
+                    {'right', Px} when 'true' ->
+                        apply apply '__ignore'/0()(Px)
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__exp'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('exp'/0)
+'f'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {P_arg1} when 'true' ->
+                case {P_arg1} of
+                    {'t'} when 'true' ->
+                        apply '__T'/0()
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__f'/0 =
+    fun() -> apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('f'/1)
+'ignore'/1 =
+    fun(X@1) ->
+        case {X@1} of
+            {P_arg1} when 'true' ->
+                case {P_arg1} of
+                    {_} when 'true' ->
+                        0
+                    ({_cor1} when 'true' ->
+                         primop 'match_fail'({'case_clause', _cor1})
+                     -| ['compiler_generated'])
+                end
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__ignore'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('ignore'/1)
+'impl'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                apply '__impl'/0()
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__impl'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('impl'/0)
+'urcv'/0 =
+    fun() ->
+        case {} of
+            {} when 'true' ->
+                fun(_) ->
+                    receive
+                        {{'conT', "Prim.Number"}, 3} when 'true' ->
+                            "yoop"
+                    after
+                        'infinity' ->
+                            "nay man"
+            ({_cor1} when 'true' ->
+                 primop 'match_fail'({'case_clause', _cor1})
+             -| ['compiler_generated'])
+        end
+'__urcv'/0 =
+    fun() ->
+        apply call 'erlang':'make_fun' ('Prim', 'curry', 1)('urcv'/0)
+'module_info'/0 =
+    fun() -> call 'erlang':'get_module_info' ('Test')
+'module_info'/1 =
+    fun(_cor0) -> call 'erlang':'get_module_info' ('Test', _cor0)
+end

@@ -1,0 +1,23 @@
+module Test4 (print, p2, p3, p4, p5, p6) where
+
+print :: Int -> Int -> Int -> Int
+print 1 2 c = c
+print a b c = a
+
+p2 :: Int
+p2 = print 1 2 99
+
+p3 :: Int
+p3 = print 3 2 1
+
+p4 :: Int -> Int -> Int
+p4 a b = a + b
+
+p5 :: Int -> Int -> Int
+p5 a b = a - b
+
+p6 :: Int
+p6 = print 1 (print 2 3 1) 3
+
+p7 :: Int
+p7 = print ((p4 5 7) + 9) (10 - (p5 8 (print 1 2 3))) (9)

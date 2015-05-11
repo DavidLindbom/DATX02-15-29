@@ -1,0 +1,4 @@
+module A where
+import B
+a :: Int
+a = 5

@@ -1,0 +1,193 @@
+--
+-- Layout
+-- ======
+-- Inserts "{" "}" around definition after the keywords below
+
+layout "=", "::", "of" ;
+layout toplevel        ;
+
+--
+-- Module
+-- ======
+--
+
+entrypoints Module;
+MMod. Module ::= "module" IdCon Exports "where" ";" [Import] [Def] ;
+
+--
+-- Exports
+-- =======
+-- NEmpty allows leaving the () out
+-- NExp now allows exporting constructors
+
+NEmpty. Exports ::=                  ;
+NExps.  Exports ::= "(" [Export] ")" ;
+
+NExp. Export ::= Id  ;
+separator Export "," ;
+
+--
+-- Imports
+-- =======
+--
+
+IImport. Import ::= "import" IdCon ;
+separator Import ";" ;
+
+--
+-- Definitions
+-- ===========
+-- Moved out definitions to make them more flexible and reuseable
+
+DFun.  Def ::= Func ;
+DSig.  Def ::= Sign ;
+DAdt.  Def ::= Adt  ;
+separator Def ";"   ;
+
+--
+-- Functions
+-- =========
+--
+
+FFun. Func ::= TIdVar [Arg] "=" "{" Expr "}" ;
+
+--
+-- Arguments
+-- =========
+-- Is just a pattern but allows to be empty
+
+APat. Arg ::= Pat ;
+terminator Arg "" ;
+
+--
+-- Expressions
+-- ===========
+-- Renamed from Exp to Expr to remove name clash with Prelude
+-- Pattern in clauses now allows 'Just _' without parenthesis
+
+EId.      Expr2 ::= Id                                   ;
+EPrim.    Expr2 ::= Prim                                 ;
+EOpr.     Expr2 ::= "(" IdOpr ")"                        ;
+EInfix.   Expr1 ::= Expr1 IdOpr Expr2                    ;
+EApp.     Expr1 ::= Expr1 Expr2                          ;
+ECase.    Expr1 ::= "case" Expr1 "of" "{" [Clause] "}"   ;
+EIf.      Expr1 ::= "if" Expr1 "then" Expr2 "else" Expr2 ;
+ELambda.  Expr  ::= "\\" [Pat] "->" Expr                 ;
+coercions Expr 2                                         ;
+
+CClause. Clause ::= ClausePat "->" Expr ;
+separator nonempty Clause ";"           ;
+
+CCPPat. ClausePat ::= Pat         ;
+CCPCon. ClausePat ::= IdCon [Pat] ;
+
+--
+-- Patterns
+-- ========
+--
+
+PCon.   Pat ::= IdCon              ;
+PVar.   Pat ::= TIdVar             ;
+PPrim.  Pat ::= Prim               ;
+PWild.  Pat ::= "_"                ;
+PTuple. Pat ::= "(" [PatTuple] ")" ;
+terminator nonempty Pat ""         ;
+
+PTCon. PatTuple ::= IdCon [Pat] ;
+PTPat. PatTuple ::= Pat         ;
+separator PatTuple ","          ;
+
+--
+-- Signatures
+-- ==========
+--
+
+SSig. Sign ::= IdVar "::" "{" [Type] "}" ;
+
+--
+-- Types
+-- =====
+-- If TypeTuple has one element, treat it as parenthethis
+-- Replace TName and TVar with TId ::= Id ?
+
+TName.  Type ::= IdCon [TypeArg]     ;
+TVar.   Type ::= TIdVar              ;
+TTuple. Type ::= "(" [TypeTuple] ")" ;
+separator nonempty Type "->"         ;
+
+TTTuple. TypeTuple ::= [Type] ;
+separator TypeTuple ","       ;
+
+TTAId.    TypeArg ::= Id                  ;
+TTATuple. TypeArg ::= "(" [TypeTuple] ")" ;
+terminator TypeArg ""                     ;
+
+--
+-- ADT declarations
+-- ================
+-- 
+
+AAdt. Adt ::= "data" TIdCon [AdtVar] "=" "{" [AdtCon] "}" ;
+
+AVVar. AdtVar ::= TIdVar ;
+terminator AdtVar ""    ;
+
+ACCon. AdtCon ::= TIdCon [AdtArg] ;
+separator nonempty AdtCon "|"    ;
+
+AAId.    AdtArg ::= IdCon                 ;
+AAVar.   AdtArg ::= TIdVar                ;
+AATuple. AdtArg ::= "(" [AdtArgTuple] ")" ;
+terminator AdtArg ""                      ;
+
+AATCon. AdtArgTuple ::= IdCon AdtArg [AdtArg] ;
+AATArg. AdtArgTuple ::= AdtArg      ;
+separator nonempty  AdtArgTuple "," ;
+
+--
+-- Identifiers and primitives
+-- ==========================
+-- To simplify lists without any separators
+
+IdVarNQ. IdVar ::= TIdVar  ;
+IdVarQ.  IdVar ::= TQIdVar ;
+
+IdConNQ. IdCon ::= TIdCon  ;
+IdConQ.  IdCon ::= TQIdCon ;
+
+ICon. Id ::= IdCon ;
+IVar. Id ::= IdVar ;
+terminator Id ""   ;
+
+IInteger. Prim ::= Integer ;
+IDouble.  Prim ::= Double  ;
+IString.  Prim ::= String  ;
+IChar.    Prim ::= Char    ;
+
+--
+-- Tokens
+-- ======
+-- TIdVar: identifiers, starting with a lower letter
+-- TIdCon: constructors, starting with a upper letter
+-- IdOpr: operators
+
+token TIdVar (lower (digit | letter | '_' )* ) ; 
+token TIdCon (upper (digit | letter)* )        ;
+token IdOpr ( [ ".:-^*+=<>&%$!#%|/\\" ]+ )    ;
+
+--
+-- Qualified names
+-- ===============
+-- Have to be implemented using tokens in order to disallow spaces
+
+token TQIdVar ((upper (digit | letter)* '.')+ lower (digit | letter | '_' )* ) ;
+token TQIdCon ((upper (digit | letter)* '.')+ upper (digit | letter )* )       ;
+
+--
+-- Comments 
+-- ========
+-- Can't handle nested comments, bug in bnfc
+
+comment "--"      ;
+comment "{-" "-}" ;
+

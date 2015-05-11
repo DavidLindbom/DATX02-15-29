@@ -1,0 +1,44 @@
+
+module HPR (add, three, mul,fac) where
+
+--import M
+add :: a -> a -> a
+add x y = Prim.apply "erlang" "+" 2 x y
+sub :: a -> a -> a
+sub x y = binop "-" x y
+three = add 1 2
+
+loop x = loop x
+
+data Bool = True | False
+
+--and True True = True
+--and _ _ = False
+
+bif = Prim.apply "erlang"
+binop :: Prim.String -> a -> b -> c
+binop s = bif s 2
+mul :: a -> a -> a
+mul x y = binop "*" x y
+
+gr8r :: a -> a -> Bool
+gr8r a b = binop ">" a b
+       	   	
+
+--fac n = fac2 n 1
+--fac2 0 acc = acc
+--fac2 n acc = fac2 (n-1) (mul acc n)
+
+fac n = case (gr8r n 0) of
+      	     True ->
+      	      (mul n (fac (sub n 1)))
+	     False -> 1
+--show :: a -> Prim.String
+--show x = 
+
+
+		  
+
+error :: a -> b
+error s = bif "error" 1 s
+

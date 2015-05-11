@@ -1,0 +1,17 @@
+module 'erl' ['f'/0,
+	      'module_info'/0,
+	      'module_info'/1]
+    attributes []
+'f'/0 =
+    %% Line 5
+    fun () ->
+	3
+'module_info'/0 =
+    fun () ->
+	call 'erlang':'get_module_info'
+	    ('erl')
+'module_info'/1 =
+    fun (_cor0) ->
+	call 'erlang':'get_module_info'
+	    ('erl', _cor0)
+end

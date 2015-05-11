@@ -1,0 +1,82 @@
+
+module Prelude (lol,exampleProgram,prog,example) where
+
+data Type = ConT String | AppT Type Type 
+
+typeOf :: Implicit t -> t -> Type
+typeOf t _ = t
+
+lol = typeOf (ConT "woop")
+sametype :: a -> a -> a
+sametype x y = x
+
+data IO a = NoConIO --has no constructors
+
+
+data Bool = True | False
+
+send :: Implicit t -> Pid -> t -> IO t
+send type pid message = mkIO(\_->Prim.apply "erlang" "!" 2 pid(T2 type message))
+
+--equivalent to Haskell's unsafePerformIO
+runIO :: IO a -> a
+runIO io = coerce io T0
+mkIO :: (T0 -> a) -> IO a
+mkIO f = coerce f
+
+bind :: IO a -> (a -> IO b) -> IO b
+bind io f = mkIO (\ _ -> runIO (f (runIO io)))
+
+arity0 :: String -> String -> (T0 -> a)
+arity0 mod fun = Prim.apply "Prim" "arity0toArity1" 2 mod fun
+--equivalent to Haskell's unsafeCoerce
+coerce :: a -> b
+coerce x = Prim.apply "Prim" "coerce" 1 x
+
+data T0 = T0
+data T2 a b = T2 a b
+data T3 a b c = T3 a b c
+data T4 a b c d = T4 a b c d
+
+spawn :: IO a -> IO Pid
+spawn io = Prim.apply "Prim" "primSpawn" 1 io
+
+data List a = Cons a (List a) | Nil
+
+
+
+
+isListNumber :: List Number -> a -> a
+isListNumber _ x = x
+listNumber :: List Number
+listNumber = Nil
+
+self :: IO Pid
+self = mkIO (arity0 "erlang" "self")
+
+io_format :: String -> IO Atom
+io_format s = mkIO (\_ -> Prim.apply "io" "format" 1 s)
+
+data Timeout = Infinity | Timeout Number
+
+exampleProgram = bind self fun1
+fun1 s = bind (send s T) fun2
+fun2 _ = case receive of
+       	      	   --True -> io_format "whee!"
+	       	   b -> isBool b (io_format "Got a list of numbers!")
+	 	   After (Timeout 3000) -> io_format "huh"
+isBool :: Bool -> a -> a
+isBool _ x = x
+data Bool = T | F
+
+prog pid = send pid T
+
+
+data Boll = Tue | Fale
+
+show :: Implicit x -> x -> String
+show (ConT "Prelude.Boll") x = case coerce x of
+     	   		       	    Tue -> "Tue"
+				    Fale -> "Fale"
+
+example = show Tue

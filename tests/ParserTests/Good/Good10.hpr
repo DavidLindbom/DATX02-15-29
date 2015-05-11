@@ -1,0 +1,3 @@
+-- this one might be up for review later on...
+module A (B.C, B.d) where
+import B

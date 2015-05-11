@@ -1,0 +1,1 @@
+(fromList [("HPR.add",TApp (TApp (TCon "Prim.->") (TVar "a")) (TApp (TApp (TCon "Prim.->") (TVar "a")) (TVar "a"))),("HPR.fac",TApp (TApp (TCon "Prim.->") (TCon "Prim.Number")) (TCon "Prim.Number")),("HPR.mul",TApp (TApp (TCon "Prim.->") (TVar "a")) (TApp (TApp (TCon "Prim.->") (TVar "a")) (TVar "a"))),("HPR.three",TCon "Prim.Number")],fromList [])
